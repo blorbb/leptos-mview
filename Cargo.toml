@@ -1,0 +1,16 @@
+[package]
+name = "leptos-mview"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+leptos-mview-macro = { path = "leptos-mview-macro" }
+
+[dev-dependencies]
+trybuild = "1"
+leptos = { version = "0.5.0-beta", features = ["nightly", "csr"] }
+
+[workspace]
+members = ["leptos-mview-core", "leptos-mview-macro"]

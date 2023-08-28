@@ -1,0 +1,5 @@
+error: only string literals are allowed in children
+ --> tests/ui/errors/invalid_child.rs:5:15
+  |
+5 |         div { 3 }
+  |               ^
