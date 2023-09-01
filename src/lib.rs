@@ -1,1 +1,1 @@
-pub use leptos_mview_macro::component;
+pub use leptos_mview_macro::view;
