@@ -19,12 +19,8 @@ pub fn component(input: TokenStream) -> TokenStream {
     // div().attr(...).child(...)...
     // If there are multiple top-level children, need to use the fragment.
     if fragment.len() == 1 {
-        fragment
-            .into_vec()
-            .into_iter()
-            .next()
-            .expect("length should be 1")
-            .into_token_stream()
+        let child = fragment.into_vec().remove(0);
+        child.into_token_stream()
     } else {
         fragment.to_fragment()
     }
