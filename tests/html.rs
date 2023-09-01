@@ -37,14 +37,12 @@ fn a_bunch() {
         br;
         input type="checkbox" checked;
     };
-    assert!(
-        result.into_view().render_to_string().contains(
-            "hi\
-            <span class=\"abc\" data-index=\"0\" id=\"_0-0-2\">\
-                <strong id=\"_0-0-3\">d</strong>3\
-            </span>\
-            <br id=\"_0-0-4\"/>\
-            <input type=\"checkbox\" checked id=\"_0-0-5\"/>"
-        )
-    )
+    assert!(result.into_view().render_to_string().contains(
+        "hi\
+        <span class=\"abc\" data-index=\"0\" id=\"_0-0-2\">\
+            <strong id=\"_0-0-3\">d</strong>3\
+        </span>\
+        <br id=\"_0-0-4\"/>\
+        <input type=\"checkbox\" checked id=\"_0-0-5\"/>"
+    ))
 }
