@@ -152,8 +152,8 @@ impl Element {
             return None;
         };
         let keys = self.attrs().iter().map(|attr| match attr {
-            Attr::Kv(kv) => kv.key(),
-            Attr::Bool(b) => b.key(),
+            Attr::Kv(kv) => kv.key().to_snake_ident(),
+            Attr::Bool(b) => b.key().to_snake_ident(),
         });
         let values = self.attrs().iter().map(|attr| match attr {
             Attr::Kv(kv) => kv.value().clone(),
@@ -174,7 +174,7 @@ impl Element {
         Some(quote! {
             ::leptos::component_view(
                 &#ident,
-                ::leptos::component_props_builder(&Comp)
+                ::leptos::component_props_builder(&#ident)
                     #( .#keys(#values) )*
                     #children
                     .build()
