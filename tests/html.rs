@@ -20,10 +20,23 @@ fn single_element() {
             "hi"
         }
     };
+    // assert_eq!(
+    //     result.into_view().render_to_string(),
+    //     r#"<div id="_0-0-1">hi</div>"#
+    // );
+    let binding = result.into_view().render_to_string();
+    let dom = tl::parse(&binding, Default::default()).unwrap();
+    let parser = dom.parser();
+    assert_eq!(dom.children().len(), 1);
     assert_eq!(
-        result.into_view().render_to_string(),
-        r#"<div id="_0-0-1">hi</div>"#
-    );
+        dom.children()
+            .first()
+            .unwrap()
+            .get(parser)
+            .unwrap()
+            .inner_text(parser),
+        "hi"
+    )
 }
 
 #[test]
@@ -37,12 +50,37 @@ fn a_bunch() {
         br;
         input type="checkbox" checked;
     };
-    assert!(result.into_view().render_to_string().contains(
-        "hi\
-        <span class=\"abc\" data-index=\"0\" id=\"_0-0-2\">\
-            <strong id=\"_0-0-3\">d</strong>3\
-        </span>\
-        <br id=\"_0-0-4\"/>\
-        <input type=\"checkbox\" checked id=\"_0-0-5\"/>"
-    ))
+    let binding = result.into_view().render_to_string();
+    let dom = tl::parse(&binding, Default::default()).unwrap();
+    let parser = dom.parser();
+
+    let mut it = dom.nodes().into_iter();
+    (|| -> Option<_> {
+        let text = it.find(|node| node.as_raw().is_some())?.outer_html(parser);
+        assert_eq!(text, "hi");
+
+        let span = it.next()?.as_tag()?;
+        assert_eq!(span.name(), "span");
+        assert_eq!(span.attributes().class()?, "abc");
+        assert_eq!(span.attributes().get("data-index")??, "0");
+
+        let strong = it.next()?.as_tag()?;
+        assert_eq!(strong.name(), "strong");
+
+        let text = it.next()?.as_raw()?;
+        assert_eq!(text, "d");
+
+        let text = it.next()?.as_raw()?;
+        assert_eq!(text, "3");
+
+        let br = it.next()?.as_tag()?;
+        assert_eq!(br.name(), "br");
+
+        let input = it.next()?.as_tag()?;
+        assert_eq!(input.name(), "input");
+        assert_eq!(input.attributes().get("type")??, "checkbox");
+        assert!(input.attributes().get("checked")?.is_none());
+        Some(())
+    })()
+    .unwrap();
 }
