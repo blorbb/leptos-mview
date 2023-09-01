@@ -1,15 +1,19 @@
+use core::slice;
+
+use proc_macro2::TokenStream;
 use proc_macro_error::abort;
-use quote::{ToTokens, quote};
+use quote::{quote, ToTokens};
 use syn::parse::Parse;
 
 use crate::{element::Element, value::Value};
 
 /// Possible child nodes inside a component.
+///
+/// If the child is a `Value::Lit`, this lit must be a string.
+/// Parsing will abort if the lit is not a string.
 #[derive(Debug)]
 pub enum Child {
-    String(syn::LitStr),
-    Braced(syn::ExprBlock),
-    Paren(syn::Expr),
+    Value(Value),
     Element(Element),
 }
 
@@ -17,16 +21,14 @@ impl Parse for Child {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         if let Ok(value) = input.parse::<Value>() {
             // only allow literals if they are a string.
-            match value {
-                Value::Lit(lit) => {
-                    if let syn::Lit::Str(s) = lit {
-                        Ok(Self::String(s))
-                    } else {
-                        abort!(lit.span(), "only string literals are allowed in children");
-                    }
+            if let Value::Lit(ref lit) = value {
+                if let syn::Lit::Str(_) = lit {
+                    Ok(Self::Value(value))
+                } else {
+                    abort!(lit.span(), "only string literals are allowed in children");
                 }
-                Value::Block(block) => Ok(Self::Braced(block)),
-                Value::Parenthesized(expr) => Ok(Self::Paren(expr)),
+            } else {
+                Ok(Self::Value(value))
             }
         } else if let Ok(elem) = input.parse::<Element>() {
             Ok(Self::Element(elem))
@@ -39,15 +41,19 @@ impl Parse for Child {
 impl ToTokens for Child {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         match self {
-            Child::String(s) => tokens.extend(s.into_token_stream()),
-            Child::Braced(b) => tokens.extend(b.into_token_stream()),
-            Child::Paren(p) => tokens.extend(quote! {move || #p}),
+            Child::Value(v) => tokens.extend(v.into_token_stream()),
             Child::Element(e) => tokens.extend(e.into_token_stream()),
         }
     }
 }
 
 /// A space-separated series of children.
+///
+/// Parsing does not include the surrounding braces.
+/// If no children are present, an empty vector will be stored.
+///
+/// There are two ways of passing children, so no `ToTokens` implementation
+/// is provided. Use `to_child_methods` or `to_fragment` instead.
 #[derive(Debug)]
 pub struct Children(Vec<Child>);
 
@@ -59,12 +65,31 @@ impl Children {
     pub fn children(&self) -> &[Child] {
         &self.0
     }
+
+    /// Converts the children to a series of `.child` calls.
+    pub fn to_child_methods(&self) -> TokenStream {
+        let children = self.children();
+        quote! {
+            #( .child(#children) )*
+        }
+    }
+
+    /// Converts the children into a `leptos::Fragment::lazy()` token stream.
+    pub fn to_fragment(&self) -> TokenStream {
+        let children = self.children();
+        quote! {
+            ::leptos::Fragment::lazy(|| [
+                #( #children.into_view() ),*
+            ].to_vec())
+        }
+    }
+
+    pub fn iter(&self) -> slice::Iter<'_, Child> {
+        self.0.iter()
+    }
 }
 
 impl Parse for Children {
-    /// Does not include the surrounding braces.
-    ///
-    /// If no children are present, an empty vector will be returned.
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let mut vec = Vec::new();
         while let Ok(child) = input.parse::<Child>() {
