@@ -62,6 +62,10 @@ impl Children {
         self.0.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn as_slice(&self) -> &[Child] {
         &self.0
     }
@@ -71,12 +75,12 @@ impl Children {
     }
 
     /// Converts the children to a series of `.child` calls.
-    /// 
+    ///
     /// Example:
     /// ```ignore
     /// div { "a" {var} "b" }
     /// ```
-    /// 
+    ///
     /// Should expand to:
     /// ```ignore
     /// div().child("a").child({var}).child("b")
@@ -89,14 +93,14 @@ impl Children {
     }
 
     /// Converts the children into a `leptos::Fragment::lazy()` token stream.
-    /// 
+    ///
     /// Example:
     /// ```ignore
     /// "a"
     /// {var}
     /// "b"
     /// ```
-    /// 
+    ///
     /// Should expand to:
     /// ```ignore
     /// Fragment::lazy(|| {

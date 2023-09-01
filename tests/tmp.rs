@@ -49,6 +49,5 @@ fn main() {
     };
     mview! {
         "a" {s} (move || s) {3} "b"
-    }
+    };
 }
-

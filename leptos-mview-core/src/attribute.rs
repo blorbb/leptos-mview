@@ -98,9 +98,6 @@ impl Parse for Attr {
         } else {
             let bool_attr = input.parse::<BoolAttr>()?;
 
-            // if there is an equal sign, then the kv
-            if input.peek(Token![=]) {}
-
             Ok(Self::Bool(bool_attr))
         }
     }
@@ -155,6 +152,10 @@ impl Attrs {
 
     pub fn len(&self) -> usize {
         self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     pub fn iter(&self) -> slice::Iter<'_, Attr> {

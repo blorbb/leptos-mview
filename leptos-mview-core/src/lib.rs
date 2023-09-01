@@ -2,6 +2,7 @@ pub mod attribute;
 pub mod children;
 pub mod element;
 pub mod ident;
+pub mod tag;
 pub mod value;
 
 use proc_macro2::TokenStream;
