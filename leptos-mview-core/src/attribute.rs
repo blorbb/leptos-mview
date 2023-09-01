@@ -1,3 +1,5 @@
+use core::slice;
+
 use proc_macro_error::abort;
 use syn::{parse::Parse, Token};
 
@@ -66,6 +68,10 @@ pub struct BoolAttr(KebabIdent);
 impl BoolAttr {
     pub fn key(&self) -> &KebabIdent {
         &self.0
+    }
+
+    pub fn span(&self) -> proc_macro2::Span {
+        self.0.span()
     }
 }
 
@@ -143,12 +149,16 @@ impl Attrs {
         Self(attrs)
     }
 
-    pub fn attrs(&self) -> &[Attr] {
+    pub fn as_slice(&self) -> &[Attr] {
         &self.0
     }
 
     pub fn len(&self) -> usize {
         self.0.len()
+    }
+
+    pub fn iter(&self) -> slice::Iter<'_, Attr> {
+        self.0.iter()
     }
 }
 
@@ -213,7 +223,7 @@ mod tests {
         let input = "key1=(value1) key2 key3 key4={value4}";
         let inputs: Vec<_> = input.split_whitespace().collect();
         let attrs = syn::parse_str::<Attrs>(input).unwrap();
-        let attrs = attrs.attrs();
+        let attrs = attrs.as_slice();
 
         check_kv(inputs[0], attrs[0].as_kv().unwrap().clone());
         check_bool(inputs[1], attrs[1].as_bool().unwrap().clone());

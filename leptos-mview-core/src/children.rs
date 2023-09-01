@@ -62,24 +62,60 @@ impl Children {
         self.0.len()
     }
 
-    pub fn children(&self) -> &[Child] {
+    pub fn as_slice(&self) -> &[Child] {
         &self.0
     }
 
+    pub fn into_vec(self) -> Vec<Child> {
+        self.0
+    }
+
     /// Converts the children to a series of `.child` calls.
+    /// 
+    /// Example:
+    /// ```ignore
+    /// div { "a" {var} "b" }
+    /// ```
+    /// 
+    /// Should expand to:
+    /// ```ignore
+    /// div().child("a").child({var}).child("b")
+    /// ```
     pub fn to_child_methods(&self) -> TokenStream {
-        let children = self.children();
+        let children = self.as_slice();
         quote! {
             #( .child(#children) )*
         }
     }
 
     /// Converts the children into a `leptos::Fragment::lazy()` token stream.
+    /// 
+    /// Example:
+    /// ```ignore
+    /// "a"
+    /// {var}
+    /// "b"
+    /// ```
+    /// 
+    /// Should expand to:
+    /// ```ignore
+    /// Fragment::lazy(|| {
+    ///     [
+    ///         {"a"}.into_view(),
+    ///         {var}.into_view(),
+    ///         {"b"}.into_view(),
+    ///     ].to_vec()
+    /// )
+    /// ```
     pub fn to_fragment(&self) -> TokenStream {
-        let children = self.children();
+        let children = self.as_slice();
+        // {} is needed to make sure that .into_view() is called on the whole child.
+        // Only occurs in edge cases like `(move || "a")` -> `move || move || "a"`.
+        // Usually, braces will already exist.
         quote! {
+            #[allow(unused_braces)]
             ::leptos::Fragment::lazy(|| [
-                #( #children.into_view() ),*
+                #(  { #children }.into_view() ),*
             ].to_vec())
         }
     }
@@ -93,7 +129,6 @@ impl Parse for Children {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let mut vec = Vec::new();
         while let Ok(child) = input.parse::<Child>() {
-            eprintln!("found child {child:?}");
             vec.push(child);
         }
         Ok(Self(vec))

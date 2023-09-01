@@ -1,15 +1,21 @@
+use proc_macro2::TokenStream;
 use proc_macro_error::abort;
 use quote::{quote, ToTokens};
-use syn::{parse::Parse, Token};
+use syn::{parse::Parse, parse_quote_spanned, Token};
 
-use crate::{attribute::{Attrs, Attr}, children::Children, ident::KebabIdent};
+use crate::{
+    attribute::{Attr, Attrs},
+    children::Children,
+    ident::KebabIdent,
+    value::Value,
+};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum TagKind {
     Html,
+    Component,
     Svg,
     Unknown,
-    Component,
 }
 
 impl From<&str> for TagKind {
@@ -27,31 +33,44 @@ impl From<&str> for TagKind {
 }
 
 #[derive(Debug)]
-pub struct Tag {
-    kind: TagKind,
-    ident: KebabIdent,
+pub enum Tag {
+    Html(syn::Ident),
+    Component(syn::Ident),
+    Svg(syn::Ident),
+    Unknown(KebabIdent),
 }
 
 impl Tag {
+    /// Returns `true` if the tag is [`Html`].
+    ///
+    /// [`Html`]: Tag::Html
+    #[must_use]
     pub fn is_html(&self) -> bool {
-        self.kind == TagKind::Html
+        matches!(self, Self::Html(..))
     }
-    pub fn is_svg(&self) -> bool {
-        self.kind == TagKind::Svg
-    }
+
+    /// Returns `true` if the tag is [`Component`].
+    ///
+    /// [`Component`]: Tag::Component
+    #[must_use]
     pub fn is_component(&self) -> bool {
-        self.kind == TagKind::Component
+        matches!(self, Self::Component(..))
     }
+
+    /// Returns `true` if the tag is [`Svg`].
+    ///
+    /// [`Svg`]: Tag::Svg
+    #[must_use]
+    pub fn is_svg(&self) -> bool {
+        matches!(self, Self::Svg(..))
+    }
+
+    /// Returns `true` if the tag is [`Unknown`].
+    ///
+    /// [`Unknown`]: Tag::Unknown
+    #[must_use]
     pub fn is_unknown(&self) -> bool {
-        self.kind == TagKind::Unknown
-    }
-
-    pub fn ident(&self) -> &KebabIdent {
-        &self.ident
-    }
-
-    pub fn kind(&self) -> &TagKind {
-        &self.kind
+        matches!(self, Self::Unknown(..))
     }
 }
 
@@ -59,7 +78,12 @@ impl Parse for Tag {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let ident = input.parse::<KebabIdent>()?;
         let kind = TagKind::from(ident.repr());
-        Ok(Self { ident, kind })
+        Ok(match kind {
+            TagKind::Html => Self::Html(ident.to_snake_ident()),
+            TagKind::Component => Self::Component(ident.to_snake_ident()),
+            TagKind::Svg => Self::Svg(ident.to_snake_ident()),
+            TagKind::Unknown => Self::Unknown(ident),
+        })
     }
 }
 
@@ -68,6 +92,7 @@ impl Parse for Tag {
 /// Syntax mostly looks like this:
 /// ```text
 /// div class="blue" { "hello!" }
+/// ^^^ ^^^^^^^^^^^^   ^^^^^^^^
 /// tag attributes     children
 /// ```
 ///
@@ -81,28 +106,6 @@ pub struct Element {
     tag: Tag,
     attrs: Attrs,
     children: Option<Children>,
-}
-
-impl Element {
-    pub fn new(tag: Tag, attrs: Attrs, children: Option<Children>) -> Self {
-        Self {
-            tag,
-            attrs,
-            children,
-        }
-    }
-
-    pub fn tag(&self) -> &Tag {
-        &self.tag
-    }
-
-    pub fn attrs(&self) -> &Attrs {
-        &self.attrs
-    }
-
-    pub fn children(&self) -> Option<&Children> {
-        self.children.as_ref()
-    }
 }
 
 impl Parse for Element {
@@ -133,19 +136,22 @@ impl Parse for Element {
 impl ToTokens for Element {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         // HTML only for now
-        match self.tag().kind() {
-            TagKind::Html => {
-                let ident = self.tag().ident().to_snake_ident();
+        match self.tag() {
+            Tag::Html(ident) => {
                 tokens.extend(quote! {
                     ::leptos::html::#ident()
                 });
             }
-            TagKind::Svg => todo!(),
-            TagKind::Unknown => todo!(),
-            TagKind::Component => todo!(),
+            Tag::Component(_) => {
+                let stream = self.to_component_token_stream().unwrap();
+                tokens.extend(stream);
+                return;
+            }
+            Tag::Svg(..) => todo!(),
+            Tag::Unknown(..) => todo!(),
         };
 
-        for attr in self.attrs().attrs() {
+        for attr in self.attrs().iter() {
             match attr {
                 Attr::Kv(kv) => {
                     let ident = kv.key();
@@ -153,23 +159,104 @@ impl ToTokens for Element {
                     tokens.extend(quote! {
                         .attr(#ident, #value)
                     })
-                },
+                }
                 Attr::Bool(b) => {
                     let ident = b.key();
                     tokens.extend(quote! {
                         .attr(#ident, true)
                     });
-                },
+                }
             }
         }
 
         if let Some(children) = self.children() {
-            for child in children.children() {
-                tokens.extend(quote! {
-                    .child(#child)
-                });
-            }
+            tokens.extend(children.to_child_methods())
         }
+    }
+}
+
+impl Element {
+    pub fn new(tag: Tag, attrs: Attrs, children: Option<Children>) -> Self {
+        Self {
+            tag,
+            attrs,
+            children,
+        }
+    }
+
+    pub fn tag(&self) -> &Tag {
+        &self.tag
+    }
+
+    pub fn attrs(&self) -> &Attrs {
+        &self.attrs
+    }
+
+    pub fn children(&self) -> Option<&Children> {
+        self.children.as_ref()
+    }
+
+    /// Transforms a component into a `TokenStream` of a leptos component view.
+    ///
+    /// Returns `None` if `self.tag` is not a `Component`.
+    ///
+    /// Example builder expansion of a component:
+
+    /// ```ignore
+    /// leptos::component_view(
+    ///     &Com,
+    ///     leptos::component_props_builder(&Com)
+    ///         .num(3)
+    ///         .text("a".to_string())
+    ///         .children(Box::new(move || {
+    ///             Fragment::lazy(|| [
+    ///                 "child",
+    ///                 "child2",
+    ///             ])
+    ///         }))
+    ///         .build()
+    /// )
+    /// ```
+    ///
+    /// Where the component has signature:
+    ///
+    /// ```ignore
+    /// #[component]
+    /// pub fn Com(num: u32, text: String, children: Children) -> impl IntoView { ... }
+    /// ```
+    fn to_component_token_stream(&self) -> Option<TokenStream> {
+        let Tag::Component(ident) = self.tag() else {
+            return None;
+        };
+        let keys = self.attrs().iter().map(|attr| match attr {
+            Attr::Kv(kv) => kv.key(),
+            Attr::Bool(b) => b.key(),
+        });
+        let values = self.attrs().iter().map(|attr| match attr {
+            Attr::Kv(kv) => kv.value().clone(),
+            Attr::Bool(b) => Value::Lit(parse_quote_spanned!(b.span()=> true)),
+        });
+        // .children takes a boxed fragment
+        let children_fragment = self.children().map(|children| children.to_fragment());
+        let children = if let Some(tokens) = children_fragment {
+            quote! {
+                .children(
+                    ::std::boxed::Box::new(move || #tokens)
+                )
+            }
+        } else {
+            quote! {}
+        };
+
+        Some(quote! {
+            ::leptos::component_view(
+                &#ident,
+                ::leptos::component_props_builder(&Comp)
+                    #( .#keys(#values) )*
+                    #children
+                    .build()
+            )
+        })
     }
 }
 
