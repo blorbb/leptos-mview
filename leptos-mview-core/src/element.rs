@@ -48,7 +48,7 @@ impl Parse for Element {
             Ok(Self::new(tag, attrs, Some(children)))
         } else {
             abort!(
-                input.span(), "child elements not found";
+                tag.span(), "child elements not found";
                 note = "if you don't want any child elements, end the element with \
                 a semi-colon `;` or empty braces `{}`."
             )

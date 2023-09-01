@@ -1,3 +1,4 @@
+use proc_macro2::Span;
 use syn::parse::Parse;
 
 use crate::ident::KebabIdent;
@@ -63,6 +64,15 @@ impl Tag {
     #[must_use]
     pub fn is_unknown(&self) -> bool {
         matches!(self, Self::Unknown(..))
+    }
+
+    pub fn span(&self) -> Span {
+        match self {
+            Tag::Html(ident) => ident.span(),
+            Tag::Component(ident) => ident.span(),
+            Tag::Svg(ident) => ident.span(),
+            Tag::Unknown(ident) => ident.span(),
+        }
     }
 }
 

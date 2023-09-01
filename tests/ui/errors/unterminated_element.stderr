@@ -1,0 +1,7 @@
+error: child elements not found
+ --> tests/ui/errors/unterminated_element.rs:5:9
+  |
+5 |         input type="text"
+  |         ^^^^^
+  |
+  = note: if you don't want any child elements, end the element with a semi-colon `;` or empty braces `{}`.
