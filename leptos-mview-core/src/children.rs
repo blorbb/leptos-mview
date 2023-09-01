@@ -88,7 +88,7 @@ impl Children {
     pub fn to_child_methods(&self) -> TokenStream {
         let children = self.as_slice();
         quote! {
-            #( .child(#children) )*
+            #( .child(#[allow(unused_braces)] #children) )*
         }
     }
 
@@ -113,14 +113,21 @@ impl Children {
     /// ```
     pub fn to_fragment(&self) -> TokenStream {
         let children = self.as_slice();
-        // {} is needed to make sure that .into_view() is called on the whole child.
+        // { #children } is needed to make sure that .into_view() is called on the whole child.
         // Only occurs in edge cases like `(move || "a")` -> `move || move || "a"`.
         // Usually, braces will already exist.
+
+        // Also need to wrap the whole thing in braces, in case of assigning
+        // a variable to this fragment.
+        // `error[E0658]: attributes on expressions are experimental`
+        // is raised otherwise.
         quote! {
-            #[allow(unused_braces)]
-            ::leptos::Fragment::lazy(|| [
-                #(  { #children }.into_view() ),*
-            ].to_vec())
+            {
+                #[allow(unused_braces)]
+                ::leptos::Fragment::lazy(|| [
+                    #(  { #children }.into_view() ),*
+                ].to_vec())
+            }
         }
     }
 

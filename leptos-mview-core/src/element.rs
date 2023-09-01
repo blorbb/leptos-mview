@@ -80,7 +80,7 @@ impl ToTokens for Element {
                     let ident = kv.key();
                     let value = kv.value();
                     tokens.extend(quote! {
-                        .attr(#ident, #value)
+                        .attr(#ident, #[allow(unused_braces)] #value)
                     })
                 }
                 Attr::Bool(b) => {
