@@ -9,7 +9,7 @@ mod tag;
 mod value;
 
 use proc_macro2::TokenStream;
-use quote::ToTokens;
+use quote::quote;
 
 use crate::children::Children;
 
@@ -23,8 +23,19 @@ pub fn component(input: TokenStream) -> TokenStream {
     // If there are multiple top-level children, need to use the fragment.
     if fragment.len() == 1 {
         let child = fragment.into_vec().remove(0);
-        child.into_token_stream()
+        quote! {
+            {
+                #[allow(unused_braces)]
+                #child
+            }
+        }
     } else {
-        fragment.to_fragment()
+        let fragment = fragment.to_fragment();
+        quote! {
+            {
+                #[allow(unused_braces)]
+                #fragment
+            }
+        }
     }
 }

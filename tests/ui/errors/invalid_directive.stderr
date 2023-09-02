@@ -1,0 +1,23 @@
+error: unknown directive `something`
+ --> tests/ui/errors/invalid_directive.rs:5:13
+  |
+5 |         div something:yes="b" {}
+  |             ^^^^^^^^^
+
+error: expected class name after `class:` directive
+  --> tests/ui/errors/invalid_directive.rs:11:19
+   |
+11 |         div class:("abcd") = true {}
+   |                   ^
+
+error: expected style name after `style:` directive
+  --> tests/ui/errors/invalid_directive.rs:17:19
+   |
+17 |         div style:[1, 2]="black" {}
+   |                   ^
+
+error: expected event name after `on:` directive
+  --> tests/ui/errors/invalid_directive.rs:23:25
+   |
+23 |         button on:clicky-click={move || ()};
+   |                         ^

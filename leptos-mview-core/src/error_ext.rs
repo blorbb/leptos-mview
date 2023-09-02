@@ -16,6 +16,10 @@ pub trait ResultExt {
     /// otherwise abort macro execution via `abort!`.
     /// If it aborts then resulting error message will be preceded with `message`.
     fn expect_or_abort(self, msg: &str) -> Self::Ok;
+
+    /// Behaves like `expect_or_abort` but the existing error message is
+    /// overwritten, not appended to the new one.
+    fn expect_or_abort_with_msg(self, message: &str) -> Self::Ok;
 }
 
 /// This traits expands `Option` with some handy shortcuts.
@@ -47,6 +51,13 @@ impl<T> ResultExt for Result<T, syn::Error> {
                 let msg = format!("{}: {}", message, e);
                 abort!(e.span(), msg)
             }
+        }
+    }
+
+    fn expect_or_abort_with_msg(self, message: &str) -> T {
+        match self {
+            Ok(res) => res,
+            Err(e) => abort!(e.span(), message),
         }
     }
 }

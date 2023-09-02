@@ -1,0 +1,11 @@
+error: only `on:` directives are allowed on components
+ --> tests/ui/errors/invalid_directive_on_component.rs:6:19
+  |
+6 |         Component style:color="white";
+  |                   ^^^^^^^^^^^
+
+error: only `on:` directives are allowed on components
+  --> tests/ui/errors/invalid_directive_on_component.rs:12:19
+   |
+12 |         Component class:red={true};
+   |                   ^^^^^^^^^

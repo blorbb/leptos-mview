@@ -3,7 +3,7 @@ use core::slice;
 use proc_macro2::{Span, TokenStream};
 use proc_macro_error::abort;
 use quote::quote;
-use syn::{parse::Parse, parse_quote_spanned, Token};
+use syn::{ext::IdentExt, parse::Parse, parse_quote_spanned, Token};
 
 use crate::{error_ext::ResultExt, ident::KebabIdent, kw, value::Value};
 
@@ -159,7 +159,7 @@ impl Parse for DirectiveAttr {
                 colon_token: input.parse().unwrap(),
                 name: input
                     .parse()
-                    .expect_or_abort("expected class name after `class:` directive"),
+                    .expect_or_abort_with_msg("expected class name after `class:` directive"),
                 equals_token: input.parse().unwrap_or_abort(),
                 value: input.parse().unwrap_or_abort(),
             })
@@ -169,7 +169,7 @@ impl Parse for DirectiveAttr {
                 colon_token: input.parse().unwrap(),
                 name: input
                     .parse()
-                    .expect_or_abort("expected style name after `style:` directive"),
+                    .expect_or_abort_with_msg("expected style name after `style:` directive"),
                 equals_token: input.parse().unwrap_or_abort(),
                 value: input.parse().unwrap_or_abort(),
             })
@@ -179,12 +179,16 @@ impl Parse for DirectiveAttr {
                 colon_token: input.parse().unwrap(),
                 event: input
                     .parse()
-                    .expect_or_abort("expected event name after `on:` directive"),
-                equals_token: input.parse().unwrap_or_abort(),
+                    .expect_or_abort_with_msg("expected event name after `on:` directive"),
+                // if equals token is not found, then it's probably a kebab-case ident
+                equals_token: input
+                    .parse()
+                    .expect_or_abort_with_msg("expected event name after `on:` directive"),
                 callback: input.parse().unwrap_or_abort(),
             })
         } else {
-            Err(input.error("unknown directive"))
+            let directive = input.call(syn::Ident::parse_any).unwrap_or_abort();
+            abort!(directive, "unknown directive `{}`", directive);
         }
     }
 }
@@ -220,7 +224,7 @@ impl Attr {
             Self::Kv(attr) => {
                 let (key, value) = attr.kv();
                 quote! {
-                    .attr(#key, #[allow(unused_braces)] #value)
+                    .attr(#key, #value)
                 }
             }
             Self::Bool(attr) => {
@@ -261,7 +265,7 @@ impl Attr {
                 let key = attr.key().to_snake_ident();
                 let value = attr.value();
                 quote! {
-                    .#key(#[allow(unused_braces)] #value)
+                    .#key(#value)
                 }
             }
             Self::Bool(attr) => {
