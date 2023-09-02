@@ -1,13 +1,12 @@
 use proc_macro2::TokenStream;
 use proc_macro_error::abort;
 use quote::{quote, ToTokens};
-use syn::{parse::Parse, parse_quote_spanned, Token};
+use syn::{parse::Parse, Token};
 
 use crate::{
     attribute::{Attr, Attrs},
     children::Children,
     tag::Tag,
-    value::Value,
 };
 
 /// A HTML or custom component.
@@ -59,11 +58,11 @@ impl Parse for Element {
 impl ToTokens for Element {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         // HTML only for now
-        match self.tag() {
+        let tag = match self.tag() {
             Tag::Html(ident) => {
-                tokens.extend(quote! {
+                quote! {
                     ::leptos::html::#ident()
-                });
+                }
             }
             Tag::Component(_) => {
                 let stream = self.to_component_token_stream().unwrap();
@@ -74,27 +73,11 @@ impl ToTokens for Element {
             Tag::Unknown(..) => todo!(),
         };
 
-        for attr in self.attrs().iter() {
-            match attr {
-                Attr::Kv(kv) => {
-                    let ident = kv.key();
-                    let value = kv.value();
-                    tokens.extend(quote! {
-                        .attr(#ident, #[allow(unused_braces)] #value)
-                    })
-                }
-                Attr::Bool(b) => {
-                    let ident = b.key();
-                    tokens.extend(quote! {
-                        .attr(#ident, true)
-                    });
-                }
-            }
-        }
-
-        if let Some(children) = self.children() {
-            tokens.extend(children.to_child_methods())
-        }
+        let attrs: TokenStream = self.attrs().iter().map(Attr::to_attr_method).collect();
+        let children = self.children().map(Children::to_child_methods);
+        tokens.extend(quote! {
+            #tag #attrs #children
+        });
     }
 }
 
@@ -151,31 +134,25 @@ impl Element {
         let Tag::Component(ident) = self.tag() else {
             return None;
         };
-        let keys = self.attrs().iter().map(|attr| match attr {
-            Attr::Kv(kv) => kv.key().to_snake_ident(),
-            Attr::Bool(b) => b.key().to_snake_ident(),
-        });
-        let values = self.attrs().iter().map(|attr| match attr {
-            Attr::Kv(kv) => kv.value().clone(),
-            Attr::Bool(b) => Value::Lit(parse_quote_spanned!(b.span()=> true)),
-        });
+        let attrs: TokenStream = self
+            .attrs()
+            .iter()
+            .map(Attr::to_component_builder_method)
+            .collect();
         // .children takes a boxed fragment
-        let children_fragment = self.children().map(|children| children.to_fragment());
-        let children = if let Some(tokens) = children_fragment {
+        let children = self.children().map(Children::to_fragment).map(|tokens| {
             quote! {
                 .children(
                     ::std::boxed::Box::new(move || #tokens)
                 )
             }
-        } else {
-            quote! {}
-        };
+        });
 
         Some(quote! {
             ::leptos::component_view(
                 &#ident,
                 ::leptos::component_props_builder(&#ident)
-                    #( .#keys(#values) )*
+                    #attrs
                     #children
                     .build()
             )

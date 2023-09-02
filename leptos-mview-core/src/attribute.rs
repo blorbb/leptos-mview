@@ -1,9 +1,11 @@
 use core::slice;
 
+use proc_macro2::{Span, TokenStream};
 use proc_macro_error::abort;
-use syn::{parse::Parse, Token};
+use quote::quote;
+use syn::{parse::Parse, parse_quote_spanned, Token};
 
-use crate::{ident::KebabIdent, value::Value};
+use crate::{error_ext::ResultExt, ident::KebabIdent, kw, value::Value};
 
 /// A `key = value` type of attribute.
 ///
@@ -31,27 +33,30 @@ impl KvAttr {
     pub fn value(&self) -> &Value {
         &self.value
     }
+
+    /// Returns a (key, value) tuple.
+    pub fn kv(&self) -> (&KebabIdent, &Value) {
+        (self.key(), self.value())
+    }
 }
 
 impl Parse for KvAttr {
-    /// Parses a ParseStream into a KvAttr.
-    ///
-    /// Does not fork the ParseStream; if parsing fails, part of the stream
-    /// will be consumed. Fork the stream before parsing if needed.
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let key = input.parse::<KebabIdent>()?;
-        let equals_token = input.parse::<Token![=]>()?;
-        // if the equals token has been parsed but the next token fails,
-        // then the value is incorrect, should abort.
-        let value = input
-            .parse::<Value>()
-            .unwrap_or_else(|e| abort!(e.span(), e.to_string()));
+        // first check that this is actually a kv attribute.
+        // if there is an ident followed by =, this is kv attribute.
+        let fork = input.fork();
+        fork.parse::<KebabIdent>()?;
 
-        Ok(Self {
-            key,
-            equals_token,
-            value,
-        })
+        if fork.peek(Token![=]) {
+            // this is a kv attribute: consume main input stream.
+            Ok(Self {
+                key: input.parse::<KebabIdent>().unwrap(),
+                equals_token: input.parse::<Token![=]>().unwrap(),
+                value: input.parse::<Value>().unwrap_or_abort(),
+            })
+        } else {
+            Err(input.error("invalid kv attribute"))
+        }
     }
 }
 
@@ -73,6 +78,17 @@ impl BoolAttr {
     pub fn span(&self) -> proc_macro2::Span {
         self.0.span()
     }
+
+    /// Returns a `true` token spanned to the identifier.
+    pub fn spanned_true(&self) -> syn::LitBool {
+        parse_quote_spanned!(self.span()=> true)
+    }
+
+    /// Returns a key-value pair `(key, true)`, with the `true` being spanned
+    /// to the identifier.
+    pub fn kv(&self) -> (&KebabIdent, syn::LitBool) {
+        (self.key(), self.spanned_true())
+    }
 }
 
 impl Parse for BoolAttr {
@@ -81,20 +97,117 @@ impl Parse for BoolAttr {
     }
 }
 
+/// A special directive attribute.
+///
+/// Currently `class`, `style` and `on` are supported.
+///
+/// Example:
+/// ```text
+/// <button class:primary={primary} style:color="grey" on:click={handle_click} />
+/// ```
+#[derive(Debug, Clone)]
+pub enum DirectiveAttr {
+    Class {
+        class_token: kw::class,
+        colon_token: Token![:],
+        name: KebabIdent,
+        equals_token: Token![=],
+        value: Value,
+    },
+    Style {
+        style_token: kw::style,
+        colon_token: Token![:],
+        name: KebabIdent,
+        equals_token: Token![=],
+        value: Value,
+    },
+    On {
+        on_token: kw::on,
+        colon_token: Token![:],
+        event: syn::Ident,
+        equals_token: Token![=],
+        callback: syn::ExprBlock,
+    },
+}
+
+impl DirectiveAttr {
+    pub fn span(&self) -> Span {
+        match self {
+            DirectiveAttr::Class {
+                class_token, name, ..
+            } => class_token
+                .span
+                .join(name.span())
+                .unwrap_or(class_token.span),
+            DirectiveAttr::Style {
+                style_token, name, ..
+            } => style_token
+                .span
+                .join(name.span())
+                .unwrap_or(style_token.span),
+            DirectiveAttr::On {
+                on_token, event, ..
+            } => on_token.span.join(event.span()).unwrap_or(on_token.span),
+        }
+    }
+}
+
+impl Parse for DirectiveAttr {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        // attribute should be <kw>:<ident> = <value>
+        if !input.peek2(Token![:]) {
+            return Err(input.error("invalid directive attribute: colon not found"));
+        }
+
+        if input.peek(kw::class) {
+            Ok(Self::Class {
+                class_token: input.parse().unwrap(),
+                colon_token: input.parse().unwrap(),
+                name: input
+                    .parse()
+                    .expect_or_abort("expected class name after `class:` directive"),
+                equals_token: input.parse().unwrap_or_abort(),
+                value: input.parse().unwrap_or_abort(),
+            })
+        } else if input.peek(kw::style) {
+            Ok(Self::Style {
+                style_token: input.parse().unwrap(),
+                colon_token: input.parse().unwrap(),
+                name: input
+                    .parse()
+                    .expect_or_abort("expected style name after `style:` directive"),
+                equals_token: input.parse().unwrap_or_abort(),
+                value: input.parse().unwrap_or_abort(),
+            })
+        } else if input.peek(kw::on) {
+            Ok(Self::On {
+                on_token: input.parse().unwrap(),
+                colon_token: input.parse().unwrap(),
+                event: input
+                    .parse()
+                    .expect_or_abort("expected event name after `on:` directive"),
+                equals_token: input.parse().unwrap_or_abort(),
+                callback: input.parse().unwrap_or_abort(),
+            })
+        } else {
+            Err(input.error("unknown directive"))
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Attr {
     Kv(KvAttr),
     Bool(BoolAttr),
+    Directive(DirectiveAttr),
 }
 
 impl Parse for Attr {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        // stream may be advanced if KvAttr parse fails
-        let fork = input.fork();
-
-        if let Ok(kv) = fork.parse::<KvAttr>() {
-            input.parse::<KvAttr>().unwrap();
+        if let Ok(kv) = input.parse::<KvAttr>() {
             Ok(Self::Kv(kv))
+        } else if let Ok(dir) = input.parse::<DirectiveAttr>() {
+            Ok(Self::Directive(dir))
         } else {
             let bool_attr = input.parse::<BoolAttr>()?;
 
@@ -104,20 +217,19 @@ impl Parse for Attr {
 }
 
 impl Attr {
-    /// Returns `true` if the attr is [`Kv`].
-    ///
-    /// [`Kv`]: Attr::Kv
     #[must_use]
     pub fn is_kv(&self) -> bool {
         matches!(self, Self::Kv(..))
     }
 
-    /// Returns `true` if the attr is [`Bool`].
-    ///
-    /// [`Bool`]: Attr::Bool
     #[must_use]
     pub fn is_bool(&self) -> bool {
         matches!(self, Self::Bool(..))
+    }
+
+    #[must_use]
+    pub fn is_directive(&self) -> bool {
+        matches!(self, Self::Directive(..))
     }
 
     pub fn as_kv(&self) -> Option<&KvAttr> {
@@ -133,6 +245,87 @@ impl Attr {
             Some(v)
         } else {
             None
+        }
+    }
+
+    /// Converts an attribute to a `.attr(key, value)` token stream.
+    ///
+    /// Directives are converted differently, but is compatible with
+    /// `leptos::html::*` so will work as expected.
+    pub fn to_attr_method(&self) -> TokenStream {
+        match self {
+            Self::Kv(attr) => {
+                let (key, value) = attr.kv();
+                quote! {
+                    .attr(#key, #[allow(unused_braces)] #value)
+                }
+            }
+            Self::Bool(attr) => {
+                let (key, value) = attr.kv();
+                quote! {
+                    .attr(#key, #value)
+                }
+            }
+            Self::Directive(attr) => match attr {
+                DirectiveAttr::Class { name, value, .. } => {
+                    quote! {
+                        .class(#name, #value)
+                    }
+                }
+                DirectiveAttr::Style { name, value, .. } => {
+                    quote! {
+                        .style(#name, #value)
+                    }
+                }
+                DirectiveAttr::On {
+                    event, callback, ..
+                } => {
+                    quote! {
+                        .on(::leptos::ev::#event, #callback)
+                    }
+                }
+            },
+        }
+    }
+
+    /// Converts an attribute to a `.key(value)` token stream.
+    ///
+    /// Only the `on` directive is allowed on components: calling this method
+    /// on a `class` or `style` directive will abort.
+    pub fn to_component_builder_method(&self) -> TokenStream {
+        match self {
+            Self::Kv(attr) => {
+                let key = attr.key().to_snake_ident();
+                let value = attr.value();
+                quote! {
+                    .#key(#[allow(unused_braces)] #value)
+                }
+            }
+            Self::Bool(attr) => {
+                let key = attr.key().to_snake_ident();
+                let value = attr.spanned_true();
+                quote! {
+                    .#key(#value)
+                }
+            }
+            Self::Directive(attr) => match attr {
+                DirectiveAttr::On {
+                    event, callback, ..
+                } => {
+                    quote! {
+                        .on(
+                            ::leptos::ev::undelegated(
+                                ::leptos::ev::#event
+                            ),
+                            #callback
+                        )
+                    }
+                }
+                other => abort!(
+                    other.span(),
+                    "only `on:` directives are allowed on components"
+                ),
+            },
         }
     }
 }

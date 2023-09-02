@@ -1,7 +1,9 @@
 pub mod attribute;
 pub mod children;
 pub mod element;
+pub mod error_ext;
 pub mod ident;
+pub mod kw;
 pub mod tag;
 pub mod value;
 
