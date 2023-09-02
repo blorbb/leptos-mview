@@ -34,38 +34,6 @@ pub enum Tag {
 }
 
 impl Tag {
-    /// Returns `true` if the tag is [`Html`].
-    ///
-    /// [`Html`]: Tag::Html
-    #[must_use]
-    pub fn is_html(&self) -> bool {
-        matches!(self, Self::Html(..))
-    }
-
-    /// Returns `true` if the tag is [`Component`].
-    ///
-    /// [`Component`]: Tag::Component
-    #[must_use]
-    pub fn is_component(&self) -> bool {
-        matches!(self, Self::Component(..))
-    }
-
-    /// Returns `true` if the tag is [`Svg`].
-    ///
-    /// [`Svg`]: Tag::Svg
-    #[must_use]
-    pub fn is_svg(&self) -> bool {
-        matches!(self, Self::Svg(..))
-    }
-
-    /// Returns `true` if the tag is [`Unknown`].
-    ///
-    /// [`Unknown`]: Tag::Unknown
-    #[must_use]
-    pub fn is_unknown(&self) -> bool {
-        matches!(self, Self::Unknown(..))
-    }
-
     pub fn span(&self) -> Span {
         match self {
             Tag::Html(ident) => ident.span(),

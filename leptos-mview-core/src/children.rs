@@ -62,14 +62,6 @@ impl Children {
         self.0.len()
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-
-    pub fn as_slice(&self) -> &[Child] {
-        &self.0
-    }
-
     pub fn into_vec(self) -> Vec<Child> {
         self.0
     }
@@ -86,7 +78,7 @@ impl Children {
     /// div().child("a").child({var}).child("b")
     /// ```
     pub fn to_child_methods(&self) -> TokenStream {
-        let children = self.as_slice();
+        let children = self.iter();
         quote! {
             #( .child(#[allow(unused_braces)] #children) )*
         }
@@ -112,7 +104,7 @@ impl Children {
     /// )
     /// ```
     pub fn to_fragment(&self) -> TokenStream {
-        let children = self.as_slice();
+        let children = self.iter();
         // { #children } is needed to make sure that .into_view() is called on the whole child.
         // Only occurs in edge cases like `(move || "a")` -> `move || move || "a"`.
         // Usually, braces will already exist.

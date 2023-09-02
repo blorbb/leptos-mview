@@ -2,17 +2,6 @@ use proc_macro_error::abort;
 use quote::{quote, ToTokens};
 use syn::parse::{Parse, ParseStream};
 
-// /// What the value is wrapped in.
-// ///
-// /// `Brace` does not hold the brace token as the whole block should be passed
-// /// in as the expression (so that semi colons work).
-// #[derive(Debug)]
-// pub enum Delimiter {
-//     None,
-//     Brace,
-//     Paren(syn::token::Paren),
-// }
-
 /// Interpolated values.
 /// Plain expressions or block expressions like `{move || !is_red.get()}`
 /// are placed as so.
@@ -61,20 +50,6 @@ impl Parse for Value {
     }
 }
 
-impl Value {
-    pub fn is_lit(&self) -> bool {
-        matches!(self, Self::Lit(_))
-    }
-
-    pub fn is_block(&self) -> bool {
-        matches!(self, Self::Block(_))
-    }
-
-    pub fn is_parenthesized(&self) -> bool {
-        matches!(self, Self::Parenthesized(_))
-    }
-}
-
 impl ToTokens for Value {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         tokens.extend(match self {
@@ -96,6 +71,21 @@ mod tests {
         Lit,
         Block,
         Paren,
+    }
+
+    // test only implementation, as it is not used anywhere else.
+    impl Value {
+        pub fn is_lit(&self) -> bool {
+            matches!(self, Self::Lit(_))
+        }
+
+        pub fn is_block(&self) -> bool {
+            matches!(self, Self::Block(_))
+        }
+
+        pub fn is_parenthesized(&self) -> bool {
+            matches!(self, Self::Parenthesized(_))
+        }
     }
 
     impl ValueKind {

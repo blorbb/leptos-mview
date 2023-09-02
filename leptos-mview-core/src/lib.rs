@@ -1,11 +1,12 @@
-pub mod attribute;
-pub mod children;
-pub mod element;
-pub mod error_ext;
-pub mod ident;
-pub mod kw;
-pub mod tag;
-pub mod value;
+#[warn(clippy::pedantic, clippy::nursery)]
+mod attribute;
+mod children;
+mod element;
+mod error_ext;
+mod ident;
+mod kw;
+mod tag;
+mod value;
 
 use proc_macro2::TokenStream;
 use quote::ToTokens;

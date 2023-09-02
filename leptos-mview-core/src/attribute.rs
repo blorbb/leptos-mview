@@ -17,25 +17,20 @@ use crate::{error_ext::ResultExt, ident::KebabIdent, kw, value::Value};
 #[derive(Debug, Clone)]
 pub struct KvAttr {
     key: KebabIdent,
-    equals_token: Token![=],
     value: Value,
 }
 
 impl KvAttr {
-    pub fn key(&self) -> &KebabIdent {
+    pub const fn key(&self) -> &KebabIdent {
         &self.key
     }
 
-    pub fn equals_token(&self) -> syn::token::Eq {
-        self.equals_token
-    }
-
-    pub fn value(&self) -> &Value {
+    pub const fn value(&self) -> &Value {
         &self.value
     }
 
     /// Returns a (key, value) tuple.
-    pub fn kv(&self) -> (&KebabIdent, &Value) {
+    pub const fn kv(&self) -> (&KebabIdent, &Value) {
         (self.key(), self.value())
     }
 }
@@ -49,11 +44,10 @@ impl Parse for KvAttr {
 
         if fork.peek(Token![=]) {
             // this is a kv attribute: consume main input stream.
-            Ok(Self {
-                key: input.parse::<KebabIdent>().unwrap(),
-                equals_token: input.parse::<Token![=]>().unwrap(),
-                value: input.parse::<Value>().unwrap_or_abort(),
-            })
+            let key = input.parse::<KebabIdent>().unwrap();
+            input.parse::<Token![=]>().unwrap();
+            let value = input.parse::<Value>().unwrap_or_abort();
+            Ok(Self { key, value })
         } else {
             Err(input.error("invalid kv attribute"))
         }
@@ -71,7 +65,7 @@ impl Parse for KvAttr {
 pub struct BoolAttr(KebabIdent);
 
 impl BoolAttr {
-    pub fn key(&self) -> &KebabIdent {
+    pub const fn key(&self) -> &KebabIdent {
         &self.0
     }
 
@@ -133,19 +127,19 @@ pub enum DirectiveAttr {
 impl DirectiveAttr {
     pub fn span(&self) -> Span {
         match self {
-            DirectiveAttr::Class {
+            Self::Class {
                 class_token, name, ..
             } => class_token
                 .span
                 .join(name.span())
                 .unwrap_or(class_token.span),
-            DirectiveAttr::Style {
+            Self::Style {
                 style_token, name, ..
             } => style_token
                 .span
                 .join(name.span())
                 .unwrap_or(style_token.span),
-            DirectiveAttr::On {
+            Self::On {
                 on_token, event, ..
             } => on_token.span.join(event.span()).unwrap_or(on_token.span),
         }
@@ -217,37 +211,6 @@ impl Parse for Attr {
 }
 
 impl Attr {
-    #[must_use]
-    pub fn is_kv(&self) -> bool {
-        matches!(self, Self::Kv(..))
-    }
-
-    #[must_use]
-    pub fn is_bool(&self) -> bool {
-        matches!(self, Self::Bool(..))
-    }
-
-    #[must_use]
-    pub fn is_directive(&self) -> bool {
-        matches!(self, Self::Directive(..))
-    }
-
-    pub fn as_kv(&self) -> Option<&KvAttr> {
-        if let Self::Kv(v) = self {
-            Some(v)
-        } else {
-            None
-        }
-    }
-
-    pub fn as_bool(&self) -> Option<&BoolAttr> {
-        if let Self::Bool(v) = self {
-            Some(v)
-        } else {
-            None
-        }
-    }
-
     /// Converts an attribute to a `.attr(key, value)` token stream.
     ///
     /// Directives are converted differently, but is compatible with
@@ -335,22 +298,6 @@ impl Attr {
 pub struct Attrs(Vec<Attr>);
 
 impl Attrs {
-    pub fn new(attrs: Vec<Attr>) -> Self {
-        Self(attrs)
-    }
-
-    pub fn as_slice(&self) -> &[Attr] {
-        &self.0
-    }
-
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-
     pub fn iter(&self) -> slice::Iter<'_, Attr> {
         self.0.iter()
     }
@@ -371,7 +318,35 @@ impl Parse for Attrs {
 mod tests {
     use crate::attribute::{Attrs, BoolAttr};
 
-    use super::KvAttr;
+    use super::{Attr, KvAttr};
+
+    impl Attr {
+        pub fn as_kv(&self) -> Option<&KvAttr> {
+            if let Self::Kv(v) = self {
+                Some(v)
+            } else {
+                None
+            }
+        }
+
+        pub fn as_bool(&self) -> Option<&BoolAttr> {
+            if let Self::Bool(v) = self {
+                Some(v)
+            } else {
+                None
+            }
+        }
+    }
+
+    impl Attrs {
+        pub fn as_slice(&self) -> &[Attr] {
+            &self.0
+        }
+
+        pub fn len(&self) -> usize {
+            self.0.len()
+        }
+    }
 
     #[track_caller]
     fn check_kv(input: &str, output: KvAttr) {
