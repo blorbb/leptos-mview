@@ -9,4 +9,4 @@ edition = "2021"
 syn = { version = "2", features = ["extra-traits", "full"] }
 quote = "1"
 proc-macro2 = "1"
-proc-macro-error = "1"
+proc-macro-error = { version = "1", default-features = false }
