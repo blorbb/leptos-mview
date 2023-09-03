@@ -219,37 +219,34 @@ impl Attr {
     ///
     /// Directives are converted differently, but is compatible with
     /// `leptos::html::*` so will work as expected.
+    ///
+    /// Some special key properties (like `ref`) are also converted differently.
     pub fn to_attr_method(&self) -> TokenStream {
         match self {
             Self::Kv(attr) => {
                 let (key, value) = attr.kv();
-                quote! {
-                    .attr(#key, #value)
+                // handle special cases
+                if key.repr() == "ref" {
+                    quote! { .node_ref(#value) }
+                } else {
+                    quote! { .attr(#key, #value) }
                 }
             }
             Self::Bool(attr) => {
                 let (key, value) = attr.kv();
-                quote! {
-                    .attr(#key, #value)
-                }
+                quote! { .attr(#key, #value) }
             }
             Self::Directive(attr) => match attr {
                 DirectiveAttr::Class { name, value, .. } => {
-                    quote! {
-                        .class(#name, #value)
-                    }
+                    quote! { .class(#name, #value) }
                 }
                 DirectiveAttr::Style { name, value, .. } => {
-                    quote! {
-                        .style(#name, #value)
-                    }
+                    quote! { .style(#name, #value) }
                 }
                 DirectiveAttr::On {
                     event, callback, ..
                 } => {
-                    quote! {
-                        .on(::leptos::ev::#event, #callback)
-                    }
+                    quote! { .on(::leptos::ev::#event, #callback) }
                 }
             },
         }
