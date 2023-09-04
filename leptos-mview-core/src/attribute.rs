@@ -1,8 +1,8 @@
-use core::slice;
+use core::{fmt, slice};
 
 use proc_macro2::{Span, TokenStream};
 use proc_macro_error::abort;
-use quote::quote;
+use quote::{quote, ToTokens};
 use syn::{ext::IdentExt, parse::Parse, parse_quote_spanned, Token};
 
 use crate::{error_ext::ResultExt, ident::KebabIdent, value::Value};
@@ -108,6 +108,64 @@ impl Parse for BoolAttr {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct DirectiveIdent {
+    kind: DirectiveKind,
+    ident: syn::Ident,
+}
+
+impl DirectiveIdent {
+    pub fn kind(&self) -> &DirectiveKind {
+        &self.kind
+    }
+
+    pub fn span(&self) -> Span {
+        self.ident.span()
+    }
+
+    pub fn ident(&self) -> &syn::Ident {
+        &self.ident
+    }
+}
+
+impl Parse for DirectiveIdent {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let fork = input.fork();
+        if let Ok(ident) = fork.call(syn::Ident::parse_any) {
+            let kind = match ident.to_string().as_str() {
+                "class" => DirectiveKind::Class,
+                "style" => DirectiveKind::Style,
+                "on" => DirectiveKind::On,
+                _ => return Err(input.error(&format!("unknown directive `{ident}`"))),
+            };
+            // only move input forward if it worked
+            input.parse::<syn::Ident>().unwrap();
+            Ok(Self { kind, ident })
+        } else {
+            Err(input.error("expected identifier"))
+        }
+    }
+}
+
+impl ToTokens for DirectiveIdent {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        tokens.extend(self.ident().to_token_stream());
+    }
+}
+
+impl fmt::Display for DirectiveIdent {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.ident().fmt(f)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum DirectiveKind {
+    Style,
+    Class,
+    On,
+}
+
 /// A special directive attribute.
 ///
 /// Example:
@@ -116,20 +174,20 @@ impl Parse for BoolAttr {
 /// ```
 #[derive(Debug, Clone)]
 pub struct DirectiveAttr {
-    directive: syn::Ident,
+    directive: DirectiveIdent,
     name: KebabIdent,
     value: Value,
 }
 
 impl DirectiveAttr {
     pub fn span(&self) -> Span {
-        self.directive
+        self.directive()
             .span()
             .join(self.name.span())
-            .unwrap_or(self.directive.span())
+            .unwrap_or(self.directive().span())
     }
 
-    pub const fn directive(&self) -> &syn::Ident {
+    pub const fn directive(&self) -> &DirectiveIdent {
         &self.directive
     }
 
@@ -141,19 +199,16 @@ impl DirectiveAttr {
         &self.value
     }
 
-    /// Tries to convert a directive to a `.dir(name, value)` token stream.
-    ///
-    /// Returns `None` if the directive is not known.
-    pub fn try_to_attr_method(&self) -> Option<TokenStream> {
+    /// Converts a directive to a `.dir(name, value)` token stream.
+    pub fn to_attr_method(&self) -> TokenStream {
         let dir = self.directive();
         let name = self.name();
         let name_ident = name.to_snake_ident();
         let value = self.value();
-        Some(match dir.to_string().as_str() {
-            "class" | "style" => quote! { .#dir(#name, #value) },
-            "on" => quote! { .#dir(::leptos::ev::#name_ident, #value)},
-            _ => return None,
-        })
+        match dir.kind() {
+            DirectiveKind::Style | DirectiveKind::Class => quote! { .#dir(#name, #value) },
+            DirectiveKind::On => quote! { .#dir(::leptos::ev::#name_ident, #value)},
+        }
     }
 }
 
@@ -165,23 +220,21 @@ impl Parse for DirectiveAttr {
         }
         // after this, any failure to parse should abort.
 
-        if let Ok(directive) = input.call(syn::Ident::parse_any) {
-            input.parse::<Token![:]>().unwrap();
-            let name = input
-                .parse::<KebabIdent>()
-                .expect_or_abort_with_msg(&format!(
-                    "expected identifier after `{directive}:` directive",
-                ));
-            input.parse::<Token![=]>().unwrap_or_abort();
-            let value = input.parse::<Value>().unwrap_or_abort();
-            Ok(Self {
-                directive,
-                name,
-                value,
-            })
-        } else {
-            abort!(input.span(), "expected identifier before colon");
-        }
+        let directive = input.parse::<DirectiveIdent>().unwrap_or_abort();
+        input.parse::<Token![:]>().unwrap();
+        let name = input
+            .parse::<KebabIdent>()
+            .expect_or_abort_with_msg(&format!(
+                "expected identifier after `{}:` directive",
+                directive.ident()
+            ));
+        input.parse::<Token![=]>().unwrap_or_abort();
+        let value = input.parse::<Value>().unwrap_or_abort();
+        Ok(Self {
+            directive,
+            name,
+            value,
+        })
     }
 }
 
@@ -220,9 +273,7 @@ impl Attr {
         match self {
             Self::Kv(attr) => attr.to_attr_method(),
             Self::Bool(attr) => attr.to_attr_method(),
-            Self::Directive(attr) => attr
-                .try_to_attr_method()
-                .unwrap_or_else(|| abort!(attr.span(), "unknown directive `{}`", attr.directive())),
+            Self::Directive(attr) => attr.to_attr_method(),
         }
     }
 
@@ -246,8 +297,8 @@ impl Attr {
                     .#key(#value)
                 }
             }
-            Self::Directive(attr) => match attr.directive().to_string().as_str() {
-                "on" => {
+            Self::Directive(attr) => match attr.directive().kind() {
+                DirectiveKind::On => {
                     let event = attr.name();
                     let callback = attr.value();
                     quote! {

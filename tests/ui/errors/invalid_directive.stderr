@@ -2,7 +2,7 @@ error: unknown directive `something`
  --> tests/ui/errors/invalid_directive.rs:5:13
   |
 5 |         div something:yes="b" {}
-  |             ^^^^^^^^^^^^^
+  |             ^^^^^^^^^
 
 error: expected identifier after `class:` directive
   --> tests/ui/errors/invalid_directive.rs:11:19
