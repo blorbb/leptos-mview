@@ -4,7 +4,6 @@ mod children;
 mod element;
 mod error_ext;
 mod ident;
-mod kw;
 mod tag;
 mod value;
 

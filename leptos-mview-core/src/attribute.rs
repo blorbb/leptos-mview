@@ -5,7 +5,7 @@ use proc_macro_error::abort;
 use quote::quote;
 use syn::{ext::IdentExt, parse::Parse, parse_quote_spanned, Token};
 
-use crate::{error_ext::ResultExt, ident::KebabIdent, kw, value::Value};
+use crate::{error_ext::ResultExt, ident::KebabIdent, value::Value};
 
 /// A `key = value` type of attribute.
 ///
@@ -32,6 +32,17 @@ impl KvAttr {
     /// Returns a (key, value) tuple.
     pub const fn kv(&self) -> (&KebabIdent, &Value) {
         (self.key(), self.value())
+    }
+
+    /// Converts an attribute to a `.attr(key, value)` token stream.
+    pub fn to_attr_method(&self) -> TokenStream {
+        let (key, value) = self.kv();
+        // handle special cases
+        if key.repr() == "ref" {
+            quote! { .node_ref(#value) }
+        } else {
+            quote! { .attr(#key, #value) }
+        }
     }
 }
 
@@ -83,6 +94,12 @@ impl BoolAttr {
     pub fn kv(&self) -> (&KebabIdent, syn::LitBool) {
         (self.key(), self.spanned_true())
     }
+
+    /// Converts an attribute to a `.attr(key, true)` token stream.
+    pub fn to_attr_method(&self) -> TokenStream {
+        let (key, value) = self.kv();
+        quote! { .attr(#key, #value) }
+    }
 }
 
 impl Parse for BoolAttr {
@@ -93,102 +110,77 @@ impl Parse for BoolAttr {
 
 /// A special directive attribute.
 ///
-/// Currently `class`, `style` and `on` are supported.
-///
 /// Example:
 /// ```text
 /// <button class:primary={primary} style:color="grey" on:click={handle_click} />
 /// ```
 #[derive(Debug, Clone)]
-pub enum DirectiveAttr {
-    Class {
-        class_token: kw::class,
-        colon_token: Token![:],
-        name: KebabIdent,
-        equals_token: Token![=],
-        value: Value,
-    },
-    Style {
-        style_token: kw::style,
-        colon_token: Token![:],
-        name: KebabIdent,
-        equals_token: Token![=],
-        value: Value,
-    },
-    On {
-        on_token: kw::on,
-        colon_token: Token![:],
-        event: syn::Ident,
-        equals_token: Token![=],
-        callback: syn::ExprBlock,
-    },
+pub struct DirectiveAttr {
+    directive: syn::Ident,
+    name: KebabIdent,
+    value: Value,
 }
 
 impl DirectiveAttr {
     pub fn span(&self) -> Span {
-        match self {
-            Self::Class {
-                class_token, name, ..
-            } => class_token
-                .span
-                .join(name.span())
-                .unwrap_or(class_token.span),
-            Self::Style {
-                style_token, name, ..
-            } => style_token
-                .span
-                .join(name.span())
-                .unwrap_or(style_token.span),
-            Self::On {
-                on_token, event, ..
-            } => on_token.span.join(event.span()).unwrap_or(on_token.span),
-        }
+        self.directive
+            .span()
+            .join(self.name.span())
+            .unwrap_or(self.directive.span())
+    }
+
+    pub const fn directive(&self) -> &syn::Ident {
+        &self.directive
+    }
+
+    pub const fn name(&self) -> &KebabIdent {
+        &self.name
+    }
+
+    pub const fn value(&self) -> &Value {
+        &self.value
+    }
+
+    /// Tries to convert a directive to a `.dir(name, value)` token stream.
+    ///
+    /// Returns `None` if the directive is not known.
+    pub fn try_to_attr_method(&self) -> Option<TokenStream> {
+        let dir = self.directive();
+        let name = self.name();
+        let name_ident = name.to_snake_ident();
+        let value = self.value();
+        Some(match dir.to_string().as_str() {
+            "class" | "style" => quote! { .#dir(#name, #value) },
+            "on" => quote! { .#dir(::leptos::ev::#name_ident, #value)},
+            _ => return None,
+        })
     }
 }
 
 impl Parse for DirectiveAttr {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        // attribute should be <kw>:<ident> = <value>
+        // attribute should be <dir>:<name> = <value>
         if !input.peek2(Token![:]) {
             return Err(input.error("invalid directive attribute: colon not found"));
         }
+        // after this, any failure to parse should abort.
 
-        if input.peek(kw::class) {
-            Ok(Self::Class {
-                class_token: input.parse().unwrap(),
-                colon_token: input.parse().unwrap(),
-                name: input
-                    .parse()
-                    .expect_or_abort_with_msg("expected class name after `class:` directive"),
-                equals_token: input.parse().unwrap_or_abort(),
-                value: input.parse().unwrap_or_abort(),
-            })
-        } else if input.peek(kw::style) {
-            Ok(Self::Style {
-                style_token: input.parse().unwrap(),
-                colon_token: input.parse().unwrap(),
-                name: input
-                    .parse()
-                    .expect_or_abort_with_msg("expected style name after `style:` directive"),
-                equals_token: input.parse().unwrap_or_abort(),
-                value: input.parse().unwrap_or_abort(),
-            })
-        } else if input.peek(kw::on) {
-            Ok(Self::On {
-                on_token: input.parse().unwrap(),
-                colon_token: input.parse().unwrap(),
-                event: input
-                    .parse()
-                    .expect_or_abort_with_msg("expected event name after `on:` directive"),
-                // if equals token is not found, then it's probably a kebab-case ident
-                equals_token: input
-                    .parse()
-                    .expect_or_abort_with_msg("expected event name after `on:` directive"),
-                callback: input.parse().unwrap_or_abort(),
+        if let Ok(directive) = input.call(syn::Ident::parse_any) {
+            input.parse::<Token![:]>().unwrap();
+            let name = input
+                .parse::<KebabIdent>()
+                .expect_or_abort_with_msg(&format!(
+                    "expected identifier after `{directive}:` directive",
+                ));
+            input.parse::<Token![=]>().unwrap_or_abort();
+            let value = input.parse::<Value>().unwrap_or_abort();
+            Ok(Self {
+                directive,
+                name,
+                value,
             })
         } else {
-            let directive = input.call(syn::Ident::parse_any).unwrap_or_abort();
-            abort!(directive, "unknown directive `{}`", directive);
+            abort!(input.span(), "expected identifier before colon");
         }
     }
 }
@@ -220,35 +212,17 @@ impl Attr {
     /// Directives are converted differently, but is compatible with
     /// `leptos::html::*` so will work as expected.
     ///
+    /// Other special directives (like `assign`) cannot be used in html
+    /// elements, and will cause an abort.
+    ///
     /// Some special key properties (like `ref`) are also converted differently.
     pub fn to_attr_method(&self) -> TokenStream {
         match self {
-            Self::Kv(attr) => {
-                let (key, value) = attr.kv();
-                // handle special cases
-                if key.repr() == "ref" {
-                    quote! { .node_ref(#value) }
-                } else {
-                    quote! { .attr(#key, #value) }
-                }
-            }
-            Self::Bool(attr) => {
-                let (key, value) = attr.kv();
-                quote! { .attr(#key, #value) }
-            }
-            Self::Directive(attr) => match attr {
-                DirectiveAttr::Class { name, value, .. } => {
-                    quote! { .class(#name, #value) }
-                }
-                DirectiveAttr::Style { name, value, .. } => {
-                    quote! { .style(#name, #value) }
-                }
-                DirectiveAttr::On {
-                    event, callback, ..
-                } => {
-                    quote! { .on(::leptos::ev::#event, #callback) }
-                }
-            },
+            Self::Kv(attr) => attr.to_attr_method(),
+            Self::Bool(attr) => attr.to_attr_method(),
+            Self::Directive(attr) => attr
+                .try_to_attr_method()
+                .unwrap_or_else(|| abort!(attr.span(), "unknown directive `{}`", attr.directive())),
         }
     }
 
@@ -272,10 +246,10 @@ impl Attr {
                     .#key(#value)
                 }
             }
-            Self::Directive(attr) => match attr {
-                DirectiveAttr::On {
-                    event, callback, ..
-                } => {
+            Self::Directive(attr) => match attr.directive().to_string().as_str() {
+                "on" => {
+                    let event = attr.name();
+                    let callback = attr.value();
                     quote! {
                         .on(
                             ::leptos::ev::undelegated(
@@ -285,8 +259,8 @@ impl Attr {
                         )
                     }
                 }
-                other => abort!(
-                    other.span(),
+                _ => abort!(
+                    attr.span(),
                     "only `on:` directives are allowed on components"
                 ),
             },
