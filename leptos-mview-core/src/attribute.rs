@@ -80,7 +80,7 @@ impl BoolAttr {
         &self.0
     }
 
-    pub fn span(&self) -> proc_macro2::Span {
+    pub const fn span(&self) -> Span {
         self.0.span()
     }
 

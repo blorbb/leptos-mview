@@ -17,7 +17,7 @@ pub struct KebabIdent {
 }
 
 impl KebabIdent {
-    pub fn new(repr: String, span: Span) -> Self {
+    pub const fn new(repr: String, span: Span) -> Self {
         Self { repr, span }
     }
 
@@ -25,7 +25,7 @@ impl KebabIdent {
         self.repr.as_ref()
     }
 
-    pub fn span(&self) -> Span {
+    pub const fn span(&self) -> Span {
         self.span
     }
 

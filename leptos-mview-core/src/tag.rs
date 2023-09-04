@@ -36,10 +36,8 @@ pub enum Tag {
 impl Tag {
     pub fn span(&self) -> Span {
         match self {
-            Tag::Html(ident) => ident.span(),
-            Tag::Component(ident) => ident.span(),
-            Tag::Svg(ident) => ident.span(),
-            Tag::Unknown(ident) => ident.span(),
+            Self::Html(ident) | Self::Component(ident) | Self::Svg(ident) => ident.span(),
+            Self::Unknown(ident) => ident.span(),
         }
     }
 }

@@ -48,7 +48,7 @@ impl<T> ResultExt for Result<T, syn::Error> {
         match self {
             Ok(res) => res,
             Err(e) => {
-                let msg = format!("{}: {}", message, e);
+                let msg = format!("{message}: {e}");
                 abort!(e.span(), msg)
             }
         }

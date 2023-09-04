@@ -1,4 +1,10 @@
-#[warn(clippy::pedantic, clippy::nursery)]
+#![warn(clippy::pedantic, clippy::nursery)]
+#![allow(
+    clippy::option_if_let_else,
+    clippy::or_fun_call,
+    clippy::module_name_repetitions
+)]
+
 mod attribute;
 mod children;
 mod element;
@@ -12,6 +18,7 @@ use quote::quote;
 
 use crate::children::Children;
 
+#[must_use]
 pub fn component(input: TokenStream) -> TokenStream {
     let fragment = match syn::parse2::<Children>(input) {
         Ok(tree) => tree,

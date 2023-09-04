@@ -41,8 +41,8 @@ impl Parse for Child {
 impl ToTokens for Child {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         match self {
-            Child::Value(v) => tokens.extend(v.into_token_stream()),
-            Child::Element(e) => tokens.extend(e.into_token_stream()),
+            Self::Value(v) => tokens.extend(v.into_token_stream()),
+            Self::Element(e) => tokens.extend(e.into_token_stream()),
         }
     }
 }

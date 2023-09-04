@@ -82,7 +82,7 @@ impl ToTokens for Element {
 }
 
 impl Element {
-    pub fn new(tag: Tag, attrs: Attrs, children: Option<Children>) -> Self {
+    pub const fn new(tag: Tag, attrs: Attrs, children: Option<Children>) -> Self {
         Self {
             tag,
             attrs,
@@ -90,15 +90,15 @@ impl Element {
         }
     }
 
-    pub fn tag(&self) -> &Tag {
+    pub const fn tag(&self) -> &Tag {
         &self.tag
     }
 
-    pub fn attrs(&self) -> &Attrs {
+    pub const fn attrs(&self) -> &Attrs {
         &self.attrs
     }
 
-    pub fn children(&self) -> Option<&Children> {
+    pub const fn children(&self) -> Option<&Children> {
         self.children.as_ref()
     }
 

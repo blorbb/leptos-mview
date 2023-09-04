@@ -29,7 +29,9 @@ impl Parse for Value {
             let full_stream = stream.fork();
             let expr: syn::Expr = stream.parse()?;
             // parsed an expression but there is still more.
-            if !stream.is_empty() {
+            if stream.is_empty() {
+                Ok(Self::Parenthesized(expr))
+            } else {
                 abort!(
                     stream.span(), "unexpected token";
                     note = "\
@@ -37,8 +39,6 @@ impl Parse for Value {
                     parens. e.g. (({})) or {{({})}}.\
                     ", full_stream, full_stream
                 )
-            } else {
-                Ok(Self::Parenthesized(expr))
             }
         } else if input.peek(syn::token::Brace) {
             Ok(Self::Block(input.parse()?))
@@ -53,9 +53,9 @@ impl Parse for Value {
 impl ToTokens for Value {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         tokens.extend(match self {
-            Value::Lit(lit) => lit.into_token_stream(),
-            Value::Block(block) => block.into_token_stream(),
-            Value::Parenthesized(expr) => quote! {move || #expr},
+            Self::Lit(lit) => lit.into_token_stream(),
+            Self::Block(block) => block.into_token_stream(),
+            Self::Parenthesized(expr) => quote! {move || #expr},
         });
     }
 }
