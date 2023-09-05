@@ -44,6 +44,15 @@ impl KvAttr {
             quote! { .attr(#key, #value) }
         }
     }
+
+    /// Converts an attribute to a `.key(value)` token stream.
+    pub fn to_component_builder_method(&self) -> TokenStream {
+        let key = self.key().to_snake_ident();
+        let value = self.value();
+        quote! {
+            .#key(#value)
+        }
+    }
 }
 
 impl Parse for KvAttr {
@@ -99,6 +108,15 @@ impl BoolAttr {
     pub fn to_attr_method(&self) -> TokenStream {
         let (key, value) = self.kv();
         quote! { .attr(#key, #value) }
+    }
+
+    /// Converts an attribute to a `.key(true)` token stream.
+    pub fn to_component_builder_method(&self) -> TokenStream {
+        let key = self.key().to_snake_ident();
+        let value = self.spanned_true();
+        quote! {
+            .#key(#value)
+        }
     }
 }
 
@@ -210,6 +228,31 @@ impl DirectiveAttr {
             DirectiveKind::On => quote! { .#dir(::leptos::ev::#name_ident, #value)},
         }
     }
+
+    /// Converts an attribute to a `.key(value)` token stream.
+    ///
+    /// Aborts if this directive is not supported on components. (Currently
+    /// only `on:` is supported)
+    pub fn to_component_builder_method(&self) -> TokenStream {
+        match self.directive().kind() {
+            DirectiveKind::On => {
+                let event = self.name();
+                let callback = self.value();
+                quote! {
+                    .on(
+                        ::leptos::ev::undelegated(
+                            ::leptos::ev::#event
+                        ),
+                        #callback
+                    )
+                }
+            }
+            _ => abort!(
+                self.span(),
+                "only `on:` directives are allowed on components"
+            ),
+        }
+    }
 }
 
 impl Parse for DirectiveAttr {
@@ -283,38 +326,9 @@ impl Attr {
     /// on a `class` or `style` directive will abort.
     pub fn to_component_builder_method(&self) -> TokenStream {
         match self {
-            Self::Kv(attr) => {
-                let key = attr.key().to_snake_ident();
-                let value = attr.value();
-                quote! {
-                    .#key(#value)
-                }
-            }
-            Self::Bool(attr) => {
-                let key = attr.key().to_snake_ident();
-                let value = attr.spanned_true();
-                quote! {
-                    .#key(#value)
-                }
-            }
-            Self::Directive(attr) => match attr.directive().kind() {
-                DirectiveKind::On => {
-                    let event = attr.name();
-                    let callback = attr.value();
-                    quote! {
-                        .on(
-                            ::leptos::ev::undelegated(
-                                ::leptos::ev::#event
-                            ),
-                            #callback
-                        )
-                    }
-                }
-                _ => abort!(
-                    attr.span(),
-                    "only `on:` directives are allowed on components"
-                ),
-            },
+            Self::Kv(attr) => attr.to_component_builder_method(),
+            Self::Bool(attr) => attr.to_component_builder_method(),
+            Self::Directive(attr) => attr.to_component_builder_method(),
         }
     }
 }

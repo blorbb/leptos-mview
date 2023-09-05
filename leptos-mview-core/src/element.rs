@@ -73,10 +73,20 @@ impl ToTokens for Element {
             Tag::Unknown(..) => todo!(),
         };
 
-        let attrs: TokenStream = self.attrs().iter().map(Attr::to_attr_method).collect();
+        // parse normal attributes first
+        let attrs = self.attrs().iter().filter_map(|a| match a {
+            Attr::Kv(kv) => Some(kv.to_attr_method()),
+            Attr::Bool(b) => Some(b.to_attr_method()),
+            Attr::Directive(_) => None,
+        });
+        // special directives after
+        let directives = self.attrs().iter().filter_map(|a| match a {
+            Attr::Directive(dir) => Some(dir.to_attr_method()),
+            _ => None,
+        });
         let children = self.children().map(Children::to_child_methods);
         tokens.extend(quote! {
-            #tag #attrs #children
+            #tag #(#attrs)* #(#directives)* #children
         });
     }
 }
@@ -134,11 +144,19 @@ impl Element {
         let Tag::Component(ident) = self.tag() else {
             return None;
         };
-        let attrs: TokenStream = self
-            .attrs()
-            .iter()
-            .map(Attr::to_component_builder_method)
-            .collect();
+
+        // normal attrs first
+        let attrs = self.attrs().iter().filter_map(|a| match a {
+            Attr::Kv(kv) => Some(kv.to_component_builder_method()),
+            Attr::Bool(b) => Some(b.to_component_builder_method()),
+            Attr::Directive(_) => None,
+        });
+        // special directives after
+        let directives = self.attrs().iter().filter_map(|a| match a {
+            Attr::Directive(dir) => Some(dir.to_component_builder_method()),
+            _ => None,
+        });
+
         // .children takes a boxed fragment
         let children = self.children().map(Children::to_fragment).map(|tokens| {
             quote! {
@@ -152,7 +170,8 @@ impl Element {
             ::leptos::component_view(
                 &#ident,
                 ::leptos::component_props_builder(&#ident)
-                    #attrs
+                    #(#attrs)*
+                    #(#directives)*
                     #children
                     .build()
             )
