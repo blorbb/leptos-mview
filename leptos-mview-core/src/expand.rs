@@ -54,16 +54,10 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
     };
 
     // parse normal attributes first
-    let attrs = element.attrs().iter().filter_map(|a| match a {
-        SimpleAttr::Kv(kv) => Some(xml_attr_tokens(kv)),
-        SimpleAttr::Directive(_) => None,
-    });
+    let attrs = element.attrs().kv_attrs().map(|kv| xml_attr_tokens(kv));
 
     // put directives at the end so conditional attributes like `class:` work.
-    let directives = element.attrs().iter().filter_map(|a| match a {
-        SimpleAttr::Directive(dir) => Some(xml_directive_tokens(dir)),
-        SimpleAttr::Kv(_) => None,
-    });
+    let directives = element.attrs().directives().map(|dir| xml_directive_tokens(dir));
 
     let children = element.children().map(child_methods_tokens);
 

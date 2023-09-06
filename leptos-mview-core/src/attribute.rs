@@ -109,6 +109,24 @@ impl Deref for SimpleAttrs {
     }
 }
 
+impl SimpleAttrs {
+    /// Creates a filtered iterator over all the `Kv` variants.
+    pub fn kv_attrs(&self) -> impl Iterator<Item = &KvAttr> {
+        self.iter().filter_map(|a| match a {
+            SimpleAttr::Kv(kv) => Some(kv),
+            SimpleAttr::Directive(_) => None,
+        })
+    }
+
+    /// Creates a filtered iterator over all the `Directive` variants.
+    pub fn directives(&self) -> impl Iterator<Item = &DirectiveAttr> {
+        self.iter().filter_map(|a| match a {
+            SimpleAttr::Kv(_) => None,
+            SimpleAttr::Directive(dir) => Some(dir),
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::attribute::{Attrs, BoolAttr};
