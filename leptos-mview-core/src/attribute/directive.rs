@@ -1,8 +1,7 @@
 use core::fmt;
 
 use proc_macro2::{Span, TokenStream};
-use proc_macro_error::abort;
-use quote::{quote, ToTokens};
+use quote::ToTokens;
 use syn::{ext::IdentExt, parse::Parse, Token};
 
 use crate::{error_ext::ResultExt, ident::KebabIdent, value::Value};
@@ -59,41 +58,8 @@ impl DirectiveAttr {
         &self.value
     }
 
-    /// Converts a directive to a `.dir(name, value)` token stream.
-    pub fn to_attr_method(&self) -> TokenStream {
-        let dir = self.directive();
-        let name = self.name();
-        let name_ident = name.to_snake_ident();
-        let value = self.value();
-        match dir.kind() {
-            DirectiveKind::Style | DirectiveKind::Class => quote! { .#dir(#name, #value) },
-            DirectiveKind::On => quote! { .#dir(::leptos::ev::#name_ident, #value)},
-        }
-    }
-
-    /// Converts an attribute to a `.key(value)` token stream.
-    ///
-    /// Aborts if this directive is not supported on components. (Currently
-    /// only `on:` is supported)
-    pub fn to_component_builder_method(&self) -> TokenStream {
-        match self.directive().kind() {
-            DirectiveKind::On => {
-                let event = self.name();
-                let callback = self.value();
-                quote! {
-                    .on(
-                        ::leptos::ev::undelegated(
-                            ::leptos::ev::#event
-                        ),
-                        #callback
-                    )
-                }
-            }
-            _ => abort!(
-                self.span(),
-                "only `on:` directives are allowed on components"
-            ),
-        }
+    pub const fn kind(&self) -> &DirectiveKind {
+        self.directive().kind()
     }
 }
 
@@ -139,7 +105,7 @@ pub struct DirectiveIdent {
 }
 
 impl DirectiveIdent {
-    pub fn kind(&self) -> &DirectiveKind {
+    pub const fn kind(&self) -> &DirectiveKind {
         &self.kind
     }
 
@@ -147,7 +113,7 @@ impl DirectiveIdent {
         self.ident.span()
     }
 
-    pub fn ident(&self) -> &syn::Ident {
+    pub const fn ident(&self) -> &syn::Ident {
         &self.ident
     }
 }
@@ -160,7 +126,7 @@ impl Parse for DirectiveIdent {
                 "class" => DirectiveKind::Class,
                 "style" => DirectiveKind::Style,
                 "on" => DirectiveKind::On,
-                _ => return Err(input.error(&format!("unknown directive `{ident}`"))),
+                _ => return Err(input.error(format!("unknown directive `{ident}`"))),
             };
             // only move input forward if it worked
             input.parse::<syn::Ident>().unwrap();

@@ -1,5 +1,3 @@
-use proc_macro2::TokenStream;
-use quote::quote;
 use syn::{parse::Parse, Token};
 
 use crate::{error_ext::ResultExt, ident::KebabIdent, value::Value};
@@ -29,37 +27,16 @@ pub struct KvAttr {
 }
 
 impl KvAttr {
+    pub const fn new(key: KebabIdent, value: Value) -> Self {
+        Self { key, value }
+    }
+
     pub const fn key(&self) -> &KebabIdent {
         &self.key
     }
 
     pub const fn value(&self) -> &Value {
         &self.value
-    }
-
-    /// Returns a (key, value) tuple.
-    pub const fn kv(&self) -> (&KebabIdent, &Value) {
-        (self.key(), self.value())
-    }
-
-    /// Converts an attribute to a `.attr(key, value)` token stream.
-    pub fn to_attr_method(&self) -> TokenStream {
-        let (key, value) = self.kv();
-        // handle special cases
-        if key.repr() == "ref" {
-            quote! { .node_ref(#value) }
-        } else {
-            quote! { .attr(#key, #value) }
-        }
-    }
-
-    /// Converts an attribute to a `.key(value)` token stream.
-    pub fn to_component_builder_method(&self) -> TokenStream {
-        let key = self.key().to_snake_ident();
-        let value = self.value();
-        quote! {
-            .#key(#value)
-        }
     }
 }
 

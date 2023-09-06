@@ -9,6 +9,7 @@ mod attribute;
 mod children;
 mod element;
 mod error_ext;
+mod expand;
 mod ident;
 mod tag;
 mod value;
@@ -16,19 +17,19 @@ mod value;
 use proc_macro2::TokenStream;
 use quote::quote;
 
-use crate::children::Children;
+use crate::{children::Children, expand::children_fragment_tokens};
 
 #[must_use]
 pub fn component(input: TokenStream) -> TokenStream {
-    let fragment = match syn::parse2::<Children>(input) {
+    let children = match syn::parse2::<Children>(input) {
         Ok(tree) => tree,
         Err(e) => return e.to_compile_error(),
     };
     // If there's a single top level component, can just expand like
     // div().attr(...).child(...)...
     // If there are multiple top-level children, need to use the fragment.
-    if fragment.len() == 1 {
-        let child = fragment.into_vec().remove(0);
+    if children.len() == 1 {
+        let child = children.into_vec().remove(0);
         quote! {
             {
                 #[allow(unused_braces)]
@@ -36,7 +37,7 @@ pub fn component(input: TokenStream) -> TokenStream {
             }
         }
     } else {
-        let fragment = fragment.to_fragment();
+        let fragment = children_fragment_tokens(&children);
         quote! {
             {
                 #[allow(unused_braces)]

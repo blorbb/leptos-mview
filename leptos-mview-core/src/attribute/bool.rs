@@ -1,5 +1,4 @@
-use proc_macro2::{Span, TokenStream};
-use quote::quote;
+use proc_macro2::Span;
 use syn::{parse::Parse, parse_quote_spanned};
 
 use crate::ident::KebabIdent;
@@ -21,38 +20,17 @@ use crate::ident::KebabIdent;
 pub struct BoolAttr(KebabIdent);
 
 impl BoolAttr {
-    pub const fn key(&self) -> &KebabIdent {
-        &self.0
-    }
-
     pub const fn span(&self) -> Span {
         self.0.span()
+    }
+
+    pub fn into_key(self) -> KebabIdent {
+        self.0
     }
 
     /// Returns a `true` token spanned to the identifier.
     pub fn spanned_true(&self) -> syn::LitBool {
         parse_quote_spanned!(self.span()=> true)
-    }
-
-    /// Returns a key-value pair `(key, true)`, with the `true` being spanned
-    /// to the identifier.
-    pub fn kv(&self) -> (&KebabIdent, syn::LitBool) {
-        (self.key(), self.spanned_true())
-    }
-
-    /// Converts an attribute to a `.attr(key, true)` token stream.
-    pub fn to_attr_method(&self) -> TokenStream {
-        let (key, value) = self.kv();
-        quote! { .attr(#key, #value) }
-    }
-
-    /// Converts an attribute to a `.key(true)` token stream.
-    pub fn to_component_builder_method(&self) -> TokenStream {
-        let key = self.key().to_snake_ident();
-        let value = self.spanned_true();
-        quote! {
-            .#key(#value)
-        }
     }
 }
 

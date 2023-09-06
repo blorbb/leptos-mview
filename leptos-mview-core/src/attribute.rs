@@ -1,15 +1,14 @@
-mod kv;
-mod bool;
-mod directive;
+pub mod bool;
+pub mod directive;
+pub mod kv;
 
 use core::slice;
-
-use proc_macro2::TokenStream;
+use std::vec;
 
 use syn::parse::Parse;
 
-
-use self::{kv::KvAttr, bool::BoolAttr, directive::DirectiveAttr};
+use self::{bool::BoolAttr, directive::DirectiveAttr, kv::KvAttr};
+use crate::value::Value;
 
 #[derive(Debug, Clone)]
 pub enum Attr {
@@ -32,33 +31,28 @@ impl Parse for Attr {
     }
 }
 
-impl Attr {
-    /// Converts an attribute to a `.attr(key, value)` token stream.
-    ///
-    /// Directives are converted differently, but is compatible with
-    /// `leptos::html::*` so will work as expected.
-    ///
-    /// Other special directives (like `assign`) cannot be used in html
-    /// elements, and will cause an abort.
-    ///
-    /// Some special key properties (like `ref`) are also converted differently.
-    pub fn to_attr_method(&self) -> TokenStream {
-        match self {
-            Self::Kv(attr) => attr.to_attr_method(),
-            Self::Bool(attr) => attr.to_attr_method(),
-            Self::Directive(attr) => attr.to_attr_method(),
-        }
-    }
+/// A simplified equivalent version of `Attr`.
+///
+/// Currently this only reduces `BoolAttr`s into a `KvAttr` with a
+/// value of `true`.
+///
+/// TODO: When field shorthands are supported, this will simplify that
+/// into the expanded form as well.
+#[derive(Debug, Clone)]
+pub enum SimpleAttr {
+    Kv(KvAttr),
+    Directive(DirectiveAttr),
+}
 
-    /// Converts an attribute to a `.key(value)` token stream.
-    ///
-    /// Only the `on` directive is allowed on components: calling this method
-    /// on a `class` or `style` directive will abort.
-    pub fn to_component_builder_method(&self) -> TokenStream {
-        match self {
-            Self::Kv(attr) => attr.to_component_builder_method(),
-            Self::Bool(attr) => attr.to_component_builder_method(),
-            Self::Directive(attr) => attr.to_component_builder_method(),
+impl From<Attr> for SimpleAttr {
+    fn from(value: Attr) -> Self {
+        match value {
+            Attr::Kv(kv) => Self::Kv(kv),
+            Attr::Bool(b) => {
+                let value = syn::Lit::Bool(b.spanned_true());
+                Self::Kv(KvAttr::new(b.into_key(), Value::Lit(value)))
+            }
+            Attr::Directive(dir) => Self::Directive(dir),
         }
     }
 }
@@ -67,9 +61,13 @@ impl Attr {
 #[derive(Debug, Clone)]
 pub struct Attrs(Vec<Attr>);
 
-impl Attrs {
-    pub fn iter(&self) -> slice::Iter<'_, Attr> {
-        self.0.iter()
+impl IntoIterator for Attrs {
+    type Item = Attr;
+
+    type IntoIter = vec::IntoIter<Attr>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }
 
@@ -81,6 +79,32 @@ impl Parse for Attrs {
             vec.push(attr);
         }
         Ok(Self(vec))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SimpleAttrs(Vec<SimpleAttr>);
+
+impl From<Attrs> for SimpleAttrs {
+    fn from(value: Attrs) -> Self {
+        Self(value.into_iter().map(Into::into).collect())
+    }
+}
+
+impl Parse for SimpleAttrs {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let attrs = input.parse::<Attrs>()?;
+        Ok(attrs.into())
+    }
+}
+
+impl SimpleAttrs {
+    pub fn iter(&self) -> slice::Iter<'_, SimpleAttr> {
+        self.0.iter()
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
     }
 }
 
@@ -112,10 +136,6 @@ mod tests {
         pub fn as_slice(&self) -> &[Attr] {
             &self.0
         }
-
-        pub fn len(&self) -> usize {
-            self.0.len()
-        }
     }
 
     #[track_caller]
@@ -134,7 +154,7 @@ mod tests {
 
     #[track_caller]
     fn check_bool(input: &str, output: BoolAttr) {
-        assert_eq!(output.key().repr(), input);
+        assert_eq!(output.into_key().repr(), input);
     }
 
     #[test]

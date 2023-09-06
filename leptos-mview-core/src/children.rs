@@ -1,8 +1,7 @@
 use core::slice;
 
-use proc_macro2::TokenStream;
 use proc_macro_error::abort;
-use quote::{quote, ToTokens};
+use quote::ToTokens;
 use syn::parse::Parse;
 
 use crate::{element::Element, value::Value};
@@ -64,52 +63,6 @@ impl Children {
 
     pub fn into_vec(self) -> Vec<Child> {
         self.0
-    }
-
-    /// Converts the children to a series of `.child` calls.
-    ///
-    /// Example:
-    /// ```ignore
-    /// div { "a" {var} "b" }
-    /// ```
-    ///
-    /// Should expand to:
-    /// ```ignore
-    /// div().child("a").child({var}).child("b")
-    /// ```
-    pub fn to_child_methods(&self) -> TokenStream {
-        let children = self.iter();
-        quote! {
-            #( .child(#children) )*
-        }
-    }
-
-    /// Converts the children into a `leptos::Fragment::lazy()` token stream.
-    ///
-    /// Example:
-    /// ```ignore
-    /// "a"
-    /// {var}
-    /// "b"
-    /// ```
-    ///
-    /// Should expand to:
-    /// ```ignore
-    /// Fragment::lazy(|| {
-    ///     [
-    ///         {"a"}.into_view(),
-    ///         {var}.into_view(),
-    ///         {"b"}.into_view(),
-    ///     ].to_vec()
-    /// )
-    /// ```
-    pub fn to_fragment(&self) -> TokenStream {
-        let children = self.iter();
-        quote! {
-            ::leptos::Fragment::lazy(|| [
-                #(  ::leptos::IntoView::into_view(#children) ),*
-            ].to_vec())
-        }
     }
 
     pub fn iter(&self) -> slice::Iter<'_, Child> {
