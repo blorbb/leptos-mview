@@ -126,6 +126,7 @@ impl Parse for DirectiveIdent {
                 "class" => DirectiveKind::Class,
                 "style" => DirectiveKind::Style,
                 "on" => DirectiveKind::On,
+                "clone" => DirectiveKind::Clone,
                 _ => return Err(input.error(format!("unknown directive `{ident}`"))),
             };
             // only move input forward if it worked
@@ -155,4 +156,5 @@ pub enum DirectiveKind {
     Style,
     Class,
     On,
+    Clone,
 }

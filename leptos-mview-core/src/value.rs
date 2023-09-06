@@ -1,3 +1,4 @@
+use proc_macro2::Span;
 use proc_macro_error::abort;
 use quote::{quote, ToTokens};
 use syn::parse::{Parse, ParseStream};
@@ -16,21 +17,21 @@ use syn::parse::{Parse, ParseStream};
 pub enum Value {
     Lit(syn::Lit),
     Block(syn::ExprBlock),
-    Parenthesized(syn::Expr),
+    Parenthesized(syn::Expr, syn::token::Paren),
 }
 
 impl Parse for Value {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         if input.peek(syn::token::Paren) {
             let stream;
-            syn::parenthesized!(stream in input);
+            let parens = syn::parenthesized!(stream in input);
 
             // fork to show better errors.
             let full_stream = stream.fork();
             let expr: syn::Expr = stream.parse()?;
             // parsed an expression but there is still more.
             if stream.is_empty() {
-                Ok(Self::Parenthesized(expr))
+                Ok(Self::Parenthesized(expr, parens))
             } else {
                 abort!(
                     stream.span(), "unexpected token";
@@ -55,8 +56,37 @@ impl ToTokens for Value {
         tokens.extend(match self {
             Self::Lit(lit) => lit.into_token_stream(),
             Self::Block(block) => block.into_token_stream(),
-            Self::Parenthesized(expr) => quote! {move || #expr},
+            Self::Parenthesized(expr, _) => quote! {move || #expr},
         });
+    }
+}
+
+impl Value {
+    /// Tries to convert a `Value` into a single ident.
+    ///
+    /// Example: the value `{something}` becomes the ident `something`.
+    ///
+    /// Returns `None` if the block does not only contain an ident.
+    pub fn as_block_with_ident(&self) -> Option<&syn::Ident> {
+        let Value::Block(block) = self else {
+            return None;
+        };
+        if block.block.stmts.len() != 1 {
+            return None;
+        }
+        let syn::Stmt::Expr(syn::Expr::Path(path), None) = block.block.stmts.first()? else {
+            return None;
+        };
+
+        path.path.get_ident()
+    }
+
+    pub fn span(&self) -> Span {
+        match self {
+            Self::Lit(lit) => lit.span(),
+            Self::Block(block) => block.block.brace_token.span.join(),
+            Self::Parenthesized(_, parens) => parens.span.join(),
+        }
     }
 }
 
@@ -84,7 +114,7 @@ mod tests {
         }
 
         pub fn is_parenthesized(&self) -> bool {
-            matches!(self, Self::Parenthesized(_))
+            matches!(self, Self::Parenthesized(..))
         }
     }
 

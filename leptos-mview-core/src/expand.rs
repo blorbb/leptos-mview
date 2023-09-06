@@ -8,11 +8,7 @@ use proc_macro_error::abort;
 use quote::quote;
 
 use crate::{
-    attribute::{
-        directive::{DirectiveAttr, DirectiveKind},
-        kv::KvAttr,
-        SimpleAttr,
-    },
+    attribute::{directive::DirectiveKind, SimpleAttr},
     children::Children,
     element::Element,
     tag::Tag,
@@ -54,88 +50,48 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
     };
 
     // parse normal attributes first
-    let attrs = element.attrs().kv_attrs().map(|kv| xml_attr_tokens(kv));
-
+    let mut attrs = TokenStream::new();
     // put directives at the end so conditional attributes like `class:` work.
-    let directives = element.attrs().directives().map(|dir| xml_directive_tokens(dir));
+    let mut directives = TokenStream::new();
+
+    for a in element.attrs().iter() {
+        match a {
+            SimpleAttr::Kv(attr) => {
+                let key = attr.key();
+                let value = attr.value();
+                // special cases
+                attrs.extend(if key.repr() == "ref" {
+                    quote! { .node_ref(#value) }
+                } else {
+                    quote! { .attr(#key, #value) }
+                });
+            }
+            SimpleAttr::Directive(attr) => {
+                let dir = attr.directive();
+                let name = attr.name();
+                let name_ident = name.to_snake_ident();
+                let value = attr.value();
+                directives.extend(match attr.kind() {
+                    DirectiveKind::Style | DirectiveKind::Class => quote! { .#dir(#name, #value) },
+                    DirectiveKind::On => quote! { .#dir(::leptos::ev::#name_ident, #value) },
+                    DirectiveKind::Clone => abort!(
+                        dir.span(),
+                        "directive `{}:` is not supported on html elements",
+                        dir
+                    ),
+                });
+            }
+        }
+    }
 
     let children = element.children().map(child_methods_tokens);
 
     Some(quote! {
         #tag_path
-            #(#attrs)*
-            #(#directives)*
+            #attrs
+            #directives
             #children
     })
-}
-
-/// Expands an attribute to a `.attr(key, value)` token stream.
-///
-/// Some special attributes are converted differently, like `ref`.
-///
-/// # Example
-/// ```ignore
-/// div data-index=1 class="b" ref={div_ref};
-/// ```
-/// Expands to:
-/// ```ignore
-/// div()
-///     .attr("data-index", 1)
-///     .attr("class", "b")
-///     .node_ref(div_ref)
-/// ```
-fn xml_attr_tokens(attr: &KvAttr) -> TokenStream {
-    let key = attr.key();
-    let value = attr.value();
-    if key.repr() == "ref" {
-        quote! { .node_ref(#value) }
-    } else {
-        quote! { .attr(#key, #value) }
-    }
-}
-
-/// Converts a directive to a `.dir(name, value)` token stream.
-///
-/// # Example
-/// ```ignore
-/// div
-///     class:some-thing=true
-///     style:color="red"
-///     on:click={handle_click};
-/// ```
-/// Expands to:
-/// ```ignore
-/// div()
-///     .class("some-thing", true)
-///     .style("color", "red")
-///     .on(leptos::ev::click, {handle_click});
-/// ```
-fn xml_directive_tokens(attr: &DirectiveAttr) -> TokenStream {
-    let dir = attr.directive();
-    let name = attr.name();
-    let name_ident = name.to_snake_ident();
-    let value = attr.value();
-    match attr.kind() {
-        DirectiveKind::Style | DirectiveKind::Class => quote! { .#dir(#name, #value) },
-        DirectiveKind::On => quote! { .#dir(::leptos::ev::#name_ident, #value) },
-    }
-}
-
-/// Converts the children to a series of `.child` calls.
-///
-/// # Example
-/// ```ignore
-/// div { "a" {var} "b" }
-/// ```
-/// Expands to:
-/// ```ignore
-/// div().child("a").child({var}).child("b")
-/// ```
-pub fn child_methods_tokens(children: &Children) -> TokenStream {
-    let children = children.iter();
-    quote! {
-        #( .child(#children) )*
-    }
 }
 
 /// Transforms a component into a `TokenStream` of a leptos component view.
@@ -170,20 +126,65 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
         return None;
     };
 
-    let attrs = element.attrs().iter().map(|a| match a {
-        SimpleAttr::Kv(kv) => component_attr_tokens(kv),
-        SimpleAttr::Directive(dir) => component_directive_tokens(dir),
-    });
+    // attribute methods to add when building
+    let mut attrs = TokenStream::new();
+    // the variables (idents) to clone before making children
+    // in the form `let value = name.clone()`
+    let mut clones = TokenStream::new();
+    let mut event_listeners = TokenStream::new();
+
+    for a in element.attrs().iter() {
+        match a {
+            SimpleAttr::Kv(attr) => {
+                let key = attr.key().to_snake_ident();
+                let value = attr.value();
+                attrs.extend(quote! { .#key(#value) });
+            }
+            SimpleAttr::Directive(dir) => match dir.directive().kind() {
+                DirectiveKind::On => {
+                    let event = dir.name();
+                    let callback = dir.value();
+                    event_listeners.extend(quote! {
+                        .on(
+                            ::leptos::ev::undelegated(::leptos::ev::#event),
+                            #callback
+                        )
+                    });
+                }
+                DirectiveKind::Clone => {
+                    let to_clone = dir.name().to_snake_ident();
+                    // value must just be an ident.
+                    let Some(new_ident) = dir.value().as_block_with_ident() else {
+                        abort!(
+                            dir.value().span(),
+                            "value of a `clone:` directive must be an ident like {}",
+                            to_clone
+                        );
+                    };
+
+                    clones.extend(quote! { let #new_ident = #to_clone.clone(); });
+                }
+                DirectiveKind::Class | DirectiveKind::Style => abort!(
+                    dir.span(),
+                    "directive `{}:` is not supported on components",
+                    dir.directive()
+                ),
+            },
+        }
+    }
 
     // .children takes a boxed fragment
     let children = element
         .children()
         .map(children_fragment_tokens)
-        .map(|tokens| {
+        .map(|fragment| {
             quote! {
-                .children(
-                    ::std::boxed::Box::new(move || #tokens)
-                )
+                .children({
+                    #clones
+                    ::std::boxed::Box::new(move || {
+                        #fragment
+                    })
+                })
             }
         });
 
@@ -191,42 +192,29 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
         ::leptos::component_view(
             &#ident,
             ::leptos::component_props_builder(&#ident)
-                #(#attrs)*
+                #attrs
                 #children
                 .build()
         )
+        .into_view()
+        #event_listeners
     })
 }
 
-/// Converts an attribute to a `.key(value)` token stream.
-fn component_attr_tokens(attr: &KvAttr) -> TokenStream {
-    let key = attr.key().to_snake_ident();
-    let value = attr.value();
-    quote! { .#key(#value) }
-}
-
-/// Converts an attribute to a `.key(value)` token stream.
+/// Converts the children to a series of `.child` calls.
 ///
-/// Aborts if this directive is not supported on components. (Currently
-/// only `on:` is supported)
-fn component_directive_tokens(directive: &DirectiveAttr) -> TokenStream {
-    match directive.directive().kind() {
-        DirectiveKind::On => {
-            let event = directive.name();
-            let callback = directive.value();
-            quote! {
-                .on(
-                    ::leptos::ev::undelegated(
-                        ::leptos::ev::#event
-                    ),
-                    #callback
-                )
-            }
-        }
-        _ => abort!(
-            directive.span(),
-            "only `on:` directives are allowed on components"
-        ),
+/// # Example
+/// ```ignore
+/// div { "a" {var} "b" }
+/// ```
+/// Expands to:
+/// ```ignore
+/// div().child("a").child({var}).child("b")
+/// ```
+pub fn child_methods_tokens(children: &Children) -> TokenStream {
+    let children = children.iter();
+    quote! {
+        #( .child(#children) )*
     }
 }
 
