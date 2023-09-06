@@ -1,4 +1,4 @@
-use core::slice;
+use std::ops::Deref;
 
 use proc_macro_error::abort;
 use quote::ToTokens;
@@ -56,17 +56,17 @@ impl ToTokens for Child {
 #[derive(Debug)]
 pub struct Children(Vec<Child>);
 
-impl Children {
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
+impl Deref for Children {
+    type Target = [Child];
 
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Children {
     pub fn into_vec(self) -> Vec<Child> {
         self.0
-    }
-
-    pub fn iter(&self) -> slice::Iter<'_, Child> {
-        self.0.iter()
     }
 }
 

@@ -2,8 +2,7 @@ pub mod bool;
 pub mod directive;
 pub mod kv;
 
-use core::slice;
-use std::vec;
+use std::ops::Deref;
 
 use syn::parse::Parse;
 
@@ -61,13 +60,17 @@ impl From<Attr> for SimpleAttr {
 #[derive(Debug, Clone)]
 pub struct Attrs(Vec<Attr>);
 
-impl IntoIterator for Attrs {
-    type Item = Attr;
+impl Deref for Attrs {
+    type Target = [Attr];
 
-    type IntoIter = vec::IntoIter<Attr>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
+impl Attrs {
+    pub fn into_vec(self) -> Vec<Attr> {
+        self.0
     }
 }
 
@@ -87,7 +90,7 @@ pub struct SimpleAttrs(Vec<SimpleAttr>);
 
 impl From<Attrs> for SimpleAttrs {
     fn from(value: Attrs) -> Self {
-        Self(value.into_iter().map(Into::into).collect())
+        Self(value.into_vec().into_iter().map(Into::into).collect())
     }
 }
 
@@ -98,13 +101,11 @@ impl Parse for SimpleAttrs {
     }
 }
 
-impl SimpleAttrs {
-    pub fn iter(&self) -> slice::Iter<'_, SimpleAttr> {
-        self.0.iter()
-    }
+impl Deref for SimpleAttrs {
+    type Target = [SimpleAttr];
 
-    pub fn len(&self) -> usize {
-        self.0.len()
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
