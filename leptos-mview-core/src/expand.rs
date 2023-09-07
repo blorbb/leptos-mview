@@ -173,20 +173,27 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
         }
     }
 
-    // .children takes a boxed fragment
-    let children = element
-        .children()
-        .map(children_fragment_tokens)
-        .map(|fragment| {
+    // children with arguments take a `Fn(T) -> impl IntoView`
+    // normal children (`Children`, `ChildrenFn`, ...) take `Box<dyn Fn() -> Fragment>`
+    let args = element.children_args();
+    let children = element.children().map(|children| {
+        let fragment = children_fragment_tokens(children);
+        // only wrap the fragment in a box if there are no closures
+        let wrapped_fragment = if element.children_args().is_none() {
             quote! {
-                .children({
-                    #clones
-                    ::std::boxed::Box::new(move || {
-                        #fragment
-                    })
-                })
+                ::std::boxed::Box::new(move || #fragment)
             }
-        });
+        } else {
+            quote! { move |#args| #fragment }
+        };
+
+        quote! {
+            .children({
+                #clones
+                #wrapped_fragment
+            })
+        }
+    });
 
     Some(quote! {
         ::leptos::component_view(
@@ -241,8 +248,11 @@ pub fn children_fragment_tokens(children: &Children) -> TokenStream {
     let children = children.iter();
     quote! {
         ::leptos::Fragment::lazy(|| {
-            [#(  ::leptos::IntoView::into_view(#children) ),*]
-            .to_vec()
+            <[_]>::into_vec(
+                ::std::boxed::Box::new([
+                    #(  ::leptos::IntoView::into_view(#children) ),*
+                ])
+            )
         })
     }
 }

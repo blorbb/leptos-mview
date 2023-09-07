@@ -1,13 +1,20 @@
 use proc_macro_error::abort;
 use quote::ToTokens;
-use syn::{parse::Parse, Token};
+use syn::{
+    parse::{Parse, ParseStream},
+    punctuated::Punctuated,
+    Token,
+};
 
 use crate::{
     attribute::SimpleAttrs,
     children::Children,
+    error_ext::ResultExt,
     expand::{component_to_tokens, xml_to_tokens},
     tag::Tag,
 };
+
+type ClosureArgs = Punctuated<syn::Pat, Token![,]>;
 
 /// A HTML or custom component.
 ///
@@ -27,24 +34,41 @@ use crate::{
 pub struct Element {
     tag: Tag,
     attrs: SimpleAttrs,
+    children_args: Option<ClosureArgs>,
     children: Option<Children>,
 }
 
 impl Parse for Element {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        fn parse_children_block(input: ParseStream) -> syn::Result<Children> {
+            let children;
+            syn::braced!(children in input);
+            children.parse::<Children>()
+        }
+
         let tag: Tag = input.parse()?;
         let attrs: SimpleAttrs = input.parse()?;
 
         if input.peek(Token![;]) {
             // no children, terminated by semicolon.
             input.parse::<Token![;]>().unwrap();
-            Ok(Self::new(tag, attrs, None))
+            Ok(Self::new(tag, attrs, None, None))
         } else if input.peek(syn::token::Brace) {
             // has children in brace.
-            let children;
-            syn::braced!(children in input);
-            let children: Children = children.parse()?;
-            Ok(Self::new(tag, attrs, Some(children)))
+            let children = parse_children_block(input)?;
+            Ok(Self::new(tag, attrs, None, Some(children)))
+        } else if input.peek(Token![|]) {
+            // maybe extra args for the children
+            let args = parse_closure_args(input).unwrap_or_abort();
+            // must have children block after
+            if !input.peek(syn::token::Brace) {
+                abort!(
+                    input.span(),
+                    "expected children block after closure arguments"
+                )
+            }
+            let children = parse_children_block(input)?;
+            Ok(Self::new(tag, attrs, Some(args), Some(children)))
         } else {
             abort!(
                 tag.span(), "child elements not found";
@@ -62,10 +86,16 @@ impl ToTokens for Element {
 }
 
 impl Element {
-    pub const fn new(tag: Tag, attrs: SimpleAttrs, children: Option<Children>) -> Self {
+    pub const fn new(
+        tag: Tag,
+        attrs: SimpleAttrs,
+        child_args: Option<ClosureArgs>,
+        children: Option<Children>,
+    ) -> Self {
         Self {
             tag,
             attrs,
+            children_args: child_args,
             children,
         }
     }
@@ -78,9 +108,32 @@ impl Element {
         &self.attrs
     }
 
+    pub const fn children_args(&self) -> Option<&ClosureArgs> {
+        self.children_args.as_ref()
+    }
+
     pub const fn children(&self) -> Option<&Children> {
         self.children.as_ref()
     }
+}
+
+fn parse_closure_args(input: ParseStream) -> syn::Result<ClosureArgs> {
+    input.parse::<Token![|]>()?;
+    let mut args = Punctuated::new();
+    loop {
+        if input.peek(Token![|]) {
+            break;
+        }
+        let value = syn::Pat::parse_single(input)?;
+        args.push_value(value);
+        if input.peek(Token![|]) {
+            break;
+        }
+        let punct: Token![,] = input.parse()?;
+        args.push_punct(punct);
+    }
+    input.parse::<Token![|]>().unwrap();
+    Ok(args)
 }
 
 #[cfg(test)]
