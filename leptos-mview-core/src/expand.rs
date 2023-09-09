@@ -5,7 +5,7 @@
 
 use proc_macro2::TokenStream;
 use proc_macro_error::abort;
-use quote::quote;
+use quote::{quote, quote_spanned};
 
 use crate::{
     attribute::{directive::DirectiveKind, SimpleAttr},
@@ -61,20 +61,24 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
                 let value = attr.value();
                 // special cases
                 attrs.extend(if key.repr() == "ref" {
-                    quote! { .node_ref(#value) }
+                    let node_ref = quote_spanned!(key.span()=> node_ref);
+                    quote! { .#node_ref(#value) }
                 } else {
                     quote! { .attr(#key, #value) }
                 });
             }
             SimpleAttr::Directive(attr) => {
+                use DirectiveKind as Dir;
+
                 let dir = attr.directive();
                 let name = attr.name();
                 let name_ident = name.to_snake_ident();
                 let value = attr.value();
+
                 directives.extend(match attr.kind() {
-                    DirectiveKind::Style | DirectiveKind::Class => quote! { .#dir(#name, #value) },
-                    DirectiveKind::On => quote! { .#dir(::leptos::ev::#name_ident, #value) },
-                    DirectiveKind::Clone => abort!(
+                    Dir::Style | Dir::Class | Dir::Prop => quote! { .#dir(#name, #value) },
+                    Dir::On => quote! { .#dir(::leptos::ev::#name_ident, #value) },
+                    Dir::Clone => abort!(
                         dir.span(),
                         "directive `{}:` is not supported on html elements",
                         dir
@@ -134,6 +138,7 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
     let mut event_listeners = TokenStream::new();
 
     for a in element.attrs().iter() {
+        use DirectiveKind as Dir;
         match a {
             SimpleAttr::Kv(attr) => {
                 let key = attr.key().to_snake_ident();
@@ -141,7 +146,7 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
                 attrs.extend(quote! { .#key(#value) });
             }
             SimpleAttr::Directive(dir) => match dir.directive().kind() {
-                DirectiveKind::On => {
+                Dir::On => {
                     let event = dir.name();
                     let callback = dir.value();
                     event_listeners.extend(quote! {
@@ -151,7 +156,7 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
                         )
                     });
                 }
-                DirectiveKind::Clone => {
+                Dir::Clone => {
                     let to_clone = dir.name().to_snake_ident();
                     // value must just be an ident.
                     let Some(new_ident) = dir.value().as_block_with_ident() else {
@@ -164,7 +169,7 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
 
                     clones.extend(quote! { let #new_ident = #to_clone.clone(); });
                 }
-                DirectiveKind::Class | DirectiveKind::Style => abort!(
+                Dir::Class | Dir::Style | Dir::Prop => abort!(
                     dir.span(),
                     "directive `{}:` is not supported on components",
                     dir.directive()
