@@ -22,10 +22,10 @@ impl Parse for Attr {
             Ok(Self::Kv(kv))
         } else if let Ok(dir) = input.parse::<DirectiveAttr>() {
             Ok(Self::Directive(dir))
+        } else if let Ok(bool) = input.parse::<BoolAttr>() {
+            Ok(Self::Bool(bool))
         } else {
-            let bool_attr = input.parse::<BoolAttr>()?;
-
-            Ok(Self::Bool(bool_attr))
+            Err(input.error("no attribute found"))
         }
     }
 }
