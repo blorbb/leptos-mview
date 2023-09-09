@@ -1,4 +1,4 @@
-use proc_macro_error::abort;
+use proc_macro_error::{abort, emit_error};
 use quote::ToTokens;
 use syn::{
     parse::{Parse, ParseStream},
@@ -70,8 +70,10 @@ impl Parse for Element {
             let children = parse_children_block(input)?;
             Ok(Self::new(tag, attrs, Some(args), Some(children)))
         } else {
+            // add error at the unknown token
+            emit_error!(input.span(), "unknown attribute");
             abort!(
-                tag.span(), "child elements not found";
+                tag.span().join(input.span()).unwrap_or(tag.span()), "child elements not found";
                 note = "if you don't want any child elements, end the element with \
                 a semi-colon `;` or empty braces `{}`."
             )
