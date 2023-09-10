@@ -4,10 +4,69 @@ pub mod kv;
 
 use std::ops::Deref;
 
-use syn::parse::Parse;
+use syn::{
+    parse::{discouraged::Speculative, Parse, ParseStream},
+    parse_quote,
+};
 
 use self::{bool::BoolAttr, directive::DirectiveAttr, kv::KvAttr};
-use crate::value::Value;
+use crate::{ident::KebabIdent, value::Value};
+
+/// Parses a shorthand attribute like `{class}`.
+///
+/// The `key` is the kebab-cased identifier in the braces, and the `value`
+/// will always be a `syn::ExprBlock` with a single ident inside.
+///
+/// # Examples
+/// ```ignore
+/// let class = "these are classes";
+/// let aria_label = "good label here";
+/// let (value, set_value) = create_signal(String::new())
+/// view! {
+///     input type="text" {class} {aria-label} prop:{value};
+/// }
+/// // is the same as:
+/// view! {
+///     input type="text" class={class} aria-label={aria_label} prop:value={value};
+/// }
+/// ```
+///
+/// # Aborts
+/// Returns an `Err` if no brace is found. If a brace is found but the
+/// block is not an ident, the macro will abort.
+struct ShorthandAttr {
+    key: KebabIdent,
+    value: Value,
+}
+
+impl Parse for ShorthandAttr {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        if input.peek(syn::token::Brace) {
+            let fork = input.fork();
+            let inner;
+            syn::braced!(inner in fork);
+
+            // inner must be a kebab ident
+            let ident = inner.parse::<KebabIdent>()?;
+            if !inner.is_empty() {
+                return Err(input.error("unexpected token after ident"));
+            };
+
+            let ident_snake = ident.to_snake_ident();
+            let block: syn::ExprBlock = parse_quote!({#ident_snake});
+
+            // advance the actual stream
+            input.advance_to(&fork);
+
+            Ok(Self {
+                key: ident,
+                value: Value::Block(block),
+            })
+        } else {
+            Err(input.error("expected braces for attribute shorthand"))
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum Attr {

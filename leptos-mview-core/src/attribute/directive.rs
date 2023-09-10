@@ -2,9 +2,15 @@ use core::fmt;
 
 use proc_macro2::{Span, TokenStream};
 use quote::ToTokens;
-use syn::{ext::IdentExt, parse::Parse, Token};
+use syn::{
+    ext::IdentExt,
+    parse::{discouraged::Speculative, Parse},
+    Token,
+};
 
 use crate::{error_ext::ResultExt, ident::KebabIdent, value::Value};
+
+use super::ShorthandAttr;
 
 /// A special attribute like `on:click={...}`.
 ///
@@ -14,6 +20,10 @@ use crate::{error_ext::ResultExt, ident::KebabIdent, value::Value};
 ///                       ^^^^^^^^^^^^^^^^^^^^^^^
 /// button class:primary={primary} style:color="grey";
 ///        ^^^^^^^^^^^^^^^^^^^^^^^ ^^^^^^^^^^^^^^^^^^
+/// ```
+/// The shorthand syntax is also supported on the argument of directives:
+/// ```ignore
+/// button class:{primary} style:color="grey";
 /// ```
 ///
 /// # Parsing
@@ -73,20 +83,31 @@ impl Parse for DirectiveAttr {
 
         let directive = input.parse::<DirectiveIdent>().unwrap_or_abort();
         input.parse::<Token![:]>().unwrap();
-        let name = input
-            .parse::<KebabIdent>()
-            .expect_or_abort_with_msg(&format!(
-                "expected identifier after `{}:` directive",
-                directive.ident()
-            ));
-        input.parse::<Token![=]>().unwrap_or_abort();
-        let value = input.parse::<Value>().unwrap_or_abort();
 
-        Ok(Self {
-            directive,
-            name,
-            value,
-        })
+        // either a shorthand if there are braces, or the full expression.
+        if input.peek(syn::token::Brace) {
+            let attr = input.parse::<ShorthandAttr>().unwrap_or_abort();
+            Ok(Self {
+                directive,
+                name: attr.key,
+                value: attr.value,
+            })
+        } else {
+            let name = input
+                .parse::<KebabIdent>()
+                .expect_or_abort_with_msg(&format!(
+                    "expected identifier after `{}:` directive",
+                    directive.ident()
+                ));
+            input.parse::<Token![=]>().unwrap_or_abort();
+            let value = input.parse::<Value>().unwrap_or_abort();
+
+            Ok(Self {
+                directive,
+                name,
+                value,
+            })
+        }
     }
 }
 
@@ -96,8 +117,6 @@ impl Parse for DirectiveAttr {
 /// The `parse` method looks for an ident and validates it. An `Err` is
 /// returned if it does not find an ident or if the identifier is not a valid
 /// directive.
-///
-/// Currently, the supported directives are `on`, `class` and `style`.
 #[derive(Debug, Clone)]
 pub struct DirectiveIdent {
     kind: DirectiveKind,
@@ -131,7 +150,7 @@ impl Parse for DirectiveIdent {
                 _ => return Err(input.error(format!("unknown directive `{ident}`"))),
             };
             // only move input forward if it worked
-            input.parse::<syn::Ident>().unwrap();
+            input.advance_to(&fork);
             Ok(Self { kind, ident })
         } else {
             Err(input.error("expected identifier"))

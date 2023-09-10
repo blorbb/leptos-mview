@@ -1,6 +1,11 @@
-use syn::{parse::Parse, Token};
+use syn::{
+    parse::{discouraged::Speculative, Parse},
+    Token,
+};
 
 use crate::{error_ext::ResultExt, ident::KebabIdent, value::Value};
+
+use super::ShorthandAttr;
 
 /// A `key = value` type of attribute.
 ///
@@ -42,14 +47,22 @@ impl KvAttr {
 
 impl Parse for KvAttr {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        // first check that this is actually a kv attribute.
+        // try parse shorthand first
+        if input.peek(syn::token::Brace) {
+            // don't unwrap_or_abort, as this might be trying to parse
+            // the children block instead of an attribute.
+            let attr = input.parse::<ShorthandAttr>()?;
+            return Ok(Self::new(attr.key, attr.value));
+        }
+
+        // check that this is actually a kv attribute.
         // if there is an ident followed by =, this is kv attribute.
         let fork = input.fork();
-        fork.parse::<KebabIdent>()?;
+        let key = fork.parse::<KebabIdent>()?;
 
         if fork.peek(Token![=]) {
             // this is a kv attribute: consume main input stream.
-            let key = input.parse::<KebabIdent>().unwrap();
+            input.advance_to(&fork);
             input.parse::<Token![=]>().unwrap();
             let value = input.parse::<Value>().unwrap_or_abort();
             Ok(Self { key, value })
