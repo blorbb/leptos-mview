@@ -207,7 +207,7 @@ mod tests {
         assert_eq!(output.key().repr(), key.trim());
         if value.contains('{') {
             assert!(output.value().is_block());
-        } else if value.contains('(') {
+        } else if value.contains('[') {
             assert!(output.value().is_bracketed());
         } else {
             assert!(output.value().is_lit());
@@ -221,7 +221,7 @@ mod tests {
 
     #[test]
     fn parse_kv_attr() {
-        // must not have a mix of parens and braces
+        // must not have a mix of brackets and braces
         let inputs = ["key = \"value\"", "something-else = {move || true}"];
 
         for input in inputs {
@@ -241,7 +241,7 @@ mod tests {
 
     #[test]
     fn parse_complex_attrs() {
-        let input = "key1=(value1) key2 key3 key4={value4}";
+        let input = "key1=[value1] key2 key3 key4={value4}";
         let inputs: Vec<_> = input.split_whitespace().collect();
         let attrs = syn::parse_str::<Attrs>(input).unwrap();
         let attrs = attrs.as_slice();

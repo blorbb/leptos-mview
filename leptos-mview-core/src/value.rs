@@ -22,14 +22,14 @@ impl Parse for Value {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         if input.peek(syn::token::Bracket) {
             let stream;
-            let parens = syn::bracketed!(stream in input);
+            let brackets = syn::bracketed!(stream in input);
 
             let expr: syn::Expr = stream.parse()?;
             // parsed an expression but there is still more.
             if stream.is_empty() {
-                Ok(Self::Bracket(expr, parens))
+                Ok(Self::Bracket(expr, brackets))
             } else {
-                abort!(stream.span(), "unexpected token")
+                abort!(stream.span(), "unexpected token in brackets")
             }
         } else if input.peek(syn::token::Brace) {
             Ok(Self::Block(input.parse()?))
