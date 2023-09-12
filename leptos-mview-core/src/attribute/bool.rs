@@ -1,5 +1,4 @@
-use proc_macro2::Span;
-use syn::{parse::Parse, parse_quote_spanned};
+use syn::parse::Parse;
 
 use crate::ident::KebabIdent;
 
@@ -20,17 +19,8 @@ use crate::ident::KebabIdent;
 pub struct BoolAttr(KebabIdent);
 
 impl BoolAttr {
-    pub const fn span(&self) -> Span {
-        self.0.span()
-    }
-
     pub fn into_key(self) -> KebabIdent {
         self.0
-    }
-
-    /// Returns a `true` token spanned to the identifier.
-    pub fn spanned_true(&self) -> syn::LitBool {
-        parse_quote_spanned!(self.span()=> true)
     }
 }
 

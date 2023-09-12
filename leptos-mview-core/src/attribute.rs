@@ -107,7 +107,9 @@ impl From<Attr> for SimpleAttr {
         match value {
             Attr::Kv(kv) => Self::Kv(kv),
             Attr::Bool(b) => {
-                let value = syn::Lit::Bool(b.spanned_true());
+                // don't span with the original ident, syntax highlighting
+                // looks bad with the boolean color
+                let value: syn::Lit = parse_quote!(true);
                 Self::Kv(KvAttr::new(b.into_key(), Value::Lit(value)))
             }
             Attr::Directive(dir) => Self::Directive(dir),
