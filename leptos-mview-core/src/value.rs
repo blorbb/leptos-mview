@@ -68,7 +68,7 @@ impl Value {
     ///
     /// Returns `None` if the block does not only contain an ident.
     pub fn as_block_with_ident(&self) -> Option<&syn::Ident> {
-        let Value::Block(block) = self else {
+        let Self::Block(block) = self else {
             return None;
         };
         if block.block.stmts.len() != 1 {
