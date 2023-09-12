@@ -119,6 +119,7 @@ Elements have the following structure:
 1. Element / component tag name (`div`, `App`).
 2. A space-separated list of attributes and directives (`class="primary"`, `on:click={...}`).
 3. Either children in braces (`{ "hi!" }`) or a semi-colon for no children (`;`).
+    - If the element is last in the block, no semi-colon is needed. This is mainly to make it easier to write, as an invalid macro removes syntax highlighting/autocomplete. It is advised to always add a semi-colon to the end if no children are required.
 
 Example:
 ```
