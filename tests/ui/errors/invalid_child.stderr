@@ -1,0 +1,5 @@
+error: invalid child: expected literal, block, bracket or element
+ --> tests/ui/errors/invalid_child.rs:6:9
+  |
+6 |         (a)
+  |         ^
