@@ -53,6 +53,12 @@ impl Parse for Element {
             // no children, terminated by semicolon.
             input.parse::<Token![;]>().unwrap();
             Ok(Self::new(tag, attrs, None, None))
+        } else if input.is_empty() {
+            // allow no ending token if its the last child
+            // makes for better editing experience when writing sequentially,
+            // as syntax highlighting/autocomplete doesn't work if macro
+            // can't fully compile.
+            Ok(Self::new(tag, attrs, None, None))
         } else if input.peek(syn::token::Brace) {
             // has children in brace.
             let children = parse_children_block(input)?;
