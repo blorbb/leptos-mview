@@ -208,7 +208,7 @@ mod tests {
         if value.contains('{') {
             assert!(output.value().is_block());
         } else if value.contains('(') {
-            assert!(output.value().is_parenthesized());
+            assert!(output.value().is_bracketed());
         } else {
             assert!(output.value().is_lit());
         }

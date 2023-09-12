@@ -145,7 +145,7 @@ mod tests {
 
     #[test]
     fn full_element() {
-        let input = r#"div class="test" checked data-index=(index) { "child" span { "child2" } }"#;
+        let input = r#"div class="test" checked data-index=[index] { "child" span { "child2" } }"#;
         let element: Element = syn::parse_str(input).unwrap();
         assert_eq!(element.attrs().len(), 3);
         assert!(element.children().is_some());

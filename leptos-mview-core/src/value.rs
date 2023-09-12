@@ -7,46 +7,36 @@ use syn::parse::{Parse, ParseStream};
 /// Plain expressions or block expressions like `{move || !is_red.get()}`
 /// are placed as so.
 ///
-/// Expressions within parens are wrapped in a closure, e.g. `(!is_red.get())`
+/// Expressions within brackets are wrapped in a closure, e.g. `[!is_red.get()]`
 /// is expanded to `{move || !is_red.get()}`.
 ///
-/// To use tuples, wrap it in braces or parens, e.g. `{(1, 2)}` or `((1, 2))`.
-///
-/// Only literals can have the `None` delimiter, to avoid ambiguity.
+/// Only literals can have no delimiter, to avoid ambiguity.
 #[derive(Debug, Clone)]
 pub enum Value {
     Lit(syn::Lit),
     Block(syn::ExprBlock),
-    Parenthesized(syn::Expr, syn::token::Paren),
+    Bracket(syn::Expr, syn::token::Bracket),
 }
 
 impl Parse for Value {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        if input.peek(syn::token::Paren) {
+        if input.peek(syn::token::Bracket) {
             let stream;
-            let parens = syn::parenthesized!(stream in input);
+            let parens = syn::bracketed!(stream in input);
 
-            // fork to show better errors.
-            let full_stream = stream.fork();
             let expr: syn::Expr = stream.parse()?;
             // parsed an expression but there is still more.
             if stream.is_empty() {
-                Ok(Self::Parenthesized(expr, parens))
+                Ok(Self::Bracket(expr, parens))
             } else {
-                abort!(
-                    stream.span(), "unexpected token";
-                    note = "\
-                    if trying to pass a tuple, wrap it in additional braces or \
-                    parens. e.g. (({})) or {{({})}}.\
-                    ", full_stream, full_stream
-                )
+                abort!(stream.span(), "unexpected token")
             }
         } else if input.peek(syn::token::Brace) {
             Ok(Self::Block(input.parse()?))
         } else if let Ok(lit) = input.parse::<syn::Lit>() {
             Ok(Self::Lit(lit))
         } else {
-            Err(input.error("invalid value: expected paren, block or literal"))
+            Err(input.error("invalid value: expected bracket, block or literal"))
         }
     }
 }
@@ -56,7 +46,7 @@ impl ToTokens for Value {
         tokens.extend(match self {
             Self::Lit(lit) => lit.into_token_stream(),
             Self::Block(block) => block.into_token_stream(),
-            Self::Parenthesized(expr, _) => quote! {move || #expr},
+            Self::Bracket(expr, _) => quote! {move || #expr},
         });
     }
 }
@@ -85,7 +75,7 @@ impl Value {
         match self {
             Self::Lit(lit) => lit.span(),
             Self::Block(block) => block.block.brace_token.span.join(),
-            Self::Parenthesized(_, parens) => parens.span.join(),
+            Self::Bracket(_, brackets) => brackets.span.join(),
         }
     }
 }
@@ -100,7 +90,7 @@ mod tests {
     enum ValueKind {
         Lit,
         Block,
-        Paren,
+        Bracket,
     }
 
     // test only implementation, as it is not used anywhere else.
@@ -113,8 +103,8 @@ mod tests {
             matches!(self, Self::Block(_))
         }
 
-        pub fn is_parenthesized(&self) -> bool {
-            matches!(self, Self::Parenthesized(..))
+        pub fn is_bracketed(&self) -> bool {
+            matches!(self, Self::Bracket(..))
         }
     }
 
@@ -123,7 +113,7 @@ mod tests {
             match self {
                 ValueKind::Lit => value.is_lit(),
                 ValueKind::Block => value.is_block(),
-                ValueKind::Paren => value.is_parenthesized(),
+                ValueKind::Bracket => value.is_bracketed(),
             }
         }
     }
@@ -137,9 +127,9 @@ mod tests {
         exprs.insert("true", ValueKind::Lit);
         exprs.insert("{value}", ValueKind::Block);
         exprs.insert("{value; value2; value3}", ValueKind::Block);
-        exprs.insert("(abc.get())", ValueKind::Paren);
+        exprs.insert("[abc.get()]", ValueKind::Bracket);
         exprs.insert("{(aa,)}", ValueKind::Block);
-        exprs.insert("({a; b})", ValueKind::Paren);
+        exprs.insert("[{a; b}]", ValueKind::Bracket);
 
         for (expr, kind) in exprs {
             let value = syn::parse_str(expr).unwrap();

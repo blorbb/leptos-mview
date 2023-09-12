@@ -32,15 +32,15 @@ fn MyComponent() -> impl IntoView {
             }};
 
         Show
-            when=(!value().is_empty())
-            fallback=(view! { "..." })
+            when=[!value().is_empty()]
+            fallback=[view! { "..." }]
         {
             Await
-                future=(fetch_from_db(value()))
+                future=[fetch_from_db(value())]
                 blocking
             |db_info| {
                 p { "Things found: " strong { {*db_info} } "!" }
-                p { "Is bad: " (red_input().to_string()) }
+                p { "Is bad: " [red_input().to_string()] }
             }
         }
     }
@@ -77,20 +77,20 @@ fn MyComponent() -> impl IntoView {
             }};
 
         Show
-            // values wrapped in parens `(body)` are expanded to `{move || body}`
-            when=(!value().is_empty()) // `{move || !value().is_empty()}`
-            fallback=(view! { "..." }) // `{move || view! { "..." }}`
+            // values wrapped in brackets `[body]` are expanded to `{move || body}`
+            when=[!value().is_empty()] // `{move || !value().is_empty()}`
+            fallback=[view! { "..." }] // `{move || view! { "..." }}`
         { // I recommend placing children like this when attributes are multi-line
             Await
-                future=(fetch_from_db(value()))
+                future=[fetch_from_db(value())]
                 blocking // expanded to `blocking=true`
             // children take arguments with a 'closure'
             // this is very different to `bind:db_info` in Leptos!
             |db_info| {
                 p { "Things found: " strong { {*db_info} } "!" }
-                // parenthesized expansion works in children too!
+                // bracketed expansion works in children too!
                 //             {move || red_input().to_string()}
-                p { "Is bad: " (red_input().to_string()) }
+                p { "Is bad: " [red_input().to_string()] }
             }
         }
     }
@@ -169,16 +169,16 @@ There are (currently) 3 main types of values you can pass in:
     view! { input type=input_type }
     ```
 
-- Values wrapped in **parentheses** (like `value=(a_bool().to_string())`) are shortcuts for a block with an empty closure `move || ...` (to `value={move || a_bool().to_string()}`).
+- Values wrapped in **brackets** (like `value=[a_bool().to_string()]`) are shortcuts for a block with an empty closure `move || ...` (to `value={move || a_bool().to_string()}`).
     ```rust
     # use leptos::*; use leptos_mview::view;
     # let number = || 3;
     view! {
         Show
-            fallback=(()) // common for not wanting a fallback as `|| ()`
-            when=(number() % 2 == 0) // `{move || number() % 2 == 0}`
+            fallback=[()] // common for not wanting a fallback as `|| ()`
+            when=[number() % 2 == 0] // `{move || number() % 2 == 0}`
         {
-            "number + 1 = " (number() + 1) // works in children too!
+            "number + 1 = " [number() + 1] // works in children too!
         }
     }
     # ;
@@ -189,7 +189,7 @@ There are (currently) 3 main types of values you can pass in:
         # use leptos_mview::view;
         # use leptos::log;
         view! {
-            input type="text" on:click=(log!("THIS DOESNT WORK"));
+            input type="text" on:click=[log!("THIS DOESNT WORK")];
         }
         ```
 
@@ -263,8 +263,8 @@ See also: [boolean attributes on HTML elements](#boolean-attributes-on-html-elem
 #### Directives
 
 Some special attributes (distinguished by the `:`) called **directives** have special functionality. Most have the same behaviour as Leptos. These include:
-- `class:class-name=(when to show)`
-- `style:style-key=(style value)`
+- `class:class-name=[when to show]`
+- `style:style-key=[style value]`
 - `on:event={move |ev| event handler}`
 - `prop:property-name={signal}`
 - `clone:{ident_to_clone}`: This differs slightly from Leptos, which just has `clone:ident_to_clone`. See [clone directive](#clone-directive) for more details - tldr: just use `clone:{ident_to_clone}`.
@@ -289,7 +289,7 @@ This is replaced with a closure right before the children block. This way, you c
 # use leptos::*; use leptos_mview::view;
 view! {
     Await
-        future=(async { 3 })
+        future=[async { 3 }]
     |monkeys| {
         p { {*monkeys} " little monkeys, jumping on the bed." }
     }
@@ -299,7 +299,7 @@ view! {
 
 Note that you will usually need to add a `*` before the data you are using. If you forget that, rust-analyser will tell you to dereference here: `*{monkeys}`. This is obviously invalid - put it inside the braces. (If anyone knows how to fix this, feel free to contribute!)
 
-Summary from the previous section on values in case you missed it: children can be literal strings (not bools or numbers!), blocks with Rust code inside (`{*monkeys}`), or the closure shorthand `(number() + 1)`.
+Summary from the previous section on values in case you missed it: children can be literal strings (not bools or numbers!), blocks with Rust code inside (`{*monkeys}`), or the closure shorthand `[number() + 1]`.
 
 ## Extra details
 
@@ -344,16 +344,14 @@ Becomes `<input type="checkbox" checked data-smth />`, NOT `checked="true"` or `
 
 To have the attribute have a value of the string "true" or "false", use `.to_string()` on the bool.
 
-Especially using the closure shorthand `()`, this can be pretty simple when working with signals:
+Especially using the closure shorthand `[...]`, this can be pretty simple when working with signals:
 ```
 use leptos::*;
 use leptos_mview::view;
 let boolean_signal = create_rw_signal(true);
-view! { input type="checkbox" checked=(boolean_signal().to_string()); }
+view! { input type="checkbox" checked=[boolean_signal().to_string()]; }
 # ;
 ```
-
-(An extra shorthand may be added in the future for this specific case!)
 
 ### Clone directive
 

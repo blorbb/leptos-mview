@@ -1,4 +1,4 @@
-error: invalid value: expected paren, block or literal
+error: invalid value: expected bracket, block or literal
  --> tests/ui/errors/invalid_value.rs:5:15
   |
 5 |         div a=a {}
