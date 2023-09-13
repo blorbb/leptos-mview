@@ -48,8 +48,8 @@ impl Parse for Element {
         }
 
         let tag: Tag = input.parse()?;
-        let attrs: SimpleAttrs = input.parse()?;
         let selectors: SelectorShorthands = input.parse()?;
+        let attrs: SimpleAttrs = input.parse()?;
 
         if input.peek(Token![;]) {
             // no children, terminated by semicolon.
