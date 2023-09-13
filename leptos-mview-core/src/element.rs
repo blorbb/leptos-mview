@@ -7,7 +7,7 @@ use syn::{
 };
 
 use crate::{
-    attribute::SimpleAttrs,
+    attribute::{selector::SelectorShorthands, SimpleAttrs},
     children::Children,
     error_ext::ResultExt,
     expand::{component_to_tokens, xml_to_tokens},
@@ -33,6 +33,7 @@ type ClosureArgs = Punctuated<syn::Pat, Token![,]>;
 #[derive(Debug)]
 pub struct Element {
     tag: Tag,
+    selectors: SelectorShorthands,
     attrs: SimpleAttrs,
     children_args: Option<ClosureArgs>,
     children: Option<Children>,
@@ -48,21 +49,22 @@ impl Parse for Element {
 
         let tag: Tag = input.parse()?;
         let attrs: SimpleAttrs = input.parse()?;
+        let selectors: SelectorShorthands = input.parse()?;
 
         if input.peek(Token![;]) {
             // no children, terminated by semicolon.
             input.parse::<Token![;]>().unwrap();
-            Ok(Self::new(tag, attrs, None, None))
+            Ok(Self::new(tag, selectors, attrs, None, None))
         } else if input.is_empty() {
             // allow no ending token if its the last child
             // makes for better editing experience when writing sequentially,
             // as syntax highlighting/autocomplete doesn't work if macro
             // can't fully compile.
-            Ok(Self::new(tag, attrs, None, None))
+            Ok(Self::new(tag, selectors, attrs, None, None))
         } else if input.peek(syn::token::Brace) {
             // has children in brace.
             let children = parse_children_block(input)?;
-            Ok(Self::new(tag, attrs, None, Some(children)))
+            Ok(Self::new(tag, selectors, attrs, None, Some(children)))
         } else if input.peek(Token![|]) {
             // maybe extra args for the children
             let args = parse_closure_args(input).unwrap_or_abort();
@@ -74,7 +76,7 @@ impl Parse for Element {
                 )
             }
             let children = parse_children_block(input)?;
-            Ok(Self::new(tag, attrs, Some(args), Some(children)))
+            Ok(Self::new(tag, selectors, attrs, Some(args), Some(children)))
         } else {
             // add error at the unknown token
             emit_error!(input.span(), "unknown attribute");
@@ -96,12 +98,14 @@ impl ToTokens for Element {
 impl Element {
     pub const fn new(
         tag: Tag,
+        selectors: SelectorShorthands,
         attrs: SimpleAttrs,
         child_args: Option<ClosureArgs>,
         children: Option<Children>,
     ) -> Self {
         Self {
             tag,
+            selectors,
             attrs,
             children_args: child_args,
             children,
@@ -110,6 +114,10 @@ impl Element {
 
     pub const fn tag(&self) -> &Tag {
         &self.tag
+    }
+
+    pub const fn selectors(&self) -> &SelectorShorthands {
+        &self.selectors
     }
 
     pub const fn attrs(&self) -> &SimpleAttrs {

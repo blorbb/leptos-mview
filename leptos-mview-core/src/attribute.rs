@@ -1,6 +1,7 @@
 pub mod bool;
 pub mod directive;
 pub mod kv;
+pub mod selector;
 
 use std::ops::Deref;
 

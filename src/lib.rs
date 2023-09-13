@@ -19,7 +19,7 @@ fn MyComponent() -> impl IntoView {
     let red_input = move || value().len() % 2 == 0;
 
     view! {
-        h1 class="title" { "A great website" }
+        h1.title { "A great website" }
         br;
 
         input
@@ -63,7 +63,9 @@ fn MyComponent() -> impl IntoView {
 
     view! {
         // specify tags and attributes, children go in braces
-        h1 class="title" { "A great website" }
+        // classes (and ids) can be added like CSS selectors.
+        // same as `h1 class="title"`
+        h1.title { "A great website" }
         // elements with no children end with a semi-colon
         br;
 
@@ -117,8 +119,9 @@ Currently, the macro expands to the [builder syntax](https://github.com/leptos-r
 Elements have the following structure:
 
 1. Element / component tag name (`div`, `App`).
-2. A space-separated list of attributes and directives (`class="primary"`, `on:click={...}`).
-3. Either children in braces (`{ "hi!" }`) or a semi-colon for no children (`;`).
+2. Any classes or ids prefixed with a dot `.` or hash `#` respectively.
+3. A space-separated list of attributes and directives (`class="primary"`, `on:click={...}`).
+4. Either children in braces (`{ "hi!" }`) or a semi-colon for no children (`;`).
     - If the element is last in the block, no semi-colon is needed. This is mainly to make it easier to write, as an invalid macro removes syntax highlighting/autocomplete. It is advised to always add a semi-colon to the end if no children are required.
 
 Example:
@@ -127,9 +130,20 @@ Example:
 # let handle_input = |_| ();
 # #[component] fn MyComponent(data: i32, other: &'static str) -> impl IntoView {}
 view! {
-    div class="primary" { strong { "hello world" } }
+    div.primary { strong { "hello world" } }
     input type="text" on:input={handle_input};
     MyComponent data=3 other="hi";
+}
+# ;
+```
+
+Note that due to [Reserving syntax](https://doc.rust-lang.org/edition-guide/rust-2021/reserving-syntax.html),
+the `#` for ids must have a space before it.
+```
+# use leptos_mview::view;
+view! {
+    nav #primary { "..." }
+    // not allowed: nav#primary { "..." }
 }
 # ;
 ```
@@ -168,6 +182,7 @@ There are (currently) 3 main types of values you can pass in:
     let input_type = "text";
     // ❌ This is not valid! Wrap input_type in braces.
     view! { input type=input_type }
+    # ;
     ```
 
 - Values wrapped in **brackets** (like `value=[a_bool().to_string()]`) are shortcuts for a block with an empty closure `move || ...` (to `value={move || a_bool().to_string()}`).

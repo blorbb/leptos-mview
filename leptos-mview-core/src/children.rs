@@ -79,8 +79,11 @@ impl Parse for Children {
         // children should be empty, otherwise there are more tokens that
         // havent been parsed, i.e. invalid children.
         if !input.is_empty() {
-            abort!(input.span(), "invalid child: expected literal, block, bracket or element")
-        }
+            abort!(
+                input.span(),
+                "invalid child: expected literal, block, bracket or element"
+            );
+        };
         Ok(Self(vec))
     }
 }

@@ -8,7 +8,7 @@ use proc_macro_error::abort;
 use quote::{quote, quote_spanned};
 
 use crate::{
-    attribute::{directive::DirectiveKind, SimpleAttr},
+    attribute::{directive::DirectiveKind, selector::SelectorShorthand, SimpleAttr},
     children::Children,
     element::Element,
     tag::Tag,
@@ -48,6 +48,28 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
         Tag::Svg(ident) => quote! { ::leptos::svg::#ident() },
         Tag::Unknown(ident) => quote! { ::leptos::math::#ident() },
     };
+
+    // add selector-style ids/classes (div.some-class #some-id)
+    let (classes, ids): (Vec<_>, Vec<_>) = element
+        .selectors()
+        .iter()
+        .partition(|sel| matches!(sel, SelectorShorthand::Class { .. }));
+    let classes_method = if classes.is_empty() {
+        None
+    } else {
+        let method = quote_spanned!(classes[0].prefix().span()=> classes);
+        let classes_str = classes
+            .into_iter()
+            .map(|class| class.ident().repr())
+            .collect::<Vec<_>>()
+            .join(" ");
+        Some(quote!(.#method(#classes_str)))
+    };
+    let id_methods = ids.into_iter().map(|id| {
+        let id_method = quote_spanned!(id.prefix().span()=> id);
+        let ident = id.ident();
+        quote!(.#id_method(#ident))
+    });
 
     // parse normal attributes first
     let mut attrs = TokenStream::new();
@@ -94,6 +116,8 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
         #tag_path
             #attrs
             #directives
+            #classes_method
+            #(#id_methods)*
             #children
     })
 }
@@ -128,6 +152,15 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
 pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
     let Tag::Component(ident) = element.tag() else {
         return None;
+    };
+
+    // selectors not supported on components (for now)
+    if !element.selectors().is_empty() {
+        let first_prefix = element.selectors()[0].prefix();
+        abort!(
+            first_prefix.span(),
+            "class/id selector shorthand is not allowed on components"
+        );
     };
 
     // attribute methods to add when building
