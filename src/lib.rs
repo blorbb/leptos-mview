@@ -203,7 +203,7 @@ There are (currently) 3 main types of values you can pass in:
     - Note that this always expands to `move || ...`: for any closures that take an argument, use the full closure block instead.
         ```compile_error
         # use leptos_mview::view;
-        # use leptos::log;
+        # use leptos::logging::log;
         view! {
             input type="text" on:click=[log!("THIS DOESNT WORK")];
         }
@@ -212,7 +212,7 @@ There are (currently) 3 main types of values you can pass in:
         Instead:
         ```
         # use leptos_mview::view;
-        # use leptos::log;
+        # use leptos::logging::log;
         view! {
             input type="text" on:click={|_| log!("THIS WORKS!")};
         }

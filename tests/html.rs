@@ -31,7 +31,7 @@ fn single_element() {
             "hi"
         }
     };
-    check_str(result, r#"<div id="_0-0-1">hi</div>"#);
+    check_str(result, r#"<div data-hk="0-0-1">hi</div>"#);
 }
 
 #[test]
@@ -49,11 +49,11 @@ fn a_bunch() {
     check_str(
         result,
         "hi\
-        <span class=\"abc\" data-index=\"0\" id=\"_0-0-2\">\
-            <strong id=\"_0-0-3\">d</strong>3\
+        <span class=\"abc\" data-index=\"0\" data-hk=\"0-0-2\">\
+            <strong data-hk=\"0-0-3\">d</strong>3\
         </span>\
-        <br id=\"_0-0-4\"/>\
-        <input type=\"checkbox\" checked id=\"_0-0-5\"/>",
+        <br data-hk=\"0-0-4\"/>\
+        <input type=\"checkbox\" checked data-hk=\"0-0-5\"/>",
     );
 }
 

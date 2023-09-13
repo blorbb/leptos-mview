@@ -133,7 +133,7 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
 ///     leptos::component_props_builder(&Com)
 ///         .num(3)
 ///         .text("a".to_string())
-///         .children(Box::new(move || {
+///         .children(::leptos::ToChildren::to_children(move || {
 ///             Fragment::lazy(|| [
 ///                 "child",
 ///                 "child2",
@@ -212,14 +212,14 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
     }
 
     // children with arguments take a `Fn(T) -> impl IntoView`
-    // normal children (`Children`, `ChildrenFn`, ...) take `Box<dyn Fn() -> Fragment>`
+    // normal children (`Children`, `ChildrenFn`, ...) take `ToChildren::to_children`
     let args = element.children_args();
     let children = element.children().map(|children| {
         let fragment = children_fragment_tokens(children);
-        // only wrap the fragment in a box if there are no closures
+        // only wrap the fragment if there are no closures
         let wrapped_fragment = if element.children_args().is_none() {
             quote! {
-                ::std::boxed::Box::new(move || #fragment)
+                ::leptos::ToChildren::to_children(move || #fragment)
             }
         } else {
             quote! { move |#args| #fragment }
