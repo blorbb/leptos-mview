@@ -283,6 +283,7 @@ Some special attributes (distinguished by the `:`) called **directives** have sp
 - `style:style-key=[style value]`
 - `on:event={move |ev| event handler}`
 - `prop:property-name={signal}`
+- `attr:name={value}`
 - `clone:{ident_to_clone}`: This differs slightly from Leptos, which just has `clone:ident_to_clone`. See [clone directive](#clone-directive) for more details - tldr: just use `clone:{ident_to_clone}`.
 
 All of these directives also support the attribute shorthand:

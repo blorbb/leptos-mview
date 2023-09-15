@@ -2,6 +2,7 @@ pub mod bool;
 pub mod directive;
 pub mod kv;
 pub mod selector;
+pub mod spread_attrs;
 
 use std::ops::Deref;
 
@@ -10,7 +11,7 @@ use syn::{
     parse_quote,
 };
 
-use self::{bool::BoolAttr, directive::DirectiveAttr, kv::KvAttr};
+use self::{bool::BoolAttr, directive::DirectiveAttr, kv::KvAttr, spread_attrs::SpreadAttr};
 use crate::{ident::KebabIdent, value::Value};
 
 /// Parses a shorthand attribute like `{class}`.
@@ -74,6 +75,7 @@ pub enum Attr {
     Kv(KvAttr),
     Bool(BoolAttr),
     Directive(DirectiveAttr),
+    Spread(SpreadAttr),
 }
 
 impl Parse for Attr {
@@ -82,6 +84,8 @@ impl Parse for Attr {
             Ok(Self::Kv(kv))
         } else if let Ok(dir) = input.parse::<DirectiveAttr>() {
             Ok(Self::Directive(dir))
+        } else if let Ok(spread) = input.parse::<SpreadAttr>() {
+            Ok(Self::Spread(spread))
         } else if let Ok(bool) = input.parse::<BoolAttr>() {
             Ok(Self::Bool(bool))
         } else {
@@ -94,13 +98,11 @@ impl Parse for Attr {
 ///
 /// Currently this only reduces `BoolAttr`s into a `KvAttr` with a
 /// value of `true`.
-///
-/// TODO: When field shorthands are supported, this will simplify that
-/// into the expanded form as well.
 #[derive(Debug, Clone)]
 pub enum SimpleAttr {
     Kv(KvAttr),
     Directive(DirectiveAttr),
+    Spread(SpreadAttr),
 }
 
 impl From<Attr> for SimpleAttr {
@@ -114,6 +116,7 @@ impl From<Attr> for SimpleAttr {
                 Self::Kv(KvAttr::new(b.into_key(), Value::Lit(value)))
             }
             Attr::Directive(dir) => Self::Directive(dir),
+            Attr::Spread(spread) => Self::Spread(spread),
         }
     }
 }

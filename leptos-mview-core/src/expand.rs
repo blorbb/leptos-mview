@@ -11,7 +11,9 @@ use crate::{
     attribute::{directive::DirectiveKind, selector::SelectorShorthand, SimpleAttr},
     children::Children,
     element::Element,
+    ident::KebabIdent,
     tag::Tag,
+    value::Value,
 };
 
 /// Converts an xml (like html, svg or math) element to tokens.
@@ -73,6 +75,7 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
 
     // parse normal attributes first
     let mut attrs = TokenStream::new();
+    let mut spread_attrs = TokenStream::new();
     // put directives at the end so conditional attributes like `class:` work.
     let mut directives = TokenStream::new();
 
@@ -100,11 +103,18 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
                 directives.extend(match attr.kind() {
                     Dir::Style | Dir::Class | Dir::Prop => quote! { .#dir(#name, #value) },
                     Dir::On => quote! { .#dir(::leptos::ev::#name_ident, #value) },
-                    Dir::Clone => abort!(
+                    Dir::Clone | Dir::Attr => abort!(
                         dir.span(),
                         "directive `{}:` is not supported on html elements",
                         dir
                     ),
+                });
+            }
+            SimpleAttr::Spread(spread) => {
+                let ident = spread.as_ident();
+                let method = quote_spanned!(ident.span()=> attrs);
+                spread_attrs.extend(quote! {
+                    .#method(#ident)
                 });
             }
         }
@@ -118,6 +128,7 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
             #directives
             #classes_method
             #(#id_methods)*
+            #spread_attrs
             #children
     })
 }
@@ -165,6 +176,8 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
 
     // attribute methods to add when building
     let mut attrs = TokenStream::new();
+    let mut dyn_attrs: Vec<(&KebabIdent, &Value)> = Vec::new();
+    let mut first_dyn_attr_token = None;
     // the variables (idents) to clone before making children
     // in the form `let value = name.clone()`
     let mut clones = TokenStream::new();
@@ -177,6 +190,12 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
                 let key = attr.key().to_snake_ident();
                 let value = attr.value();
                 attrs.extend(quote! { .#key(#value) });
+            }
+            SimpleAttr::Spread(spread) => {
+                abort!(
+                    spread.as_ident().span(),
+                    "spread attributes not supported on components"
+                );
             }
             SimpleAttr::Directive(dir) => match dir.directive().kind() {
                 Dir::On => {
@@ -201,6 +220,10 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
                     };
 
                     clones.extend(quote! { let #new_ident = #to_clone.clone(); });
+                }
+                Dir::Attr => {
+                    dyn_attrs.push((dir.name(), dir.value()));
+                    first_dyn_attr_token.get_or_insert(dir.directive());
                 }
                 Dir::Class | Dir::Style | Dir::Prop => abort!(
                     dir.span(),
@@ -233,6 +256,26 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
         }
     });
 
+    // expand dyn attrs to the method if any exist
+    let dyn_attrs = if dyn_attrs.is_empty() {
+        None
+    } else {
+        let method = quote_spanned! {
+            first_dyn_attr_token.unwrap().span()=>
+            dyn_attrs
+        };
+        let (names, values): (Vec<_>, Vec<_>) = dyn_attrs.into_iter().unzip();
+        Some(quote! {
+            .#method(
+                <[_]>::into_vec(
+                    ::std::boxed::Box::new([
+                        #( (#names, ::leptos::IntoAttribute::into_attribute(#values)) ),*
+                    ])
+                )
+            )
+        })
+    };
+
     Some(quote! {
         ::leptos::component_view(
             &#ident,
@@ -240,6 +283,7 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
                 #attrs
                 #children
                 .build()
+                #dyn_attrs
         )
         .into_view()
         #event_listeners
