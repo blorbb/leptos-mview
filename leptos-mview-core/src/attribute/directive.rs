@@ -4,13 +4,16 @@ use proc_macro2::{Span, TokenStream};
 use quote::ToTokens;
 use syn::{
     ext::IdentExt,
-    parse::{discouraged::Speculative, Parse},
+    parse::{discouraged::Speculative, Parse, ParseStream},
     Token,
 };
 
-use crate::{error_ext::ResultExt, ident::KebabIdent, value::Value};
+use crate::{error_ext::ResultExt, ident::KebabIdent, kw, value::Value};
 
-use super::ShorthandAttr;
+use super::{
+    parsing::{parse_braced_bool, parse_dir_then, parse_ident_braced, parse_str_braced},
+    ShorthandAttr,
+};
 
 /// A special attribute like `on:click={...}`.
 ///
@@ -108,6 +111,109 @@ impl Parse for DirectiveAttr {
                 value,
             })
         }
+    }
+}
+
+/// A `class:some-thing={move || boolean()}` directive.
+pub struct Class {
+    directive: kw::class,
+    class_name: syn::LitStr,
+    value: Value,
+}
+
+impl Parse for Class {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let (class, (name, value)) = parse_dir_then(input, parse_str_braced)?;
+        Ok(Self {
+            directive: class,
+            class_name: name,
+            value,
+        })
+    }
+}
+
+pub struct Style {
+    directive: kw::style,
+    style_name: syn::LitStr,
+    value: Value,
+}
+
+impl Parse for Style {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let (style, (name, value)) = parse_dir_then(input, parse_str_braced)?;
+        Ok(Self {
+            directive: style,
+            style_name: name,
+            value,
+        })
+    }
+}
+
+pub struct Attr {
+    directive: kw::attr,
+    attr_key: KebabIdent,
+    value: Value,
+}
+
+impl Parse for Attr {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let (attr, (key, value)) = parse_dir_then(input, parse_braced_bool)?;
+        Ok(Self {
+            directive: attr,
+            attr_key: key,
+            value,
+        })
+    }
+}
+
+pub struct On {
+    directive: kw::on,
+    event: syn::Ident,
+    value: Value,
+}
+
+impl Parse for On {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let (on, (event, value)) = parse_dir_then(input, parse_ident_braced)?;
+        Ok(Self {
+            directive: on,
+            event,
+            value,
+        })
+    }
+}
+
+pub struct Prop {
+    directive: kw::prop,
+    name: syn::Ident,
+    value: Value,
+}
+
+impl Parse for Prop {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let (prop, (name, value)) = parse_dir_then(input, parse_ident_braced)?;
+        Ok(Self {
+            directive: prop,
+            name,
+            value,
+        })
+    }
+}
+
+pub struct Clone {
+    directive: kw::clone,
+    name: syn::Ident,
+    value: Value,
+}
+
+impl Parse for Clone {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let (clone, (name, value)) = parse_dir_then(input, parse_ident_braced)?;
+        Ok(Self {
+            directive: clone,
+            name,
+            value,
+        })
     }
 }
 

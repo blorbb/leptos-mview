@@ -25,6 +25,10 @@ impl KebabIdent {
         self.repr.as_ref()
     }
 
+    pub fn to_lit_str(&self) -> syn::LitStr {
+        syn::LitStr::new(self.repr(), self.span())
+    }
+
     pub const fn span(&self) -> Span {
         self.span
     }
