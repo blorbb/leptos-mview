@@ -107,7 +107,10 @@ pub fn parse_dir_then<Kw: CustomToken + Parse, R>(
 
     let dir = input.parse::<Kw>()?; // should not advance if no match
     input.parse::<Token![:]>().expect("peeked for token");
-    Ok((dir, next(input).unwrap_or_abort()))
+    Ok((
+        dir,
+        next(input).expect_or_abort("invalid key after directive"),
+    ))
 }
 
 // Parse either a kebab-case ident or a str literal.

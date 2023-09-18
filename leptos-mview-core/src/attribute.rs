@@ -6,7 +6,9 @@ pub mod spread_attrs;
 
 use std::ops::Deref;
 
-use syn::parse::Parse;
+use syn::{parse::Parse, Token};
+
+use crate::error_ext::ResultExt;
 
 use self::{directive::DirectiveAttr, kv::KvAttr, spread_attrs::SpreadAttr};
 
@@ -19,8 +21,15 @@ pub enum Attr {
 
 impl Parse for Attr {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        if let Ok(dir) = input.parse::<DirectiveAttr>() {
+        // ident then colon must be directive
+        // just ident must be regular kv attribute
+        // otherwise, try kv or spread
+        if input.peek(syn::Ident) && input.peek2(Token![:]) {
+            let dir = input.parse::<DirectiveAttr>().unwrap_or_abort();
             Ok(Self::Directive(dir))
+        } else if input.peek(syn::Ident) {
+            let kv = input.parse::<KvAttr>().unwrap_or_abort();
+            Ok(Self::Kv(kv))
         } else if let Ok(kv) = input.parse::<KvAttr>() {
             Ok(Self::Kv(kv))
         } else if let Ok(spread) = input.parse::<SpreadAttr>() {

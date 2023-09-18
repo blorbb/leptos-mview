@@ -1,23 +1,23 @@
-error: unknown directive `something`
+error: unknown directive
  --> tests/ui/errors/invalid_directive.rs:5:13
   |
 5 |         div something:yes="b" {}
   |             ^^^^^^^^^
 
-error: expected identifier after `class:` directive
+error: invalid key after directive: input is not a kebab-cased ident
   --> tests/ui/errors/invalid_directive.rs:11:19
    |
 11 |         div class:("abcd") = true {}
    |                   ^
 
-error: expected identifier after `style:` directive
+error: invalid key after directive: input is not a kebab-cased ident
   --> tests/ui/errors/invalid_directive.rs:17:19
    |
 17 |         div style:[1, 2]="black" {}
    |                   ^
 
-error[E0425]: cannot find value `clicky_click` in module `leptos::ev`
-  --> tests/ui/errors/invalid_directive.rs:23:19
+error: expected `=`
+  --> tests/ui/errors/invalid_directive.rs:23:25
    |
 23 |         button on:clicky-click={move |_| ()};
-   |                   ^^^^^^^^^^^^ not found in `leptos::ev`
+   |                         ^

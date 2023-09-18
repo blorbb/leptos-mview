@@ -50,7 +50,7 @@ impl Parse for DirectiveAttr {
         } else if let Ok(clone) = input.parse::<Clone>() {
             Ok(Self::Clone(clone))
         } else {
-            Err(input.error("invalid directive"))
+            Err(input.error("unknown directive"))
         }
     }
 }
