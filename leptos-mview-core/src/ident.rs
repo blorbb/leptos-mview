@@ -6,6 +6,8 @@ use syn::{
     Token,
 };
 
+use crate::span;
+
 /// A kebab-cased identifier.
 ///
 /// The identifier must start with a letter, underscore or dash.
@@ -88,7 +90,7 @@ impl Parse for KebabIdent {
         }
 
         // `join` returns `None` if not on nightly.
-        let full_span = start_span.join(end_span).unwrap_or(start_span);
+        let full_span = span::join(start_span, end_span);
 
         Ok(Self::new(repr, full_span))
     }

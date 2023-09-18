@@ -80,19 +80,19 @@ macro_rules! create_directive {
         }
 
         impl $struct_name {
-            pub fn $value(&self) -> &$value_type {
+            pub const fn $value(&self) -> &$value_type {
                 &self.$value
             }
 
-            pub fn $name(&self) -> &$name_type {
+            pub const fn $name(&self) -> &$name_type {
                 &self.$name
             }
 
-            pub fn $dir(&self) -> &$dir_type {
+            pub const fn $dir(&self) -> &$dir_type {
                 &self.$dir
             }
 
-            pub fn explode(&self) -> (&$dir_type, &$name_type, &$value_type) {
+            pub const fn explode(&self) -> (&$dir_type, &$name_type, &$value_type) {
                 (&self.$dir(), &self.$name(), &self.$value())
             }
         }

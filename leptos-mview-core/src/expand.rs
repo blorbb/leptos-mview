@@ -221,15 +221,15 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
                     first_dyn_attr_token.get_or_insert(dir);
                 }
                 DirectiveAttr::Clone(c) => {
-                    let (_, to_clone, cloned) = c.explode();
-                    let Some(cloned) = cloned.as_block_with_ident() else {
+                    let (_, to_clone, cloned_ident) = c.explode();
+                    let Some(cloned_ident) = cloned_ident.as_block_with_ident() else {
                         abort!(
-                            cloned.span(),
+                            cloned_ident.span(),
                             "value of a `clone:` directive must be an ident like {{{}}}",
                             to_clone
                         )
                     };
-                    clones.extend(quote! { let #cloned = #to_clone.clone(); })
+                    clones.extend(quote! { let #cloned_ident = #to_clone.clone(); });
                 }
                 DirectiveAttr::Class(c) => abort!(
                     c.directive().span,
@@ -237,11 +237,11 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
                 ),
                 DirectiveAttr::Style(s) => abort!(
                     s.directive().span,
-                    "directive `class:` is not supported on components"
+                    "directive `style:` is not supported on components"
                 ),
                 DirectiveAttr::Prop(p) => abort!(
                     p.directive().span,
-                    "directive `class:` is not supported on components"
+                    "directive `prop:` is not supported on components"
                 ),
             },
         }

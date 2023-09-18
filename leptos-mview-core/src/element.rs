@@ -11,6 +11,7 @@ use crate::{
     children::Children,
     error_ext::ResultExt,
     expand::{component_to_tokens, xml_to_tokens},
+    span,
     tag::Tag,
 };
 
@@ -81,7 +82,7 @@ impl Parse for Element {
             // add error at the unknown token
             emit_error!(input.span(), "unknown attribute");
             abort!(
-                tag.span().join(input.span()).unwrap_or(tag.span()), "child elements not found";
+                span::join(tag.span(), input.span()), "child elements not found";
                 note = "if you don't want any child elements, end the element with \
                 a semi-colon `;` or empty braces `{}`."
             )

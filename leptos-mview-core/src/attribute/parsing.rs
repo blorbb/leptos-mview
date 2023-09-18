@@ -144,14 +144,14 @@ pub struct BracedKebabIdent {
 }
 
 impl BracedKebabIdent {
-    pub fn new(brace: Brace, ident: KebabIdent) -> Self {
+    pub const fn new(brace: Brace, ident: KebabIdent) -> Self {
         Self {
             brace_token: brace,
             ident,
         }
     }
 
-    pub fn ident(&self) -> &KebabIdent {
+    pub const fn ident(&self) -> &KebabIdent {
         &self.ident
     }
 
