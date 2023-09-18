@@ -1,123 +1,32 @@
-pub mod bool;
-mod parsing;
 pub mod directive;
 pub mod kv;
+mod parsing;
 pub mod selector;
 pub mod spread_attrs;
 
 use std::ops::Deref;
 
-use syn::{
-    parse::{discouraged::Speculative, Parse, ParseStream},
-    parse_quote,
-};
+use syn::parse::Parse;
 
-use self::{bool::BoolAttr, directive::DirectiveAttr, kv::KvAttr, spread_attrs::SpreadAttr};
-use crate::{ident::KebabIdent, value::Value};
-
-/// Parses a shorthand attribute like `{class}`.
-///
-/// The `key` is the kebab-cased identifier in the braces, and the `value`
-/// will always be a `syn::ExprBlock` with a single ident inside.
-///
-/// # Examples
-/// ```ignore
-/// let class = "these are classes";
-/// let aria_label = "good label here";
-/// let (value, set_value) = create_signal(String::new())
-/// view! {
-///     input type="text" {class} {aria-label} prop:{value};
-/// }
-/// // is the same as:
-/// view! {
-///     input type="text" class={class} aria-label={aria_label} prop:value={value};
-/// }
-/// ```
-///
-/// # Aborts
-/// Returns an `Err` if no brace is found. If a brace is found but the
-/// block is not an ident, the macro will abort.
-struct ShorthandAttr {
-    key: KebabIdent,
-    value: Value,
-}
-
-impl Parse for ShorthandAttr {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        if input.peek(syn::token::Brace) {
-            let fork = input.fork();
-            let inner;
-            syn::braced!(inner in fork);
-
-            // inner must be a kebab ident
-            let ident = inner.parse::<KebabIdent>()?;
-            if !inner.is_empty() {
-                return Err(input.error("unexpected token after ident"));
-            };
-
-            let ident_snake = ident.to_snake_ident();
-            let block: syn::ExprBlock = parse_quote!({#ident_snake});
-
-            // advance the actual stream
-            input.advance_to(&fork);
-
-            Ok(Self {
-                key: ident,
-                value: Value::Block(block),
-            })
-        } else {
-            Err(input.error("expected braces for attribute shorthand"))
-        }
-    }
-}
+use self::{directive::DirectiveAttr, kv::KvAttr, spread_attrs::SpreadAttr};
 
 #[derive(Debug, Clone)]
 pub enum Attr {
     Kv(KvAttr),
-    Bool(BoolAttr),
     Directive(DirectiveAttr),
     Spread(SpreadAttr),
 }
 
 impl Parse for Attr {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        if let Ok(kv) = input.parse::<KvAttr>() {
-            Ok(Self::Kv(kv))
-        } else if let Ok(dir) = input.parse::<DirectiveAttr>() {
+        if let Ok(dir) = input.parse::<DirectiveAttr>() {
             Ok(Self::Directive(dir))
+        } else if let Ok(kv) = input.parse::<KvAttr>() {
+            Ok(Self::Kv(kv))
         } else if let Ok(spread) = input.parse::<SpreadAttr>() {
             Ok(Self::Spread(spread))
-        } else if let Ok(bool) = input.parse::<BoolAttr>() {
-            Ok(Self::Bool(bool))
         } else {
             Err(input.error("no attribute found"))
-        }
-    }
-}
-
-/// A simplified equivalent version of `Attr`.
-///
-/// Currently this only reduces `BoolAttr`s into a `KvAttr` with a
-/// value of `true`.
-#[derive(Debug, Clone)]
-pub enum SimpleAttr {
-    Kv(KvAttr),
-    Directive(DirectiveAttr),
-    Spread(SpreadAttr),
-}
-
-impl From<Attr> for SimpleAttr {
-    fn from(value: Attr) -> Self {
-        match value {
-            Attr::Kv(kv) => Self::Kv(kv),
-            Attr::Bool(b) => {
-                // don't span with the original ident, syntax highlighting
-                // looks bad with the boolean color
-                let value: syn::Lit = parse_quote!(true);
-                Self::Kv(KvAttr::new(b.into_key(), Value::Lit(value)))
-            }
-            Attr::Directive(dir) => Self::Directive(dir),
-            Attr::Spread(spread) => Self::Spread(spread),
         }
     }
 }
@@ -134,12 +43,6 @@ impl Deref for Attrs {
     }
 }
 
-impl Attrs {
-    pub fn into_vec(self) -> Vec<Attr> {
-        self.0
-    }
-}
-
 impl Parse for Attrs {
     /// If no attributes are present, an empty vector will be returned.
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
@@ -151,109 +54,48 @@ impl Parse for Attrs {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct SimpleAttrs(Vec<SimpleAttr>);
-
-impl From<Attrs> for SimpleAttrs {
-    fn from(value: Attrs) -> Self {
-        Self(value.into_vec().into_iter().map(Into::into).collect())
-    }
-}
-
-impl Parse for SimpleAttrs {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let attrs = input.parse::<Attrs>()?;
-        Ok(attrs.into())
-    }
-}
-
-impl Deref for SimpleAttrs {
-    type Target = [SimpleAttr];
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use crate::attribute::{Attrs, BoolAttr};
+    use syn::parse_quote;
 
     use super::{Attr, KvAttr};
-
-    impl Attr {
-        pub fn as_kv(&self) -> Option<&KvAttr> {
-            if let Self::Kv(v) = self {
-                Some(v)
-            } else {
-                None
-            }
-        }
-
-        pub fn as_bool(&self) -> Option<&BoolAttr> {
-            if let Self::Bool(v) = self {
-                Some(v)
-            } else {
-                None
-            }
-        }
-    }
-
-    impl Attrs {
-        pub fn as_slice(&self) -> &[Attr] {
-            &self.0
-        }
-    }
-
-    #[track_caller]
-    fn check_kv(input: &str, output: KvAttr) {
-        let (key, value) = input.split_once('=').unwrap();
-
-        assert_eq!(output.key().repr(), key.trim());
-        if value.contains('{') {
-            assert!(output.value().is_block());
-        } else if value.contains('[') {
-            assert!(output.value().is_bracketed());
-        } else {
-            assert!(output.value().is_lit());
-        }
-    }
-
-    #[track_caller]
-    fn check_bool(input: &str, output: BoolAttr) {
-        assert_eq!(output.into_key().repr(), input);
-    }
+    use crate::attribute::Attrs;
 
     #[test]
-    fn parse_kv_attr() {
-        // must not have a mix of brackets and braces
-        let inputs = ["key = \"value\"", "something-else = {move || true}"];
-
-        for input in inputs {
-            let attr = syn::parse_str::<KvAttr>(input).unwrap();
-            check_kv(input, attr);
-        }
-    }
-
-    #[test]
-    fn parse_bool_attr() {
-        let inputs = ["key", "something-else", "-a-b-c"];
-        for input in inputs {
-            let attr = syn::parse_str::<BoolAttr>(input).unwrap();
-            check_bool(input, attr);
-        }
+    fn simple_kv_attr() {
+        let input: KvAttr = parse_quote! { key = "value" };
+        assert_eq!(input.key().repr(), "key");
+        assert!(input.value().is_lit());
     }
 
     #[test]
     fn parse_complex_attrs() {
-        let input = "key1=[value1] key2 key3 key4={value4}";
-        let inputs: Vec<_> = input.split_whitespace().collect();
-        let attrs = syn::parse_str::<Attrs>(input).unwrap();
-        let attrs = attrs.as_slice();
+        impl Attr {
+            fn is_kv(&self) -> bool {
+                matches!(self, Self::Kv(..))
+            }
 
-        check_kv(inputs[0], attrs[0].as_kv().unwrap().clone());
-        check_bool(inputs[1], attrs[1].as_bool().unwrap().clone());
-        check_bool(inputs[2], attrs[2].as_bool().unwrap().clone());
-        check_kv(inputs[3], attrs[3].as_kv().unwrap().clone());
+            fn is_dir(&self) -> bool {
+                matches!(self, Self::Directive(..))
+            }
+
+            fn is_spread(&self) -> bool {
+                matches!(self, Self::Spread(..))
+            }
+        }
+        let attrs: Attrs = parse_quote! {
+            key-1 = "value"
+            a-long-thing=[some()]
+            style:--var-2={move || true}
+            class:{disabled}
+            {checked}
+            {..spread}
+        };
+        assert!(attrs[0].is_kv());
+        assert!(attrs[1].is_kv());
+        assert!(attrs[2].is_dir());
+        assert!(attrs[3].is_dir());
+        assert!(attrs[4].is_kv());
+        assert!(attrs[5].is_spread());
     }
 }

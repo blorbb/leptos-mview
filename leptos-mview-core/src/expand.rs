@@ -8,7 +8,7 @@ use proc_macro_error::abort;
 use quote::{quote, quote_spanned};
 
 use crate::{
-    attribute::{directive::DirectiveKind, selector::SelectorShorthand, SimpleAttr},
+    attribute::{directive::DirectiveAttr, selector::SelectorShorthand, Attr},
     children::Children,
     element::Element,
     ident::KebabIdent,
@@ -81,7 +81,7 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
 
     for a in element.attrs().iter() {
         match a {
-            SimpleAttr::Kv(attr) => {
+            Attr::Kv(attr) => {
                 let key = attr.key();
                 let value = attr.value();
                 // special cases
@@ -92,25 +92,34 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
                     quote! { .attr(#key, #value) }
                 });
             }
-            SimpleAttr::Directive(attr) => {
-                use DirectiveKind as Dir;
-
-                let dir = attr.directive();
-                let name = attr.name();
-                let name_ident = name.to_snake_ident();
-                let value = attr.value();
-
-                directives.extend(match attr.kind() {
-                    Dir::Style | Dir::Class | Dir::Prop => quote! { .#dir(#name, #value) },
-                    Dir::On => quote! { .#dir(::leptos::ev::#name_ident, #value) },
-                    Dir::Clone | Dir::Attr => abort!(
-                        dir.span(),
-                        "directive `{}:` is not supported on html elements",
-                        dir
-                    ),
-                });
-            }
-            SimpleAttr::Spread(spread) => {
+            Attr::Directive(dir) => match dir {
+                // TODO: reduce duplication
+                DirectiveAttr::Class(c) => {
+                    let (dir, name, value) = c.explode();
+                    directives.extend(quote! { .#dir(#name, #value) });
+                }
+                DirectiveAttr::Style(s) => {
+                    let (dir, name, value) = s.explode();
+                    directives.extend(quote! { .#dir(#name, #value) });
+                }
+                DirectiveAttr::On(o) => {
+                    let (dir, ev, value) = o.explode();
+                    directives.extend(quote! { .#dir(::leptos::ev::#ev, #value) });
+                }
+                DirectiveAttr::Prop(p) => {
+                    let (dir, name, value) = p.explode();
+                    directives.extend(quote! { #dir(#name, #value) });
+                }
+                DirectiveAttr::Attr(a) => abort!(
+                    a.directive().span,
+                    "directive `attr:` is not supported on html elements"
+                ),
+                DirectiveAttr::Clone(c) => abort!(
+                    c.directive().span,
+                    "directive `clone:` is not supported on html elements"
+                ),
+            },
+            Attr::Spread(spread) => {
                 let ident = spread.as_ident();
                 let method = quote_spanned!(ident.span()=> attrs);
                 spread_attrs.extend(quote! {
@@ -184,51 +193,55 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
     let mut event_listeners = TokenStream::new();
 
     for a in element.attrs().iter() {
-        use DirectiveKind as Dir;
         match a {
-            SimpleAttr::Kv(attr) => {
+            Attr::Kv(attr) => {
                 let key = attr.key().to_snake_ident();
                 let value = attr.value();
                 attrs.extend(quote! { .#key(#value) });
             }
-            SimpleAttr::Spread(spread) => {
+            Attr::Spread(spread) => {
                 abort!(
                     spread.as_ident().span(),
                     "spread attributes not supported on components"
                 );
             }
-            SimpleAttr::Directive(dir) => match dir.directive().kind() {
-                Dir::On => {
-                    let event = dir.name();
-                    let callback = dir.value();
+            Attr::Directive(dir) => match dir {
+                DirectiveAttr::On(o) => {
+                    let (dir, ev, callback) = o.explode();
                     event_listeners.extend(quote! {
-                        .on(
-                            ::leptos::ev::undelegated(::leptos::ev::#event),
+                        .#dir(
+                            ::leptos::ev::undelegated(::leptos::ev::#ev),
                             #callback
                         )
                     });
                 }
-                Dir::Clone => {
-                    let to_clone = dir.name().to_snake_ident();
-                    // value must just be an ident.
-                    let Some(new_ident) = dir.value().as_block_with_ident() else {
+                DirectiveAttr::Attr(a) => {
+                    let (dir, key, value) = a.explode();
+                    dyn_attrs.push((key, value));
+                    first_dyn_attr_token.get_or_insert(dir);
+                }
+                DirectiveAttr::Clone(c) => {
+                    let (_, to_clone, cloned) = c.explode();
+                    let Some(cloned) = cloned.as_block_with_ident() else {
                         abort!(
-                            dir.value().span(),
-                            "value of a `clone:` directive must be an ident like {}",
+                            cloned.span(),
+                            "value of a `clone:` directive must be an ident like {{{}}}",
                             to_clone
-                        );
+                        )
                     };
-
-                    clones.extend(quote! { let #new_ident = #to_clone.clone(); });
+                    clones.extend(quote! { let #cloned = #to_clone.clone(); })
                 }
-                Dir::Attr => {
-                    dyn_attrs.push((dir.name(), dir.value()));
-                    first_dyn_attr_token.get_or_insert(dir.directive());
-                }
-                Dir::Class | Dir::Style | Dir::Prop => abort!(
-                    dir.span(),
-                    "directive `{}:` is not supported on components",
-                    dir.directive()
+                DirectiveAttr::Class(c) => abort!(
+                    c.directive().span,
+                    "directive `class:` is not supported on components"
+                ),
+                DirectiveAttr::Style(s) => abort!(
+                    s.directive().span,
+                    "directive `class:` is not supported on components"
+                ),
+                DirectiveAttr::Prop(p) => abort!(
+                    p.directive().span,
+                    "directive `class:` is not supported on components"
                 ),
             },
         }
@@ -261,7 +274,7 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
         None
     } else {
         let method = quote_spanned! {
-            first_dyn_attr_token.unwrap().span()=>
+            first_dyn_attr_token.unwrap().span=>
             dyn_attrs
         };
         let (names, values): (Vec<_>, Vec<_>) = dyn_attrs.into_iter().unzip();

@@ -2,6 +2,7 @@
 
 use syn::{
     parse::{discouraged::Speculative, Parse, ParseStream},
+    parse_quote,
     token::{Brace, CustomToken},
     Token,
 };
@@ -11,9 +12,10 @@ use crate::{error_ext::ResultExt, ident::KebabIdent, value::Value};
 /// Parsing function for attributes that can accept:
 /// - Normal `key={value}` pairs
 /// - Shorthand attributes like `{class}` to `class={class}`
+/// - Boolean attributes like `checked` to `checked=true`
 /// - The above can also be kebab-case idents.
 ///
-/// For use with `on` directives and key-value attributes.
+/// For use with `attr` directives and key-value attributes.
 pub fn parse_braced_bool(input: ParseStream) -> syn::Result<(KebabIdent, Value)> {
     if input.peek(syn::token::Brace) {
         let braced_ident = input.parse::<BracedKebabIdent>()?;
@@ -24,10 +26,17 @@ pub fn parse_braced_bool(input: ParseStream) -> syn::Result<(KebabIdent, Value)>
     } else {
         let fork = input.fork();
         let ident = fork.parse::<KebabIdent>()?;
-        fork.parse::<Token![=]>()?;
-        let value = fork.parse::<Value>()?;
-        input.advance_to(&fork);
-        Ok((ident, value))
+        if fork.parse::<Token![=]>().is_ok() {
+            // key = value pair
+            let value = fork.parse::<Value>().unwrap_or_abort();
+            input.advance_to(&fork);
+            Ok((ident, value))
+        } else {
+            // boolean attribute
+            let value = Value::Lit(parse_quote!(true));
+            input.advance_to(&fork);
+            Ok((ident, value))
+        }
     }
 }
 
@@ -69,10 +78,10 @@ pub fn parse_str_braced(input: ParseStream) -> syn::Result<(syn::LitStr, Value)>
 pub fn parse_ident_braced(input: ParseStream) -> syn::Result<(syn::Ident, Value)> {
     if input.peek(syn::token::Brace) {
         // TODO: give these better errors
-        let ident = input.parse::<BracedIdent>().unwrap_or_abort();
+        let ident = input.parse::<BracedIdent>()?;
         Ok((ident.ident().clone(), ident.into_block_value()))
     } else {
-        let ident = input.parse::<syn::Ident>().unwrap_or_abort();
+        let ident = input.parse::<syn::Ident>()?;
         input.parse::<Token![=]>().unwrap_or_abort();
         let value = input.parse::<Value>().unwrap_or_abort();
         Ok((ident, value))
@@ -170,14 +179,14 @@ pub struct BracedIdent {
 }
 
 impl BracedIdent {
-    pub fn new(brace: Brace, ident: syn::Ident) -> Self {
+    pub const fn new(brace: Brace, ident: syn::Ident) -> Self {
         Self {
             brace_token: brace,
             ident,
         }
     }
 
-    pub fn ident(&self) -> &syn::Ident {
+    pub const fn ident(&self) -> &syn::Ident {
         &self.ident
     }
 
@@ -202,8 +211,12 @@ fn parse_braced<T: syn::parse::Parse>(input: ParseStream) -> syn::Result<(Brace,
         let inner;
         let brace_token = syn::braced!(inner in fork);
         let ast = inner.parse::<T>()?;
-        input.advance_to(&fork);
-        Ok((brace_token, ast))
+        if inner.is_empty() {
+            input.advance_to(&fork);
+            Ok((brace_token, ast))
+        } else {
+            Err(inner.error("found extra tokens trying to parse braced expression"))
+        }
     } else {
         Err(input.error("no brace found"))
     }

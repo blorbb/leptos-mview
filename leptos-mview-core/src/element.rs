@@ -7,7 +7,7 @@ use syn::{
 };
 
 use crate::{
-    attribute::{selector::SelectorShorthands, SimpleAttrs},
+    attribute::{selector::SelectorShorthands, Attrs},
     children::Children,
     error_ext::ResultExt,
     expand::{component_to_tokens, xml_to_tokens},
@@ -34,7 +34,7 @@ type ClosureArgs = Punctuated<syn::Pat, Token![,]>;
 pub struct Element {
     tag: Tag,
     selectors: SelectorShorthands,
-    attrs: SimpleAttrs,
+    attrs: Attrs,
     children_args: Option<ClosureArgs>,
     children: Option<Children>,
 }
@@ -49,7 +49,7 @@ impl Parse for Element {
 
         let tag: Tag = input.parse()?;
         let selectors: SelectorShorthands = input.parse()?;
-        let attrs: SimpleAttrs = input.parse()?;
+        let attrs: Attrs = input.parse()?;
 
         if input.peek(Token![;]) {
             // no children, terminated by semicolon.
@@ -99,7 +99,7 @@ impl Element {
     pub const fn new(
         tag: Tag,
         selectors: SelectorShorthands,
-        attrs: SimpleAttrs,
+        attrs: Attrs,
         child_args: Option<ClosureArgs>,
         children: Option<Children>,
     ) -> Self {
@@ -120,7 +120,7 @@ impl Element {
         &self.selectors
     }
 
-    pub const fn attrs(&self) -> &SimpleAttrs {
+    pub const fn attrs(&self) -> &Attrs {
         &self.attrs
     }
 
