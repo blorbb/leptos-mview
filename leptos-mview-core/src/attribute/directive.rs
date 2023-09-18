@@ -1,3 +1,5 @@
+use proc_macro2::Span;
+use quote::ToTokens;
 use syn::parse::{Parse, ParseStream};
 
 use super::parsing::{parse_braced_bool, parse_dir_then, parse_ident_braced, parse_str_braced};
@@ -53,47 +55,63 @@ impl Parse for DirectiveAttr {
     }
 }
 
+pub trait Directive {
+    type Dir: ToTokens + syn::token::CustomToken + std::clone::Clone;
+    type Key: ToTokens + std::clone::Clone;
+    type Value: ToTokens + std::clone::Clone;
+    fn dir(&self) -> &Self::Dir;
+    fn key(&self) -> &Self::Key;
+    fn value(&self) -> &Self::Value;
+
+    fn explode(&self) -> (Self::Dir, Self::Key, Self::Value) {
+        // TODO: remove these clones
+        (self.dir().clone(), self.key().clone(), self.value().clone())
+    }
+
+    fn dir_key_span(&self) -> Span;
+}
+
 macro_rules! create_directive {
     (
         use $parser:ident for pub struct $struct_name:ident {
             $dir:ident: $dir_type:ty,
-            $name:ident: $name_type:ty,
+            $key:ident: $key_type:ty,
             $value:ident: $value_type:ty,
         }
     ) => {
         #[derive(Debug, Clone)]
         pub struct $struct_name {
             $dir: $dir_type,
-            $name: $name_type,
+            $key: $key_type,
             $value: $value_type,
         }
 
         impl Parse for $struct_name {
             fn parse(input: ParseStream) -> syn::Result<Self> {
-                let ($dir, ($name, $value)) = parse_dir_then(input, $parser)?;
-                Ok(Self {
-                    $dir,
-                    $name,
-                    $value,
-                })
+                let ($dir, ($key, $value)) = parse_dir_then(input, $parser)?;
+                Ok(Self { $dir, $key, $value })
             }
         }
 
-        impl $struct_name {
-            pub const fn $value(&self) -> &$value_type {
+        impl Directive for $struct_name {
+            type Dir = $dir_type;
+            type Key = $key_type;
+            type Value = $value_type;
+
+            fn value(&self) -> &Self::Value {
                 &self.$value
             }
 
-            pub const fn $name(&self) -> &$name_type {
-                &self.$name
+            fn key(&self) -> &Self::Key {
+                &self.$key
             }
 
-            pub const fn $dir(&self) -> &$dir_type {
+            fn dir(&self) -> &Self::Dir {
                 &self.$dir
             }
 
-            pub const fn explode(&self) -> (&$dir_type, &$name_type, &$value_type) {
-                (&self.$dir(), &self.$name(), &self.$value())
+            fn dir_key_span(&self) -> Span {
+                crate::span::join(self.dir().span, self.key().span())
             }
         }
     };

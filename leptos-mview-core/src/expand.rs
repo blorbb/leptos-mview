@@ -6,9 +6,14 @@
 use proc_macro2::TokenStream;
 use proc_macro_error::abort;
 use quote::{quote, quote_spanned};
+use syn::token::CustomToken;
 
 use crate::{
-    attribute::{directive::DirectiveAttr, selector::SelectorShorthand, Attr},
+    attribute::{
+        directive::{Directive, DirectiveAttr},
+        selector::{SelectorShorthand, SelectorShorthands},
+        Attr,
+    },
     children::Children,
     element::Element,
     ident::KebabIdent,
@@ -52,31 +57,13 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
     };
 
     // add selector-style ids/classes (div.some-class #some-id)
-    let (classes, ids): (Vec<_>, Vec<_>) = element
-        .selectors()
-        .iter()
-        .partition(|sel| matches!(sel, SelectorShorthand::Class { .. }));
-    let classes_method = if classes.is_empty() {
-        None
-    } else {
-        let method = quote_spanned!(classes[0].prefix().span()=> classes);
-        let classes_str = classes
-            .into_iter()
-            .map(|class| class.ident().repr())
-            .collect::<Vec<_>>()
-            .join(" ");
-        Some(quote!(.#method(#classes_str)))
-    };
-    let id_methods = ids.into_iter().map(|id| {
-        let id_method = quote_spanned!(id.prefix().span()=> id);
-        let ident = id.ident();
-        quote!(.#id_method(#ident))
-    });
+    let selector_methods = xml_selectors_to_tokens(element.selectors());
 
     // parse normal attributes first
     let mut attrs = TokenStream::new();
     let mut spread_attrs = TokenStream::new();
-    // put directives at the end so conditional attributes like `class:` work.
+    // put directives at the end so conditional attributes like `class:` work
+    // with `class="..."` attributes
     let mut directives = TokenStream::new();
 
     for a in element.attrs().iter() {
@@ -92,33 +79,24 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
                     quote! { .attr(#key, #value) }
                 });
             }
-            Attr::Directive(dir) => match dir {
-                // TODO: reduce duplication
-                DirectiveAttr::Class(c) => {
-                    let (dir, name, value) = c.explode();
-                    directives.extend(quote! { .#dir(#name, #value) });
+            Attr::Directive(dir) => {
+                fn method_key_value(dir: &impl Directive) -> TokenStream {
+                    let (dir, name, value) = dir.explode();
+                    quote! { .#dir(#name, #value) }
                 }
-                DirectiveAttr::Style(s) => {
-                    let (dir, name, value) = s.explode();
-                    directives.extend(quote! { .#dir(#name, #value) });
+
+                match dir {
+                    DirectiveAttr::Class(c) => directives.extend(method_key_value(c)),
+                    DirectiveAttr::Style(s) => directives.extend(method_key_value(s)),
+                    DirectiveAttr::Prop(p) => directives.extend(method_key_value(p)),
+                    DirectiveAttr::On(o) => {
+                        let (dir, ev, value) = o.explode();
+                        directives.extend(quote! { .#dir(::leptos::ev::#ev, #value) });
+                    }
+                    DirectiveAttr::Attr(a) => abort_not_supported(element, a),
+                    DirectiveAttr::Clone(c) => abort_not_supported(element, c),
                 }
-                DirectiveAttr::On(o) => {
-                    let (dir, ev, value) = o.explode();
-                    directives.extend(quote! { .#dir(::leptos::ev::#ev, #value) });
-                }
-                DirectiveAttr::Prop(p) => {
-                    let (dir, name, value) = p.explode();
-                    directives.extend(quote! { #dir(#name, #value) });
-                }
-                DirectiveAttr::Attr(a) => abort!(
-                    a.directive().span,
-                    "directive `attr:` is not supported on html elements"
-                ),
-                DirectiveAttr::Clone(c) => abort!(
-                    c.directive().span,
-                    "directive `clone:` is not supported on html elements"
-                ),
-            },
+            }
             Attr::Spread(spread) => {
                 let ident = spread.as_ident();
                 let method = quote_spanned!(ident.span()=> attrs);
@@ -135,8 +113,7 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
         #tag_path
             #attrs
             #directives
-            #classes_method
-            #(#id_methods)*
+            #selector_methods
             #spread_attrs
             #children
     })
@@ -185,7 +162,7 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
 
     // attribute methods to add when building
     let mut attrs = TokenStream::new();
-    let mut dyn_attrs: Vec<(&KebabIdent, &Value)> = Vec::new();
+    let mut dyn_attrs: Vec<(KebabIdent, Value)> = Vec::new();
     let mut first_dyn_attr_token = None;
     // the variables (idents) to clone before making children
     // in the form `let value = name.clone()`
@@ -231,18 +208,9 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
                     };
                     clones.extend(quote! { let #cloned_ident = #to_clone.clone(); });
                 }
-                DirectiveAttr::Class(c) => abort!(
-                    c.directive().span,
-                    "directive `class:` is not supported on components"
-                ),
-                DirectiveAttr::Style(s) => abort!(
-                    s.directive().span,
-                    "directive `style:` is not supported on components"
-                ),
-                DirectiveAttr::Prop(p) => abort!(
-                    p.directive().span,
-                    "directive `prop:` is not supported on components"
-                ),
+                DirectiveAttr::Class(c) => abort_not_supported(element, c),
+                DirectiveAttr::Style(s) => abort_not_supported(element, s),
+                DirectiveAttr::Prop(p) => abort_not_supported(element, p),
             },
         }
     }
@@ -350,4 +318,47 @@ pub fn children_fragment_tokens(children: &Children) -> TokenStream {
             )
         })
     }
+}
+
+/// Converts element class/id selector shorthands into a series of `.classes`
+/// and `.id` calls.
+fn xml_selectors_to_tokens(selectors: &SelectorShorthands) -> TokenStream {
+    let (classes, ids): (Vec<_>, Vec<_>) = selectors
+        .iter()
+        .partition(|sel| matches!(sel, SelectorShorthand::Class { .. }));
+
+    let classes_method = if classes.is_empty() {
+        None
+    } else {
+        let method = quote_spanned!(classes[0].prefix().span()=> classes);
+        let classes_str = classes
+            .iter()
+            .map(|class| class.ident().repr())
+            .collect::<Vec<_>>()
+            .join(" ");
+        Some(quote! { .#method(#classes_str) })
+    };
+
+    let id_methods = ids.iter().map(|id| {
+        let method = quote_spanned!(id.prefix().span()=> id);
+        let ident = id.ident();
+        quote!(.#method(#ident))
+    });
+
+    quote! { #classes_method #(#id_methods)* }
+}
+
+fn abort_not_supported<D: Directive>(element: &Element, dir: &D) -> ! {
+    let suffix = match element.tag() {
+        Tag::Html(_) => "html elements",
+        Tag::Component(_) => "components",
+        Tag::Svg(_) => "svgs",
+        Tag::Unknown(_) => "web components",
+    };
+    abort!(
+        dir.dir_key_span(),
+        "directive {} is not supported on {}",
+        D::Dir::display(),
+        suffix
+    )
 }
