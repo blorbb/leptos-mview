@@ -14,8 +14,7 @@ fn main() {
 
 #[component]
 fn Owning(children: ChildrenFn) -> impl IntoView {
-    // TODO: replace with `{children}` when fixed in rc2
     view! {
-        div { {children()} }
+        div { {children} }
     }
 }
