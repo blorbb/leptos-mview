@@ -24,6 +24,7 @@ pub fn parse_braced_bool(input: ParseStream) -> syn::Result<(KebabIdent, Value)>
             braced_ident.into_block_value(),
         ))
     } else {
+        // TODO: can this fork be removed?
         let fork = input.fork();
         let ident = fork.parse::<KebabIdent>()?;
         if fork.parse::<Token![=]>().is_ok() {
@@ -159,7 +160,7 @@ impl BracedKebabIdent {
     }
 
     pub fn into_block_value(self) -> Value {
-        let ident = self.ident();
+        let ident = self.ident().to_snake_ident();
         Value::Block(syn::parse_quote_spanned!(self.brace_token.span=> {#ident}))
     }
 }

@@ -88,7 +88,12 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
                 match dir {
                     DirectiveAttr::Class(c) => directives.extend(method_key_value(c)),
                     DirectiveAttr::Style(s) => directives.extend(method_key_value(s)),
-                    DirectiveAttr::Prop(p) => directives.extend(method_key_value(p)),
+                    DirectiveAttr::Prop(p) => {
+                        let (dir, name, value) = p.explode();
+                        let name_str = name.to_string();
+                        let name = quote_spanned!(name.span()=> #name_str);
+                        directives.extend(quote! { .#dir(#name, #value) })
+                    },
                     DirectiveAttr::On(o) => {
                         let (dir, ev, value) = o.explode();
                         directives.extend(quote! { .#dir(::leptos::ev::#ev, #value) });
