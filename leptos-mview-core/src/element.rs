@@ -15,7 +15,7 @@ use crate::{
     tag::Tag,
 };
 
-type ClosureArgs = Punctuated<syn::Pat, Token![,]>;
+pub type ClosureArgs = Punctuated<syn::Pat, Token![,]>;
 
 /// A HTML or custom component.
 ///

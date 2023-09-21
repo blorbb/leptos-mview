@@ -40,6 +40,15 @@ impl Tag {
             Self::Unknown(ident) => ident.span(),
         }
     }
+
+    pub const fn kind(&self) -> TagKind {
+        match self {
+            Self::Html(_) => TagKind::Html,
+            Self::Component(_) => TagKind::Component,
+            Self::Svg(_) => TagKind::Svg,
+            Self::Unknown(_) => TagKind::Unknown,
+        }
+    }
 }
 
 impl Parse for Tag {
