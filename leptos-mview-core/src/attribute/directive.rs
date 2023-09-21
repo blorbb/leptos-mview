@@ -2,7 +2,10 @@ use proc_macro2::Span;
 use quote::ToTokens;
 use syn::parse::{Parse, ParseStream};
 
-use super::parsing::{parse_braced_bool, parse_dir_then, parse_ident_braced, parse_str_braced};
+use super::parsing::{
+    parse_dir_then, parse_ident_or_braced, parse_kebab_or_braced_or_bool,
+    parse_kebab_or_braced_or_str,
+};
 use crate::{ident::KebabIdent, kw, value::Value};
 
 /// A special attribute like `on:click={...}`.
@@ -72,42 +75,36 @@ pub trait Directive {
 }
 
 macro_rules! create_directive {
-    (
-        use $parser:ident for pub struct $struct_name:ident {
-            $dir:ident: $dir_type:ty,
-            $key:ident: $key_type:ty,
-            $value:ident: $value_type:ty,
-        }
-    ) => {
+    ($struct_name:ident { $dir:ty : $key:ty = $value:ty } uses $parser:ident) => {
         #[derive(Debug, Clone)]
         pub struct $struct_name {
-            $dir: $dir_type,
-            $key: $key_type,
-            $value: $value_type,
+            dir: $dir,
+            key: $key,
+            value: $value,
         }
 
         impl Parse for $struct_name {
             fn parse(input: ParseStream) -> syn::Result<Self> {
-                let ($dir, ($key, $value)) = parse_dir_then(input, $parser)?;
-                Ok(Self { $dir, $key, $value })
+                let (dir, (key, value)) = parse_dir_then(input, $parser)?;
+                Ok(Self { dir, key, value })
             }
         }
 
         impl Directive for $struct_name {
-            type Dir = $dir_type;
-            type Key = $key_type;
-            type Value = $value_type;
+            type Dir = $dir;
+            type Key = $key;
+            type Value = $value;
 
             fn value(&self) -> &Self::Value {
-                &self.$value
+                &self.value
             }
 
             fn key(&self) -> &Self::Key {
-                &self.$key
+                &self.key
             }
 
             fn dir(&self) -> &Self::Dir {
-                &self.$dir
+                &self.dir
             }
 
             fn dir_key_span(&self) -> Span {
@@ -117,50 +114,9 @@ macro_rules! create_directive {
     };
 }
 
-create_directive! {
-    use parse_str_braced for pub struct Class {
-        directive: kw::class,
-        class_name: syn::LitStr,
-        value: Value,
-    }
-}
-
-create_directive! {
-    use parse_str_braced for pub struct Style {
-        directive: kw::style,
-        style: syn::LitStr,
-        value: Value,
-    }
-}
-
-create_directive! {
-    use parse_braced_bool for pub struct Attr {
-        directive: kw::attr,
-        key: KebabIdent,
-        value: Value,
-    }
-}
-
-create_directive! {
-    use parse_ident_braced for pub struct On {
-        directive: kw::on,
-        event: syn::Ident,
-        value: Value,
-    }
-}
-
-create_directive! {
-    use parse_ident_braced for pub struct Prop {
-        directive: kw::prop,
-        name: syn::Ident,
-        value: Value,
-    }
-}
-
-create_directive! {
-    use parse_ident_braced for pub struct Clone {
-        directive: kw::clone,
-        name: syn::Ident,
-        value: Value,
-    }
-}
+create_directive! { Class { kw::class : syn::LitStr = Value } uses parse_kebab_or_braced_or_str }
+create_directive! { Style { kw::style : syn::LitStr = Value } uses parse_kebab_or_braced_or_str }
+create_directive! { Attr { kw::attr : KebabIdent = Value } uses parse_kebab_or_braced_or_bool }
+create_directive! { On { kw::on : syn::Ident = Value } uses parse_ident_or_braced }
+create_directive! { Prop { kw::prop : syn::Ident = Value } uses parse_ident_or_braced }
+create_directive! { Clone { kw::clone : syn::Ident = Value } uses parse_ident_or_braced }

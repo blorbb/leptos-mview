@@ -16,7 +16,7 @@ use crate::{error_ext::ResultExt, ident::KebabIdent, value::Value};
 /// - The above can also be kebab-case idents.
 ///
 /// For use with `attr` directives and key-value attributes.
-pub fn parse_braced_bool(input: ParseStream) -> syn::Result<(KebabIdent, Value)> {
+pub fn parse_kebab_or_braced_or_bool(input: ParseStream) -> syn::Result<(KebabIdent, Value)> {
     if input.peek(syn::token::Brace) {
         let braced_ident = input.parse::<BracedKebabIdent>()?;
         Ok((
@@ -50,7 +50,7 @@ pub fn parse_braced_bool(input: ParseStream) -> syn::Result<(KebabIdent, Value)>
 /// # Errors
 /// Returns `Err`s if the input cannot be parsed. Does not advance the
 /// token stream if so.
-pub fn parse_str_braced(input: ParseStream) -> syn::Result<(syn::LitStr, Value)> {
+pub fn parse_kebab_or_braced_or_str(input: ParseStream) -> syn::Result<(syn::LitStr, Value)> {
     // either a shorthand `{class}` or key-value pair `class={class}`.
     if input.peek(syn::token::Brace) {
         let braced_ident = input.parse::<BracedKebabIdent>()?;
@@ -76,7 +76,7 @@ pub fn parse_str_braced(input: ParseStream) -> syn::Result<(syn::LitStr, Value)>
 /// # Errors
 /// Returns `Err`s if the input cannot be parsed. Does not advance the
 /// token stream if so.
-pub fn parse_ident_braced(input: ParseStream) -> syn::Result<(syn::Ident, Value)> {
+pub fn parse_ident_or_braced(input: ParseStream) -> syn::Result<(syn::Ident, Value)> {
     if input.peek(syn::token::Brace) {
         // TODO: give these better errors
         let ident = input.parse::<BracedIdent>()?;

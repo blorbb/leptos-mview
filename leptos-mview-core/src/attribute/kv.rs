@@ -2,7 +2,7 @@ use syn::parse::Parse;
 
 use crate::{ident::KebabIdent, value::Value};
 
-use super::parsing::parse_braced_bool;
+use super::parsing::parse_kebab_or_braced_or_bool;
 
 /// A `key = value` type of attribute.
 ///
@@ -47,7 +47,7 @@ impl KvAttr {
 
 impl Parse for KvAttr {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let (key, value) = parse_braced_bool(input)?;
+        let (key, value) = parse_kebab_or_braced_or_bool(input)?;
         Ok(Self::new(key, value))
     }
 }
