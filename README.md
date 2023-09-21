@@ -352,5 +352,3 @@ Please feel free to make a PR/issue if you have feature ideas/bugs to report/fee
 
 - [ ] [Extending `class` attribute support](https://github.com/leptos-rs/leptos/issues/1492)
 - [ ] [SSR optimisation](https://github.com/leptos-rs/leptos/issues/1492#issuecomment-1664675672) (potential `delegate` feature that transforms this macro into a `leptos::view!` macro call as well?)
-- [ ] Support [spread attributes](https://github.com/leptos-rs/leptos/pull/1619) (and [dynamic spread attributes](https://github.com/leptos-rs/leptos/pull/1628))
-- [ ] [`Rc` backed `ChildrenFn`](https://github.com/leptos-rs/leptos/pull/1669) (probably once this becomes part of a release)
