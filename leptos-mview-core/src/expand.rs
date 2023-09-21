@@ -6,14 +6,19 @@
 use proc_macro2::TokenStream;
 use proc_macro_error::abort;
 use quote::{quote, quote_spanned};
+use syn::token::CustomToken;
 
 use crate::{
-    attribute::{directive::DirectiveKind, selector::SelectorShorthand, SimpleAttr},
+    attribute::{
+        directive::{self, Directive, DirectiveAttr},
+        kv::KvAttr,
+        selector::{SelectorShorthand, SelectorShorthands},
+        spread_attrs::SpreadAttr,
+        Attr,
+    },
     children::Children,
-    element::Element,
-    ident::KebabIdent,
-    tag::Tag,
-    value::Value,
+    element::{ClosureArgs, Element},
+    tag::{Tag, TagKind},
 };
 
 /// Converts an xml (like html, svg or math) element to tokens.
@@ -52,71 +57,20 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
     };
 
     // add selector-style ids/classes (div.some-class #some-id)
-    let (classes, ids): (Vec<_>, Vec<_>) = element
-        .selectors()
-        .iter()
-        .partition(|sel| matches!(sel, SelectorShorthand::Class { .. }));
-    let classes_method = if classes.is_empty() {
-        None
-    } else {
-        let method = quote_spanned!(classes[0].prefix().span()=> classes);
-        let classes_str = classes
-            .into_iter()
-            .map(|class| class.ident().repr())
-            .collect::<Vec<_>>()
-            .join(" ");
-        Some(quote!(.#method(#classes_str)))
-    };
-    let id_methods = ids.into_iter().map(|id| {
-        let id_method = quote_spanned!(id.prefix().span()=> id);
-        let ident = id.ident();
-        quote!(.#id_method(#ident))
-    });
+    let selector_methods = xml_selectors_to_tokens(element.selectors());
 
     // parse normal attributes first
     let mut attrs = TokenStream::new();
     let mut spread_attrs = TokenStream::new();
-    // put directives at the end so conditional attributes like `class:` work.
+    // put directives at the end so conditional attributes like `class:` work
+    // with `class="..."` attributes
     let mut directives = TokenStream::new();
 
     for a in element.attrs().iter() {
         match a {
-            SimpleAttr::Kv(attr) => {
-                let key = attr.key();
-                let value = attr.value();
-                // special cases
-                attrs.extend(if key.repr() == "ref" {
-                    let node_ref = quote_spanned!(key.span()=> node_ref);
-                    quote! { .#node_ref(#value) }
-                } else {
-                    quote! { .attr(#key, #value) }
-                });
-            }
-            SimpleAttr::Directive(attr) => {
-                use DirectiveKind as Dir;
-
-                let dir = attr.directive();
-                let name = attr.name();
-                let name_ident = name.to_snake_ident();
-                let value = attr.value();
-
-                directives.extend(match attr.kind() {
-                    Dir::Style | Dir::Class | Dir::Prop => quote! { .#dir(#name, #value) },
-                    Dir::On => quote! { .#dir(::leptos::ev::#name_ident, #value) },
-                    Dir::Clone | Dir::Attr => abort!(
-                        dir.span(),
-                        "directive `{}:` is not supported on html elements",
-                        dir
-                    ),
-                });
-            }
-            SimpleAttr::Spread(spread) => {
-                let ident = spread.as_ident();
-                let method = quote_spanned!(ident.span()=> attrs);
-                spread_attrs.extend(quote! {
-                    .#method(#ident)
-                });
-            }
+            Attr::Kv(attr) => attrs.extend(xml_kv_attribute_tokens(attr)),
+            Attr::Directive(dir) => directives.extend(xml_directive_tokens(element, dir)),
+            Attr::Spread(spread) => spread_attrs.extend(xml_spread_tokens(spread)),
         }
     }
 
@@ -126,11 +80,100 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
         #tag_path
             #attrs
             #directives
-            #classes_method
-            #(#id_methods)*
+            #selector_methods
             #spread_attrs
             #children
     })
+}
+
+/// Converts element class/id selector shorthands into a series of `.classes`
+/// and `.id` calls.
+fn xml_selectors_to_tokens(selectors: &SelectorShorthands) -> TokenStream {
+    let (classes, ids): (Vec<_>, Vec<_>) = selectors
+        .iter()
+        .partition(|sel| matches!(sel, SelectorShorthand::Class { .. }));
+
+    let classes_method = if classes.is_empty() {
+        None
+    } else {
+        let method = quote_spanned!(classes[0].prefix().span()=> classes);
+        let classes_str = classes
+            .iter()
+            .map(|class| class.ident().repr())
+            .collect::<Vec<_>>()
+            .join(" ");
+        Some(quote! { .#method(#classes_str) })
+    };
+
+    let id_methods = ids.iter().map(|id| {
+        let method = quote_spanned!(id.prefix().span()=> id);
+        let ident = id.ident();
+        quote!(.#method(#ident))
+    });
+
+    quote! { #classes_method #(#id_methods)* }
+}
+
+fn xml_kv_attribute_tokens(attr: &KvAttr) -> TokenStream {
+    let key = attr.key();
+    let value = attr.value();
+    // special cases
+    if key.repr() == "ref" {
+        let node_ref = quote_spanned!(key.span()=> node_ref);
+        quote! { .#node_ref(#value) }
+    } else {
+        quote! { .attr(#key, #value) }
+    }
+}
+
+fn xml_directive_tokens(element: &Element, directive: &DirectiveAttr) -> TokenStream {
+    match directive {
+        DirectiveAttr::Class(c) => {
+            let (dir, name, value) = c.explode();
+            quote! { .#dir(#name, #value) }
+        }
+        DirectiveAttr::Style(s) => {
+            let (dir, name, value) = s.explode();
+            quote! { .#dir(#name, #value) }
+        }
+        DirectiveAttr::Prop(p) => {
+            let (dir, name, value) = p.explode();
+            let name_str = name.to_string();
+            let name = quote_spanned!(name.span()=> #name_str);
+            quote! { .#dir(#name, #value) }
+        }
+        DirectiveAttr::On(o) => {
+            let (dir, ev, value) = o.explode();
+            quote! { .#dir(::leptos::ev::#ev, #value) }
+        }
+        DirectiveAttr::Attr(a) => abort_not_supported(&element.tag().kind(), a),
+        DirectiveAttr::Clone(c) => abort_not_supported(&element.tag().kind(), c),
+    }
+}
+
+fn xml_spread_tokens(attr: &SpreadAttr) -> TokenStream {
+    let ident = attr.as_ident();
+    let method = quote_spanned!(ident.span()=> attrs);
+    quote! {
+        .#method(#ident)
+    }
+}
+
+/// Converts the children to a series of `.child` calls.
+///
+/// # Example
+/// ```ignore
+/// div { "a" {var} "b" }
+/// ```
+/// Expands to:
+/// ```ignore
+/// div().child("a").child({var}).child("b")
+/// ```
+pub fn child_methods_tokens(children: &Children) -> TokenStream {
+    let children = children.iter();
+    quote! {
+        #( .child(#children) )*
+    }
 }
 
 /// Transforms a component into a `TokenStream` of a leptos component view.
@@ -176,105 +219,37 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
 
     // attribute methods to add when building
     let mut attrs = TokenStream::new();
-    let mut dyn_attrs: Vec<(&KebabIdent, &Value)> = Vec::new();
-    let mut first_dyn_attr_token = None;
+    let mut dyn_attrs: Vec<&directive::Attr> = Vec::new();
     // the variables (idents) to clone before making children
     // in the form `let value = name.clone()`
     let mut clones = TokenStream::new();
     let mut event_listeners = TokenStream::new();
 
     for a in element.attrs().iter() {
-        use DirectiveKind as Dir;
         match a {
-            SimpleAttr::Kv(attr) => {
-                let key = attr.key().to_snake_ident();
-                let value = attr.value();
-                attrs.extend(quote! { .#key(#value) });
-            }
-            SimpleAttr::Spread(spread) => {
+            Attr::Kv(attr) => attrs.extend(component_kv_attribute_tokens(attr)),
+            Attr::Spread(spread) => {
                 abort!(
                     spread.as_ident().span(),
                     "spread attributes not supported on components"
                 );
             }
-            SimpleAttr::Directive(dir) => match dir.directive().kind() {
-                Dir::On => {
-                    let event = dir.name();
-                    let callback = dir.value();
-                    event_listeners.extend(quote! {
-                        .on(
-                            ::leptos::ev::undelegated(::leptos::ev::#event),
-                            #callback
-                        )
-                    });
-                }
-                Dir::Clone => {
-                    let to_clone = dir.name().to_snake_ident();
-                    // value must just be an ident.
-                    let Some(new_ident) = dir.value().as_block_with_ident() else {
-                        abort!(
-                            dir.value().span(),
-                            "value of a `clone:` directive must be an ident like {}",
-                            to_clone
-                        );
-                    };
-
-                    clones.extend(quote! { let #new_ident = #to_clone.clone(); });
-                }
-                Dir::Attr => {
-                    dyn_attrs.push((dir.name(), dir.value()));
-                    first_dyn_attr_token.get_or_insert(dir.directive());
-                }
-                Dir::Class | Dir::Style | Dir::Prop => abort!(
-                    dir.span(),
-                    "directive `{}:` is not supported on components",
-                    dir.directive()
-                ),
+            Attr::Directive(dir) => match dir {
+                DirectiveAttr::On(o) => event_listeners.extend(component_event_listener_tokens(o)),
+                DirectiveAttr::Attr(a) => dyn_attrs.push(a),
+                DirectiveAttr::Clone(c) => clones.extend(component_clone_tokens(c)),
+                DirectiveAttr::Class(c) => abort_not_supported(&element.tag().kind(), c),
+                DirectiveAttr::Style(s) => abort_not_supported(&element.tag().kind(), s),
+                DirectiveAttr::Prop(p) => abort_not_supported(&element.tag().kind(), p),
             },
         }
     }
 
-    // children with arguments take a `Fn(T) -> impl IntoView`
-    // normal children (`Children`, `ChildrenFn`, ...) take `ToChildren::to_children`
-    let args = element.children_args();
-    let children = element.children().map(|children| {
-        let fragment = children_fragment_tokens(children);
-        // only wrap the fragment if there are no closures
-        let wrapped_fragment = if element.children_args().is_none() {
-            quote! {
-                ::leptos::ToChildren::to_children(move || #fragment)
-            }
-        } else {
-            quote! { move |#args| #fragment }
-        };
+    let children = element
+        .children()
+        .map(|children| component_children_tokens(children, element.children_args(), &clones));
 
-        quote! {
-            .children({
-                #clones
-                #wrapped_fragment
-            })
-        }
-    });
-
-    // expand dyn attrs to the method if any exist
-    let dyn_attrs = if dyn_attrs.is_empty() {
-        None
-    } else {
-        let method = quote_spanned! {
-            first_dyn_attr_token.unwrap().span()=>
-            dyn_attrs
-        };
-        let (names, values): (Vec<_>, Vec<_>) = dyn_attrs.into_iter().unzip();
-        Some(quote! {
-            .#method(
-                <[_]>::into_vec(
-                    ::std::boxed::Box::new([
-                        #( (#names, ::leptos::IntoAttribute::into_attribute(#values)) ),*
-                    ])
-                )
-            )
-        })
-    };
+    let dyn_attrs = dyn_attrs_to_methods(&dyn_attrs);
 
     Some(quote! {
         ::leptos::component_view(
@@ -290,21 +265,80 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
     })
 }
 
-/// Converts the children to a series of `.child` calls.
-///
-/// # Example
-/// ```ignore
-/// div { "a" {var} "b" }
-/// ```
-/// Expands to:
-/// ```ignore
-/// div().child("a").child({var}).child("b")
-/// ```
-pub fn child_methods_tokens(children: &Children) -> TokenStream {
-    let children = children.iter();
+fn component_kv_attribute_tokens(attr: &KvAttr) -> TokenStream {
+    let (key, value) = (attr.key().to_snake_ident(), attr.value());
+    quote! { .#key(#value) }
+}
+
+fn component_event_listener_tokens(dir: &directive::On) -> TokenStream {
+    let (dir, ev, callback) = dir.explode();
     quote! {
-        #( .child(#children) )*
+        .#dir(
+            ::leptos::ev::undelegated(::leptos::ev::#ev),
+            #callback
+        )
     }
+}
+
+/// Aborts if the directive value is not a block with an ident.
+fn component_clone_tokens(dir: &directive::Clone) -> TokenStream {
+    let (_, to_clone, cloned_ident) = dir.explode();
+    let Some(cloned_ident) = cloned_ident.as_block_with_ident() else {
+        abort!(
+            cloned_ident.span(),
+            "value of a `clone:` directive must be an ident like `{{{}}}`",
+            to_clone
+        )
+    };
+    quote! { let #cloned_ident = #to_clone.clone(); }
+}
+
+fn component_children_tokens(
+    children: &Children,
+    args: Option<&ClosureArgs>,
+    clones: &TokenStream,
+) -> TokenStream {
+    let children_fragment = children_fragment_tokens(children);
+
+    // children with arguments take a `Fn(T) -> impl IntoView`
+    // normal children (`Children`, `ChildrenFn`, ...) take `ToChildren::to_children`
+    let wrapped_fragment = if args.is_none() {
+        quote! {
+            ::leptos::ToChildren::to_children(move || #children_fragment)
+        }
+    } else {
+        quote! { move |#args| #children_fragment }
+    };
+
+    quote! {
+        .children({
+            #clones
+            #wrapped_fragment
+        })
+    }
+}
+
+fn dyn_attrs_to_methods(dyn_attrs: &[&directive::Attr]) -> Option<TokenStream> {
+    // expand dyn attrs to the method if any exist
+    if dyn_attrs.is_empty() {
+        return None;
+    };
+
+    let dyn_attrs_method = quote_spanned! {
+        dyn_attrs[0].dir().span=>
+        dyn_attrs
+    };
+
+    let (keys, values): (Vec<_>, Vec<_>) = dyn_attrs.iter().map(|a| (a.key(), a.value())).unzip();
+    Some(quote! {
+        .#dyn_attrs_method(
+            <[_]>::into_vec(
+                ::std::boxed::Box::new([
+                    #( (#keys, ::leptos::IntoAttribute::into_attribute(#values)) ),*
+                ])
+            )
+        )
+    })
 }
 
 /// Converts the children into a `leptos::Fragment::lazy()` token stream.
@@ -337,4 +371,20 @@ pub fn children_fragment_tokens(children: &Children) -> TokenStream {
             )
         })
     }
+}
+
+/// Aborts with an appropriate message when a directive is not supported.
+fn abort_not_supported<D: Directive>(tag: &TagKind, dir: &D) -> ! {
+    let suffix = match tag {
+        TagKind::Html => "html elements",
+        TagKind::Component => "components",
+        TagKind::Svg => "svgs",
+        TagKind::Unknown => "web components",
+    };
+    abort!(
+        dir.dir_key_span(),
+        "directive {} is not supported on {}",
+        D::Dir::display(),
+        suffix
+    )
 }

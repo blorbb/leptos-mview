@@ -1,16 +1,12 @@
-use core::fmt;
-
-use proc_macro2::{Span, TokenStream};
+use proc_macro2::Span;
 use quote::ToTokens;
-use syn::{
-    ext::IdentExt,
-    parse::{discouraged::Speculative, Parse},
-    Token,
+use syn::parse::{Parse, ParseStream};
+
+use super::parsing::{
+    parse_dir_then, parse_ident_or_braced, parse_kebab_or_braced_or_bool,
+    parse_kebab_or_braced_or_str,
 };
-
-use crate::{error_ext::ResultExt, ident::KebabIdent, value::Value};
-
-use super::ShorthandAttr;
+use crate::{ident::KebabIdent, kw, value::Value};
 
 /// A special attribute like `on:click={...}`.
 ///
@@ -33,151 +29,94 @@ use super::ShorthandAttr;
 /// If a `:` is found but any other part of the parsing fails (including unknown
 /// directives), the macro will abort.
 #[derive(Debug, Clone)]
-pub struct DirectiveAttr {
-    directive: DirectiveIdent,
-    name: KebabIdent,
-    value: Value,
-}
-
-impl DirectiveAttr {
-    /// Returns the part before the equal sign on nightly.
-    ///
-    /// If compiled on stable, the span will only be the directive (e.g. `on`).
-    ///
-    /// Example on nightly:
-    /// ```ignore
-    /// button on:click={handle_click}
-    ///        ^^^^^^^^
-    /// ```
-    pub fn span(&self) -> Span {
-        self.directive()
-            .span()
-            .join(self.name.span())
-            .unwrap_or(self.directive().span())
-    }
-
-    pub const fn directive(&self) -> &DirectiveIdent {
-        &self.directive
-    }
-
-    pub const fn name(&self) -> &KebabIdent {
-        &self.name
-    }
-
-    pub const fn value(&self) -> &Value {
-        &self.value
-    }
-
-    pub const fn kind(&self) -> &DirectiveKind {
-        self.directive().kind()
-    }
+pub enum DirectiveAttr {
+    Class(Class),
+    Style(Style),
+    Attr(Attr),
+    On(On),
+    Prop(Prop),
+    Clone(Clone),
 }
 
 impl Parse for DirectiveAttr {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        // attribute should be <dir>:<name> = <value>
-        if !input.peek2(Token![:]) {
-            return Err(input.error("invalid directive attribute: colon not found"));
-        }
-        // after this, any failure to parse should abort.
-
-        let directive = input.parse::<DirectiveIdent>().unwrap_or_abort();
-        input.parse::<Token![:]>().unwrap();
-
-        // either a shorthand if there are braces, or the full expression.
-        if input.peek(syn::token::Brace) {
-            let attr = input.parse::<ShorthandAttr>().unwrap_or_abort();
-            Ok(Self {
-                directive,
-                name: attr.key,
-                value: attr.value,
-            })
+        if let Ok(class) = input.parse::<Class>() {
+            Ok(Self::Class(class))
+        } else if let Ok(style) = input.parse::<Style>() {
+            Ok(Self::Style(style))
+        } else if let Ok(attr) = input.parse::<Attr>() {
+            Ok(Self::Attr(attr))
+        } else if let Ok(on) = input.parse::<On>() {
+            Ok(Self::On(on))
+        } else if let Ok(prop) = input.parse::<Prop>() {
+            Ok(Self::Prop(prop))
+        } else if let Ok(clone) = input.parse::<Clone>() {
+            Ok(Self::Clone(clone))
         } else {
-            let name = input
-                .parse::<KebabIdent>()
-                .expect_or_abort_with_msg(&format!(
-                    "expected identifier after `{}:` directive",
-                    directive.ident()
-                ));
-            input.parse::<Token![=]>().unwrap_or_abort();
-            let value = input.parse::<Value>().unwrap_or_abort();
-
-            Ok(Self {
-                directive,
-                name,
-                value,
-            })
+            Err(input.error("unknown directive"))
         }
     }
 }
 
-/// Holds the identifier for a valid directive.
-///
-/// # Parsing
-/// The `parse` method looks for an ident and validates it. An `Err` is
-/// returned if it does not find an ident or if the identifier is not a valid
-/// directive.
-#[derive(Debug, Clone)]
-pub struct DirectiveIdent {
-    kind: DirectiveKind,
-    ident: syn::Ident,
+pub trait Directive {
+    type Dir: ToTokens + syn::token::CustomToken + std::clone::Clone;
+    type Key: ToTokens + std::clone::Clone;
+    type Value: ToTokens + std::clone::Clone;
+    fn dir(&self) -> &Self::Dir;
+    fn key(&self) -> &Self::Key;
+    fn value(&self) -> &Self::Value;
+
+    fn explode(&self) -> (Self::Dir, Self::Key, Self::Value) {
+        // TODO: remove these clones
+        (self.dir().clone(), self.key().clone(), self.value().clone())
+    }
+
+    fn dir_key_span(&self) -> Span;
 }
 
-impl DirectiveIdent {
-    pub const fn kind(&self) -> &DirectiveKind {
-        &self.kind
-    }
-
-    pub fn span(&self) -> Span {
-        self.ident.span()
-    }
-
-    pub const fn ident(&self) -> &syn::Ident {
-        &self.ident
-    }
-}
-
-impl Parse for DirectiveIdent {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let fork = input.fork();
-        if let Ok(ident) = fork.call(syn::Ident::parse_any) {
-            let kind = match ident.to_string().as_str() {
-                "class" => DirectiveKind::Class,
-                "style" => DirectiveKind::Style,
-                "on" => DirectiveKind::On,
-                "clone" => DirectiveKind::Clone,
-                "prop" => DirectiveKind::Prop,
-                "attr" => DirectiveKind::Attr,
-                _ => return Err(input.error(format!("unknown directive `{ident}`"))),
-            };
-            // only move input forward if it worked
-            input.advance_to(&fork);
-            Ok(Self { kind, ident })
-        } else {
-            Err(input.error("expected identifier"))
+macro_rules! create_directive {
+    ($struct_name:ident { $dir:ty : $key:ty = $value:ty } uses $parser:ident) => {
+        #[derive(Debug, Clone)]
+        pub struct $struct_name {
+            dir: $dir,
+            key: $key,
+            value: $value,
         }
-    }
+
+        impl Parse for $struct_name {
+            fn parse(input: ParseStream) -> syn::Result<Self> {
+                let (dir, (key, value)) = parse_dir_then(input, $parser)?;
+                Ok(Self { dir, key, value })
+            }
+        }
+
+        impl Directive for $struct_name {
+            type Dir = $dir;
+            type Key = $key;
+            type Value = $value;
+
+            fn value(&self) -> &Self::Value {
+                &self.value
+            }
+
+            fn key(&self) -> &Self::Key {
+                &self.key
+            }
+
+            fn dir(&self) -> &Self::Dir {
+                &self.dir
+            }
+
+            fn dir_key_span(&self) -> Span {
+                crate::span::join(self.dir().span, self.key().span())
+            }
+        }
+    };
 }
 
-impl ToTokens for DirectiveIdent {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        tokens.extend(self.ident().to_token_stream());
-    }
-}
-
-impl fmt::Display for DirectiveIdent {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.ident().fmt(f)
-    }
-}
-
-/// The kinds of supported directives.
-#[derive(Debug, Clone)]
-pub enum DirectiveKind {
-    Style,
-    Class,
-    On,
-    Clone,
-    Prop,
-    Attr,
-}
+create_directive! { Class { kw::class : syn::LitStr = Value } uses parse_kebab_or_braced_or_str }
+create_directive! { Style { kw::style : syn::LitStr = Value } uses parse_kebab_or_braced_or_str }
+create_directive! { Attr { kw::attr : KebabIdent = Value } uses parse_kebab_or_braced_or_bool }
+create_directive! { On { kw::on : syn::Ident = Value } uses parse_ident_or_braced }
+create_directive! { Prop { kw::prop : syn::Ident = Value } uses parse_ident_or_braced }
+create_directive! { Clone { kw::clone : syn::Ident = Value } uses parse_ident_or_braced }

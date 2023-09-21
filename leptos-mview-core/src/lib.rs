@@ -11,6 +11,8 @@ mod element;
 mod error_ext;
 mod expand;
 mod ident;
+mod kw;
+mod span;
 mod tag;
 mod value;
 

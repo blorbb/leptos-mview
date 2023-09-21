@@ -1,18 +1,18 @@
-use syn::{
-    parse::{discouraged::Speculative, Parse},
-    Token,
-};
+use syn::parse::Parse;
 
-use crate::{error_ext::ResultExt, ident::KebabIdent, value::Value};
+use crate::{ident::KebabIdent, value::Value};
 
-use super::ShorthandAttr;
+use super::parsing::parse_kebab_or_braced_or_bool;
 
 /// A `key = value` type of attribute.
+///
+/// This can either be a normal `key = value`, a shorthand `{key}`, or a
+/// boolean attribute `checked`.
 ///
 /// # Examples
 /// ```ignore
 /// input type="checkbox" data-index=1 checked;
-///       ^^^^^^^^^^^^^^^ ^^^^^^^^^^^^
+///       ^^^^^^^^^^^^^^^ ^^^^^^^^^^^^ ^^^^^^^
 /// ```
 /// Directives are not included.
 /// ```ignore
@@ -47,27 +47,7 @@ impl KvAttr {
 
 impl Parse for KvAttr {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        // try parse shorthand first
-        if input.peek(syn::token::Brace) {
-            // don't unwrap_or_abort, as this might be trying to parse
-            // the children block instead of an attribute.
-            let attr = input.parse::<ShorthandAttr>()?;
-            return Ok(Self::new(attr.key, attr.value));
-        }
-
-        // check that this is actually a kv attribute.
-        // if there is an ident followed by =, this is kv attribute.
-        let fork = input.fork();
-        let key = fork.parse::<KebabIdent>()?;
-
-        if fork.peek(Token![=]) {
-            // this is a kv attribute: consume main input stream.
-            input.advance_to(&fork);
-            input.parse::<Token![=]>().unwrap();
-            let value = input.parse::<Value>().unwrap_or_abort();
-            Ok(Self { key, value })
-        } else {
-            Err(input.error("invalid kv attribute"))
-        }
+        let (key, value) = parse_kebab_or_braced_or_bool(input)?;
+        Ok(Self::new(key, value))
     }
 }
