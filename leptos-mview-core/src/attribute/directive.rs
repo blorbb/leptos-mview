@@ -84,7 +84,6 @@ pub trait Directive {
         (self.dir().clone(), self.key().clone(), self.value().clone())
     }
 
-    fn dir_key_span(&self) -> Span;
     fn full_span(&self) -> Span;
 }
 
@@ -119,10 +118,6 @@ macro_rules! create_directive {
 
             fn dir(&self) -> &Self::Dir {
                 &self.dir
-            }
-
-            fn dir_key_span(&self) -> Span {
-                crate::span::join(self.dir().span, self.key().span())
             }
 
             fn full_span(&self) -> Span {
