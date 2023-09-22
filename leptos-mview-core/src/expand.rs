@@ -18,7 +18,7 @@ use crate::{
     },
     children::Children,
     element::{ClosureArgs, Element},
-    tag::{Tag, TagKind},
+    tag::{Tag, TagKind}, span,
 };
 
 /// Converts an xml (like html, svg or math) element to tokens.
@@ -211,8 +211,9 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
     // selectors not supported on components (for now)
     if !element.selectors().is_empty() {
         let first_prefix = element.selectors()[0].prefix();
+        let last_ident = element.selectors().last().unwrap().ident();
         abort!(
-            first_prefix.span(),
+            span::join(first_prefix.span(), last_ident.span()),
             "class/id selector shorthand is not allowed on components"
         );
     };

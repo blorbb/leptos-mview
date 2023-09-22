@@ -26,6 +26,14 @@ fn single_element() {
 }
 
 #[test]
+fn multi_element_is_fragment() {
+    let _fragment: Fragment = view! {
+        div { "a" }
+        span { "b" }
+    };
+}
+
+#[test]
 fn a_bunch() {
     let result = view! {
         "hi"
@@ -81,4 +89,21 @@ fn multiple_directives() {
         result,
         r#"class="normal here also-here" style="line-height: 1.5; color: white; background-color: red;""#,
     );
+}
+
+#[test]
+fn string_directives() {
+    let yes = move || true;
+    let result = view! {
+        div
+            class:"complex[class]-name"={yes}
+            style:"doesn't-exist"="black"
+            class:"with spaces"=true
+            class:"not-here"=false;
+    };
+
+    check_str(
+        result,
+        r#"class="complex[class]-name with spaces" style="doesn't-exist: black;""#,
+    )
 }

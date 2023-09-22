@@ -1,0 +1,5 @@
+error: expected children block after closure arguments
+ --> tests/ui/errors/no_children_after_closure.rs:7:16
+  |
+7 |         |data| "no"
+  |                ^^^^
