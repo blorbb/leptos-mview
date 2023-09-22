@@ -1,7 +1,7 @@
 use proc_macro2::Span;
-use syn::parse::Parse;
+use syn::{parse::Parse, parse_quote, Token};
 
-use crate::ident::KebabIdent;
+use crate::{error_ext::ResultExt, ident::KebabIdent};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum TagKind {
@@ -31,7 +31,8 @@ impl From<&str> for TagKind {
 #[derive(Debug)]
 pub enum Tag {
     Html(syn::Ident),
-    Component(syn::Ident),
+    /// The generic will contain a leading `::`.
+    Component(syn::Ident, Option<syn::AngleBracketedGenericArguments>),
     Svg(syn::Ident),
     Math(syn::Ident),
     Unknown(KebabIdent),
@@ -40,9 +41,10 @@ pub enum Tag {
 impl Tag {
     pub fn span(&self) -> Span {
         match self {
-            Self::Html(ident) | Self::Component(ident) | Self::Svg(ident) | Self::Math(ident) => {
-                ident.span()
-            }
+            Self::Html(ident)
+            | Self::Component(ident, _)
+            | Self::Svg(ident)
+            | Self::Math(ident) => ident.span(),
             Self::Unknown(ident) => ident.span(),
         }
     }
@@ -50,7 +52,7 @@ impl Tag {
     pub const fn kind(&self) -> TagKind {
         match self {
             Self::Html(_) => TagKind::Html,
-            Self::Component(_) => TagKind::Component,
+            Self::Component(..) => TagKind::Component,
             Self::Svg(_) => TagKind::Svg,
             Self::Math(_) => TagKind::Math,
             Self::Unknown(_) => TagKind::Unknown,
@@ -64,7 +66,15 @@ impl Parse for Tag {
         let kind = TagKind::from(ident.repr());
         Ok(match kind {
             TagKind::Html => Self::Html(ident.to_snake_ident()),
-            TagKind::Component => Self::Component(ident.to_snake_ident()),
+            TagKind::Component => {
+                let generics = input.peek(Token![<]).then(|| {
+                    let non_leading_generic = input
+                        .parse::<syn::AngleBracketedGenericArguments>()
+                        .expect_or_abort("failed to parse component generics");
+                    parse_quote!(::#non_leading_generic)
+                });
+                Self::Component(ident.to_snake_ident(), generics)
+            }
             TagKind::Svg => Self::Svg(ident.to_snake_ident()),
             TagKind::Math => Self::Math(ident.to_snake_ident()),
             TagKind::Unknown => Self::Unknown(ident),

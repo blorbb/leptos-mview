@@ -118,9 +118,10 @@ Currently, the macro expands to the [builder syntax](https://github.com/leptos-r
 Elements have the following structure:
 
 1. Element / component tag name (`div`, `App`).
-2. Any classes or ids prefixed with a dot `.` or hash `#` respectively.
-3. A space-separated list of attributes and directives (`class="primary"`, `on:click={...}`).
-4. Either children in braces (`{ "hi!" }`) or a semi-colon for no children (`;`).
+2. Any generics where applicable.
+3. Any classes or ids prefixed with a dot `.` or hash `#` respectively.
+4. A space-separated list of attributes and directives (`class="primary"`, `on:click={...}`).
+5. Either children in braces (`{ "hi!" }`) or a semi-colon for no children (`;`).
     - If the element is last in the block, no semi-colon is needed. This is mainly to make it easier to write, as an invalid macro removes syntax highlighting/autocomplete. It is advised to always add a semi-colon to the end if no children are required.
 
 Example:
@@ -129,6 +130,23 @@ view! {
     div.primary { strong { "hello world" } }
     input type="text" on:input={handle_input};
     MyComponent data=3 other="hi";
+}
+```
+
+Adding generics is the same as in leptos: add it directly after the component name, without the turbofish `::<...>`.
+```rust
+#[component]
+pub fn GenericComponent<S>(ty: PhantomData<S>) -> impl IntoView {
+    std::any::type_name::<S>()
+}
+
+#[component]
+pub fn App() -> impl IntoView {
+    view! {
+        GenericComponent<String> ty={PhantomData};
+        GenericComponent<usize> ty={PhantomData};
+        GenericComponent<i32> ty={PhantomData};
+    }
 }
 ```
 

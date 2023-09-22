@@ -1,5 +1,7 @@
 use leptos::*;
 use leptos_mview::view;
+mod utils;
+use utils::check_str;
 
 #[test]
 fn clones() {
@@ -37,6 +39,25 @@ fn children_args() {
             {greeting} " " {name.clone()}
         }
     };
+}
+
+#[test]
+fn generics() {
+    use core::marker::PhantomData;
+    // copied from https://github.com/leptos-rs/leptos/pull/1636
+    #[component]
+    pub fn GenericComponent<S>(ty: PhantomData<S>) -> impl IntoView {
+        let _ty = ty;
+        std::any::type_name::<S>()
+    }
+
+    let result = view! {
+        GenericComponent<String> ty={PhantomData};
+        GenericComponent<usize> ty={PhantomData};
+        GenericComponent<i32> ty={PhantomData};
+    };
+
+    check_str(result, ["alloc::string::String", "usize", "i32"].as_slice());
 }
 
 fn main() {}

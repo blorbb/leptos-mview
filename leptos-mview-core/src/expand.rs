@@ -51,14 +51,14 @@ use crate::{
 /// ```
 pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
     let tag_path = match element.tag() {
-        Tag::Component(_) => return None,
+        Tag::Component(..) => return None,
         Tag::Html(ident) => quote! { ::leptos::html::#ident() },
         Tag::Svg(ident) => quote! { ::leptos::svg::#ident() },
         Tag::Math(ident) => quote! { ::leptos::math::#ident() },
         Tag::Unknown(ident) => {
             let custom = quote_spanned!(ident.span()=> custom);
             quote! { ::leptos::html::#custom(::leptos::html::Custom::new(#ident)) }
-        },
+        }
     };
 
     // add selector-style ids/classes (div.some-class #some-id)
@@ -209,7 +209,7 @@ pub fn child_methods_tokens(children: &Children) -> TokenStream {
 /// pub fn Com(num: u32, text: String, children: Children) -> impl IntoView { ... }
 /// ```
 pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
-    let Tag::Component(ident) = element.tag() else {
+    let Tag::Component(ident, generics) = element.tag() else {
         return None;
     };
 
@@ -260,7 +260,7 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
     Some(quote! {
         ::leptos::component_view(
             &#ident,
-            ::leptos::component_props_builder(&#ident)
+            ::leptos::component_props_builder(&#ident #generics)
                 #attrs
                 #children
                 .build()
