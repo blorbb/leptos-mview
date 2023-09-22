@@ -54,7 +54,11 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
         Tag::Component(_) => return None,
         Tag::Html(ident) => quote! { ::leptos::html::#ident() },
         Tag::Svg(ident) => quote! { ::leptos::svg::#ident() },
-        Tag::Unknown(ident) => quote! { ::leptos::math::#ident() },
+        Tag::Math(ident) => quote! { ::leptos::math::#ident() },
+        Tag::Unknown(ident) => {
+            let custom = quote_spanned!(ident.span()=> custom);
+            quote! { ::leptos::html::#custom(::leptos::html::Custom::new(#ident)) }
+        },
     };
 
     // add selector-style ids/classes (div.some-class #some-id)
@@ -381,6 +385,7 @@ fn abort_not_supported<D: Directive>(tag: &TagKind, dir: &D) -> ! {
         TagKind::Html => "html elements",
         TagKind::Component => "components",
         TagKind::Svg => "svgs",
+        TagKind::Math => "math elements",
         TagKind::Unknown => "web components",
     };
     abort!(

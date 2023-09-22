@@ -8,6 +8,7 @@ pub enum TagKind {
     Html,
     Component,
     Svg,
+    Math,
     Unknown,
 }
 
@@ -19,6 +20,8 @@ impl From<&str> for TagKind {
             Self::Svg
         } else if is_unknown_element(value) {
             Self::Unknown
+        } else if is_math_ml_element(value) {
+            Self::Math
         } else {
             Self::Html
         }
@@ -30,13 +33,16 @@ pub enum Tag {
     Html(syn::Ident),
     Component(syn::Ident),
     Svg(syn::Ident),
+    Math(syn::Ident),
     Unknown(KebabIdent),
 }
 
 impl Tag {
     pub fn span(&self) -> Span {
         match self {
-            Self::Html(ident) | Self::Component(ident) | Self::Svg(ident) => ident.span(),
+            Self::Html(ident) | Self::Component(ident) | Self::Svg(ident) | Self::Math(ident) => {
+                ident.span()
+            }
             Self::Unknown(ident) => ident.span(),
         }
     }
@@ -46,6 +52,7 @@ impl Tag {
             Self::Html(_) => TagKind::Html,
             Self::Component(_) => TagKind::Component,
             Self::Svg(_) => TagKind::Svg,
+            Self::Math(_) => TagKind::Math,
             Self::Unknown(_) => TagKind::Unknown,
         }
     }
@@ -59,6 +66,7 @@ impl Parse for Tag {
             TagKind::Html => Self::Html(ident.to_snake_ident()),
             TagKind::Component => Self::Component(ident.to_snake_ident()),
             TagKind::Svg => Self::Svg(ident.to_snake_ident()),
+            TagKind::Math => Self::Math(ident.to_snake_ident()),
             TagKind::Unknown => Self::Unknown(ident),
         })
     }
@@ -133,6 +141,44 @@ pub fn is_svg_element(tag: &str) -> bool {
         "use",
         "use_",
         "view",
+    ]
+    .binary_search(&tag)
+    .is_ok()
+}
+
+fn is_math_ml_element(tag: &str) -> bool {
+    [
+        "annotation",
+        "maction",
+        "math",
+        "menclose",
+        "merror",
+        "mfenced",
+        "mfrac",
+        "mi",
+        "mmultiscripts",
+        "mn",
+        "mo",
+        "mover",
+        "mpadded",
+        "mphantom",
+        "mprescripts",
+        "mroot",
+        "mrow",
+        "ms",
+        "mspace",
+        "msqrt",
+        "mstyle",
+        "msub",
+        "msubsup",
+        "msup",
+        "mtable",
+        "mtd",
+        "mtext",
+        "mtr",
+        "munder",
+        "munderover",
+        "semantics",
     ]
     .binary_search(&tag)
     .is_ok()
