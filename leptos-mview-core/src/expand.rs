@@ -215,7 +215,7 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
         let last_ident = element.selectors().last().unwrap().ident();
         abort!(
             span::join(first_prefix.span(), last_ident.span()),
-            "class/id selector shorthand is not allowed on components"
+            "class/id selector shorthand is not supported on components"
         );
     };
 
@@ -232,7 +232,7 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
             Attr::Kv(attr) => attrs.extend(component_kv_attribute_tokens(attr)),
             Attr::Spread(spread) => {
                 abort!(
-                    spread.as_ident().span(),
+                    spread.span(),
                     "spread attributes not supported on components"
                 );
             }
@@ -384,7 +384,7 @@ fn abort_not_supported<D: Directive>(tag: &TagKind, dir: &D) -> ! {
         TagKind::Unknown => "web components",
     };
     abort!(
-        dir.dir_key_span(),
+        dir.full_span(),
         "directive {} is not supported on {}",
         D::Dir::display(),
         suffix
