@@ -79,9 +79,8 @@ pub trait Directive {
     fn key(&self) -> &Self::Key;
     fn value(&self) -> &Self::Value;
 
-    fn explode(&self) -> (Self::Dir, Self::Key, Self::Value) {
-        // TODO: remove these clones
-        (self.dir().clone(), self.key().clone(), self.value().clone())
+    fn explode(&self) -> (&Self::Dir, &Self::Key, &Self::Value) {
+        (self.dir(), self.key(), self.value())
     }
 
     fn full_span(&self) -> Span;
