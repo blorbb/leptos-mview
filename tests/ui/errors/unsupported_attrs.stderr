@@ -13,7 +13,7 @@ error: directive `class` is not supported on components
 error: directive `prop` is not supported on components
   --> tests/ui/errors/unsupported_attrs.rs:18:19
    |
-18 |         Component prop:value="1"
+18 |         Component prop:value="1";
    |                   ^^^^^^^^^^
 
 error: spread attributes not supported on components

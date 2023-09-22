@@ -38,6 +38,19 @@ pub enum DirectiveAttr {
     Clone(Clone),
 }
 
+impl DirectiveAttr {
+    pub fn span(&self) -> Span {
+        match self {
+            Self::Class(a) => a.full_span(),
+            Self::Style(a) => a.full_span(),
+            Self::Attr(a) => a.full_span(),
+            Self::On(a) => a.full_span(),
+            Self::Prop(a) => a.full_span(),
+            Self::Clone(a) => a.full_span(),
+        }
+    }
+}
+
 impl Parse for DirectiveAttr {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         if let Ok(class) = input.parse::<Class>() {
@@ -72,6 +85,7 @@ pub trait Directive {
     }
 
     fn dir_key_span(&self) -> Span;
+    fn full_span(&self) -> Span;
 }
 
 macro_rules! create_directive {
@@ -109,6 +123,10 @@ macro_rules! create_directive {
 
             fn dir_key_span(&self) -> Span {
                 crate::span::join(self.dir().span, self.key().span())
+            }
+
+            fn full_span(&self) -> Span {
+                crate::span::join(self.dir().span, self.value().span())
             }
         }
     };

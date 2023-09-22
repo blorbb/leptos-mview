@@ -1,3 +1,4 @@
+use proc_macro2::Span;
 use syn::{
     braced,
     parse::{discouraged::Speculative, Parse},
@@ -5,21 +6,27 @@ use syn::{
 };
 
 #[derive(Debug, Clone)]
-pub struct SpreadAttr(syn::Ident);
+pub struct SpreadAttr {
+    ident: syn::Ident,
+    span: Span,
+}
 
 impl Parse for SpreadAttr {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         // try parse spread attributes `{..attrs}`
         let fork = input.fork();
         let stream;
-        braced!(stream in fork);
+        let brace_token = braced!(stream in fork);
         if stream.peek(Token![..]) && stream.peek3(syn::Ident) {
             _ = stream.parse::<Token![..]>();
             let ident = stream.parse::<syn::Ident>()?;
             // if not empty, do not parse
             if stream.is_empty() {
                 input.advance_to(&fork);
-                return Ok(Self(ident));
+                return Ok(Self {
+                    ident,
+                    span: brace_token.span.join(),
+                });
             };
         };
         Err(input.error("invalid spread attribute"))
@@ -28,7 +35,11 @@ impl Parse for SpreadAttr {
 
 impl SpreadAttr {
     pub const fn as_ident(&self) -> &syn::Ident {
-        &self.0
+        &self.ident
+    }
+
+    pub const fn span(&self) -> Span {
+        self.span
     }
 }
 

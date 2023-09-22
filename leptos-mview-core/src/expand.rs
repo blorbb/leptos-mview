@@ -18,7 +18,8 @@ use crate::{
     },
     children::Children,
     element::{ClosureArgs, Element},
-    tag::{Tag, TagKind}, span,
+    span,
+    tag::{Tag, TagKind},
 };
 
 /// Converts an xml (like html, svg or math) element to tokens.

@@ -1,8 +1,9 @@
 use std::ops::Deref;
 
+use proc_macro2::Span;
 use syn::{parse::Parse, Token};
 
-use crate::ident::KebabIdent;
+use crate::{ident::KebabIdent, span};
 
 /// A shorthand for adding class or ids to an element.
 ///
@@ -47,6 +48,10 @@ impl SelectorShorthand {
         let mut punct = proc_macro2::Punct::new(char, proc_macro2::Spacing::Alone);
         punct.set_span(span);
         punct
+    }
+
+    pub fn span(&self) -> Span {
+        span::join(self.prefix().span(), self.ident().span())
     }
 }
 

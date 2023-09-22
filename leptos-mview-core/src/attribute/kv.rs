@@ -1,6 +1,7 @@
+use proc_macro2::Span;
 use syn::parse::Parse;
 
-use crate::{ident::KebabIdent, value::Value};
+use crate::{ident::KebabIdent, span, value::Value};
 
 use super::parsing::parse_kebab_or_braced_or_bool;
 
@@ -42,6 +43,10 @@ impl KvAttr {
 
     pub const fn value(&self) -> &Value {
         &self.value
+    }
+
+    pub fn span(&self) -> Span {
+        span::join(self.key().span(), self.value().span())
     }
 }
 

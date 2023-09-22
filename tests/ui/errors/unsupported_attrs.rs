@@ -15,7 +15,7 @@ fn class_on_component() {
 
 fn prop_on_component() {
     view! {
-        Component prop:value="1"
+        Component prop:value="1";
     }
 }
 

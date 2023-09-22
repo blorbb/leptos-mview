@@ -1,4 +1,4 @@
-use proc_macro_error::{abort, emit_error};
+use proc_macro_error::{abort, emit_error, emit_warning};
 use quote::ToTokens;
 use syn::{
     parse::{Parse, ParseStream},
@@ -7,7 +7,10 @@ use syn::{
 };
 
 use crate::{
-    attribute::{selector::SelectorShorthands, Attrs},
+    attribute::{
+        selector::{SelectorShorthand, SelectorShorthands},
+        Attr, Attrs,
+    },
     children::Children,
     error_ext::ResultExt,
     expand::{component_to_tokens, xml_to_tokens},
@@ -61,6 +64,17 @@ impl Parse for Element {
             // makes for better editing experience when writing sequentially,
             // as syntax highlighting/autocomplete doesn't work if macro
             // can't fully compile.
+
+            let last_span = attrs.last().map_or(
+                selectors.last().map_or(tag.span(), SelectorShorthand::span),
+                Attr::span,
+            );
+            emit_warning!(
+                span::join(tag.span(), last_span), "unterminated element";
+                note = "elements without a `;` or children block is only \
+                allowed for better rust-analyzer support. do not leave \
+                elements unterminated to avoid ambiguities"
+            );
             Ok(Self::new(tag, selectors, attrs, None, None))
         } else if input.peek(syn::token::Brace) {
             // has children in brace.

@@ -6,6 +6,7 @@ pub mod spread_attrs;
 
 use std::ops::Deref;
 
+use proc_macro2::Span;
 use syn::{parse::Parse, Token};
 
 use crate::error_ext::ResultExt;
@@ -17,6 +18,16 @@ pub enum Attr {
     Kv(KvAttr),
     Directive(DirectiveAttr),
     Spread(SpreadAttr),
+}
+
+impl Attr {
+    pub fn span(&self) -> Span {
+        match self {
+            Self::Kv(kv) => kv.span(),
+            Self::Directive(dir) => dir.span(),
+            Self::Spread(s) => s.span(),
+        }
+    }
 }
 
 impl Parse for Attr {
