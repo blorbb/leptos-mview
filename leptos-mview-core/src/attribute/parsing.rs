@@ -1,5 +1,6 @@
 //! A collection of structs and functions for parsing attributes.
 
+use quote::ToTokens;
 use syn::{
     parse::{discouraged::Speculative, Parse, ParseStream},
     parse_quote,
@@ -160,8 +161,10 @@ impl BracedKebabIdent {
     }
 
     pub fn into_block_value(self) -> Value {
-        let ident = self.ident().to_snake_ident();
-        Value::Block(syn::parse_quote_spanned!(self.brace_token.span=> {#ident}))
+        Value::Block(
+            self.ident().to_snake_ident().into_token_stream(),
+            self.brace_token,
+        )
     }
 }
 
@@ -195,8 +198,7 @@ impl BracedIdent {
     }
 
     pub fn into_block_value(self) -> Value {
-        let ident = self.ident();
-        Value::Block(syn::parse_quote_spanned!(self.brace_token.span=> {#ident}))
+        Value::Block(self.ident().into_token_stream(), self.brace_token)
     }
 }
 

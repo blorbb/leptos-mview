@@ -1,6 +1,5 @@
-use proc_macro2::Span;
-use proc_macro_error::abort;
-use quote::{quote, ToTokens};
+use proc_macro2::{Span, TokenStream};
+use quote::{quote, quote_spanned, ToTokens};
 use syn::parse::{Parse, ParseStream};
 
 /// Interpolated values.
@@ -14,8 +13,10 @@ use syn::parse::{Parse, ParseStream};
 #[derive(Debug, Clone)]
 pub enum Value {
     Lit(syn::Lit),
-    Block(syn::ExprBlock),
-    Bracket(syn::Expr, syn::token::Bracket),
+    // take a raw `TokenStream` instead of ExprBlock/etc for better r-a support
+    // as invalid expressions aren't completely rejected
+    Block(TokenStream, syn::token::Brace),
+    Bracket(TokenStream, syn::token::Bracket),
 }
 
 impl Parse for Value {
@@ -23,16 +24,13 @@ impl Parse for Value {
         if input.peek(syn::token::Bracket) {
             let stream;
             let brackets = syn::bracketed!(stream in input);
-
-            let expr: syn::Expr = stream.parse()?;
-            // parsed an expression but there is still more.
-            if stream.is_empty() {
-                Ok(Self::Bracket(expr, brackets))
-            } else {
-                abort!(stream.span(), "unexpected token in brackets")
-            }
+            let stream = stream.parse::<TokenStream>().unwrap();
+            Ok(Self::Bracket(stream, brackets))
         } else if input.peek(syn::token::Brace) {
-            Ok(Self::Block(input.parse()?))
+            let stream;
+            let braces = syn::braced!(stream in input);
+            let stream = stream.parse::<TokenStream>().unwrap();
+            Ok(Self::Block(stream, braces))
         } else if let Ok(lit) = input.parse::<syn::Lit>() {
             Ok(Self::Lit(lit))
         } else {
@@ -45,7 +43,7 @@ impl ToTokens for Value {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         tokens.extend(match self {
             Self::Lit(lit) => lit.into_token_stream(),
-            Self::Block(block) => block.into_token_stream(),
+            Self::Block(stream, braces) => quote_spanned!(braces.span.join()=> {#stream}),
             Self::Bracket(expr, _) => quote! {move || #expr},
         });
     }
@@ -57,24 +55,17 @@ impl Value {
     /// Example: the value `{something}` becomes the ident `something`.
     ///
     /// Returns `None` if the block does not only contain an ident.
-    pub fn as_block_with_ident(&self) -> Option<&syn::Ident> {
-        let Self::Block(block) = self else {
+    pub fn as_block_with_ident(&self) -> Option<syn::Ident> {
+        let Self::Block(block, _) = self else {
             return None;
         };
-        if block.block.stmts.len() != 1 {
-            return None;
-        }
-        let syn::Stmt::Expr(syn::Expr::Path(path), None) = block.block.stmts.first()? else {
-            return None;
-        };
-
-        path.path.get_ident()
+        syn::parse2::<syn::Ident>(block.clone()).ok()
     }
 
     pub fn span(&self) -> Span {
         match self {
             Self::Lit(lit) => lit.span(),
-            Self::Block(block) => block.block.brace_token.span.join(),
+            Self::Block(_, braces) => braces.span.join(),
             Self::Bracket(_, brackets) => brackets.span.join(),
         }
     }
@@ -100,7 +91,7 @@ mod tests {
         }
 
         pub fn is_block(&self) -> bool {
-            matches!(self, Self::Block(_))
+            matches!(self, Self::Block(..))
         }
 
         pub fn is_bracketed(&self) -> bool {
