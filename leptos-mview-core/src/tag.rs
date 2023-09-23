@@ -1,4 +1,5 @@
 use proc_macro2::Span;
+use proc_macro_error::abort;
 use syn::{parse::Parse, parse_quote, Token};
 
 use crate::{error_ext::ResultExt, ident::KebabIdent};
@@ -67,6 +68,13 @@ impl Parse for Tag {
         Ok(match kind {
             TagKind::Html => Self::Html(ident.to_snake_ident()),
             TagKind::Component => {
+                if input.peek(Token![::]) {
+                    abort! {
+                        input.span(), "unexpected token `::`";
+                        help = "turbofish syntax is not used for component generics, \
+                        place angle brackets directly after the component name"
+                    }
+                }
                 let generics = input.peek(Token![<]).then(|| {
                     let non_leading_generic = input
                         .parse::<syn::AngleBracketedGenericArguments>()
