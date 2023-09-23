@@ -2,6 +2,8 @@ use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned, ToTokens};
 use syn::parse::{Parse, ParseStream};
 
+use crate::parse;
+
 /// Interpolated values.
 /// Plain expressions or block expressions like `{move || !is_red.get()}`
 /// are placed as so.
@@ -27,9 +29,7 @@ impl Parse for Value {
             let stream = stream.parse::<TokenStream>().unwrap();
             Ok(Self::Bracket(stream, brackets))
         } else if input.peek(syn::token::Brace) {
-            let stream;
-            let braces = syn::braced!(stream in input);
-            let stream = stream.parse::<TokenStream>().unwrap();
+            let (stream, braces) = parse::parse_braced::<TokenStream>(input).unwrap();
             Ok(Self::Block(stream, braces))
         } else if let Ok(lit) = input.parse::<syn::Lit>() {
             Ok(Self::Lit(lit))
@@ -56,10 +56,10 @@ impl Value {
     ///
     /// Returns `None` if the block does not only contain an ident.
     pub fn as_block_with_ident(&self) -> Option<syn::Ident> {
-        let Self::Block(block, _) = self else {
+        let Self::Block(inner, _) = self else {
             return None;
         };
-        syn::parse2::<syn::Ident>(block.clone()).ok()
+        syn::parse2::<syn::Ident>(inner.clone()).ok()
     }
 
     pub fn span(&self) -> Span {

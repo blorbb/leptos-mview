@@ -8,7 +8,7 @@ use syn::{
     Token,
 };
 
-use crate::{error_ext::ResultExt, ident::KebabIdent, value::Value};
+use crate::{error_ext::ResultExt, ident::KebabIdent, parse, value::Value};
 
 /// Parsing function for attributes that can accept:
 /// - Normal `key={value}` pairs
@@ -170,7 +170,7 @@ impl BracedKebabIdent {
 
 impl Parse for BracedKebabIdent {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let (brace, ident) = parse_braced::<KebabIdent>(input)?;
+        let (ident, brace) = parse::parse_braced::<KebabIdent>(input)?;
         Ok(Self::new(brace, ident))
     }
 }
@@ -204,26 +204,7 @@ impl BracedIdent {
 
 impl Parse for BracedIdent {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let (brace, ident) = parse_braced::<syn::Ident>(input)?;
+        let (ident, brace) = parse::parse_braced::<syn::Ident>(input)?;
         Ok(Self::new(brace, ident))
-    }
-}
-
-/// Parses an AST wrapped in braces.
-/// Does not advance the token stream if unable to match.
-fn parse_braced<T: syn::parse::Parse>(input: ParseStream) -> syn::Result<(Brace, T)> {
-    let fork = input.fork();
-    if fork.peek(Brace) {
-        let inner;
-        let brace_token = syn::braced!(inner in fork);
-        let ast = inner.parse::<T>()?;
-        if inner.is_empty() {
-            input.advance_to(&fork);
-            Ok((brace_token, ast))
-        } else {
-            Err(inner.error("found extra tokens trying to parse braced expression"))
-        }
-    } else {
-        Err(input.error("no brace found"))
     }
 }

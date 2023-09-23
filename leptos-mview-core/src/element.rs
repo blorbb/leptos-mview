@@ -14,7 +14,7 @@ use crate::{
     children::Children,
     error_ext::ResultExt,
     expand::{component_to_tokens, xml_to_tokens},
-    span,
+    parse, span,
     tag::Tag,
 };
 
@@ -45,12 +45,6 @@ pub struct Element {
 
 impl Parse for Element {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        fn parse_children_block(input: ParseStream) -> syn::Result<Children> {
-            let children;
-            syn::braced!(children in input);
-            children.parse::<Children>()
-        }
-
         let tag: Tag = input.parse()?;
         let selectors: SelectorShorthands = input.parse()?;
         let attrs: Attrs = input.parse()?;
@@ -78,7 +72,7 @@ impl Parse for Element {
             Ok(Self::new(tag, selectors, attrs, None, None))
         } else if input.peek(syn::token::Brace) {
             // has children in brace.
-            let children = parse_children_block(input)?;
+            let (children, _) = parse::parse_braced::<Children>(input).unwrap_or_abort();
             Ok(Self::new(tag, selectors, attrs, None, Some(children)))
         } else if input.peek(Token![|]) {
             // maybe extra args for the children
@@ -90,7 +84,7 @@ impl Parse for Element {
                     "expected children block after closure arguments"
                 )
             }
-            let children = parse_children_block(input)?;
+            let (children, _) = parse::parse_braced::<Children>(input).unwrap_or_abort();
             Ok(Self::new(tag, selectors, attrs, Some(args), Some(children)))
         } else {
             // add error at the unknown token
