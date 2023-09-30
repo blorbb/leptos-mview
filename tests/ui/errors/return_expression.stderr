@@ -1,0 +1,5 @@
+error: invalid value: expected bracket, block or literal
+ --> tests/ui/errors/return_expression.rs:6:19
+  |
+6 |         div class=;
+  |                   ^

@@ -3,7 +3,7 @@ use std::ops::Deref;
 use proc_macro2::Span;
 use syn::{parse::Parse, Token};
 
-use crate::{ident::KebabIdent, span, error_ext::ResultExt};
+use crate::{error_ext::ResultExt, ident::KebabIdent, span};
 
 /// A shorthand for adding class or ids to an element.
 ///

@@ -24,6 +24,10 @@ use crate::{children::Children, expand::children_fragment_tokens};
 
 #[must_use]
 pub fn component(input: TokenStream) -> TokenStream {
+    // return () in case of any errors, to avoid "unexpected end of macro invocation"
+    // e.g. when assigning `let res = view! { ... };`
+    proc_macro_error::set_dummy(quote! { () });
+
     let children = match syn::parse2::<Children>(input) {
         Ok(tree) => tree,
         Err(e) => return e.to_compile_error(),
