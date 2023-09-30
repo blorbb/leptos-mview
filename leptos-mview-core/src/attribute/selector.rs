@@ -3,7 +3,7 @@ use std::ops::Deref;
 use proc_macro2::Span;
 use syn::{parse::Parse, Token};
 
-use crate::{ident::KebabIdent, span};
+use crate::{ident::KebabIdent, span, error_ext::ResultExt};
 
 /// A shorthand for adding class or ids to an element.
 ///
@@ -58,13 +58,13 @@ impl SelectorShorthand {
 impl Parse for SelectorShorthand {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         if let Ok(dot) = input.parse::<Token![.]>() {
-            let class = input.parse::<KebabIdent>()?;
+            let class = input.parse::<KebabIdent>().unwrap_or_abort();
             Ok(Self::Class {
                 dot_symbol: dot,
                 class,
             })
         } else if let Ok(pound) = input.parse::<Token![#]>() {
-            let id = input.parse::<KebabIdent>()?;
+            let id = input.parse::<KebabIdent>().unwrap_or_abort();
             Ok(Self::Id {
                 pound_symbol: pound,
                 id,
