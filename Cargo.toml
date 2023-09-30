@@ -2,11 +2,16 @@
 name = "leptos-mview"
 version = "0.1.0"
 edition = "2021"
+license = "MIT OR Apache-2.0"
+keywords = ["macro", "leptos", "view"]
+description = "A concise view macro for Leptos"
+repository = "https://github.com/blorbb/leptos-mview"
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-leptos-mview-macro = { path = "leptos-mview-macro" }
+leptos-mview-macro = { path = "leptos-mview-macro", version = "0.1.0" }
 
 [dev-dependencies]
 trybuild = "1"
