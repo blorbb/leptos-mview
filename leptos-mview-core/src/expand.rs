@@ -56,13 +56,13 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
         Tag::Svg(ident) => quote! { ::leptos::svg::#ident() },
         Tag::Math(ident) => quote! { ::leptos::math::#ident() },
         Tag::Unknown(ident) => {
-            let custom = quote_spanned!(ident.span()=> custom);
+            let custom = syn::Ident::new("custom", ident.span());
             quote! { ::leptos::html::#custom(::leptos::html::Custom::new(#ident)) }
         }
     };
 
     // add selector-style ids/classes (div.some-class #some-id)
-    let selector_methods = xml_selectors_to_tokens(element.selectors());
+    let selector_methods = xml_selectors_tokens(element.selectors());
 
     // parse normal attributes first
     let mut attrs = TokenStream::new();
@@ -93,7 +93,7 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
 
 /// Converts element class/id selector shorthands into a series of `.classes`
 /// and `.id` calls.
-fn xml_selectors_to_tokens(selectors: &SelectorShorthands) -> TokenStream {
+fn xml_selectors_tokens(selectors: &SelectorShorthands) -> TokenStream {
     let (classes, ids): (Vec<_>, Vec<_>) = selectors
         .iter()
         .partition(|sel| matches!(sel, SelectorShorthand::Class { .. }));
@@ -101,7 +101,7 @@ fn xml_selectors_to_tokens(selectors: &SelectorShorthands) -> TokenStream {
     let classes_method = if classes.is_empty() {
         None
     } else {
-        let method = quote_spanned!(classes[0].prefix().span()=> classes);
+        let method = syn::Ident::new("classes", classes[0].prefix().span());
         let classes_str = classes
             .iter()
             .map(|class| class.ident().repr())
@@ -111,7 +111,7 @@ fn xml_selectors_to_tokens(selectors: &SelectorShorthands) -> TokenStream {
     };
 
     let id_methods = ids.iter().map(|id| {
-        let method = quote_spanned!(id.prefix().span()=> id);
+        let method = proc_macro2::Ident::new("id", id.prefix().span());
         let ident = id.ident();
         quote!(.#method(#ident))
     });
@@ -124,7 +124,7 @@ fn xml_kv_attribute_tokens(attr: &KvAttr) -> TokenStream {
     let value = attr.value();
     // special cases
     if key.repr() == "ref" {
-        let node_ref = quote_spanned!(key.span()=> node_ref);
+        let node_ref = syn::Ident::new("node_ref", key.span());
         quote! { .#node_ref(#value) }
     } else {
         quote! { .attr(#key, #value) }
@@ -158,9 +158,9 @@ fn xml_directive_tokens(element: &Element, directive: &DirectiveAttr) -> TokenSt
 
 fn xml_spread_tokens(attr: &SpreadAttr) -> TokenStream {
     let ident = attr.as_ident();
-    let method = quote_spanned!(ident.span()=> attrs);
+    let attrs = syn::Ident::new("attrs", ident.span());
     quote! {
-        .#method(#ident)
+        .#attrs(#ident)
     }
 }
 
@@ -331,10 +331,7 @@ fn dyn_attrs_to_methods(dyn_attrs: &[&directive::Attr]) -> Option<TokenStream> {
         return None;
     };
 
-    let dyn_attrs_method = quote_spanned! {
-        dyn_attrs[0].dir().span=>
-        dyn_attrs
-    };
+    let dyn_attrs_method = syn::Ident::new("dyn_attrs", dyn_attrs[0].dir().span);
 
     let (keys, values): (Vec<_>, Vec<_>) = dyn_attrs.iter().map(|a| (a.key(), a.value())).unzip();
     Some(quote! {

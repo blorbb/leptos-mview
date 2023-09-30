@@ -15,17 +15,23 @@ use crate::span;
 #[derive(Debug, Clone)]
 pub struct KebabIdent {
     repr: String,
-    span: Span,
+    spans: Vec<Span>,
 }
 
 impl KebabIdent {
-    pub const fn new(repr: String, span: Span) -> Self { Self { repr, span } }
+    /// Both `repr` and `spans` should not be empty.
+    const fn new(repr: String, spans: Vec<Span>) -> Self { Self { repr, spans } }
 
     pub fn repr(&self) -> &str { self.repr.as_ref() }
 
     pub fn to_lit_str(&self) -> syn::LitStr { syn::LitStr::new(self.repr(), self.span()) }
 
-    pub const fn span(&self) -> Span { self.span }
+    pub fn span(&self) -> Span {
+        span::join(
+            self.spans[0],
+            *self.spans.last().expect("kebab ident should not be empty"),
+        )
+    }
 
     pub fn to_snake_ident(&self) -> syn::Ident {
         let snake_string = self.repr().replace('-', "_");
@@ -36,20 +42,18 @@ impl KebabIdent {
 impl Parse for KebabIdent {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let mut repr = String::new();
-        let start_span: Span;
+        let mut spans = Vec::new();
 
         // Start with `-` or letter.
         if let Ok(ident) = input.call(syn::Ident::parse_any) {
             repr.push_str(&ident.to_string());
-            start_span = ident.span();
+            spans.push(ident.span());
         } else if let Ok(dash) = input.parse::<Token![-]>() {
             repr.push('-');
-            start_span = dash.span;
+            spans.push(dash.span);
         } else {
             return Err(input.error("input is not a kebab-cased ident"));
         };
-
-        let mut end_span = start_span;
 
         // Whether we are parsing the second token now.
         // Can't just check if `repr == "-"` as it will cause an infinite
@@ -74,17 +78,14 @@ impl Parse for KebabIdent {
             // add ident or number
             if let Ok(ident) = input.call(syn::Ident::parse_any) {
                 repr.push_str(&ident.to_string());
-                end_span = ident.span();
+                spans.push(ident.span());
             } else if let Ok(int) = input.parse::<syn::LitInt>() {
                 repr.push_str(&int.to_string());
-                end_span = int.span();
+                spans.push(int.span());
             };
         }
 
-        // `join` returns `None` if not on nightly.
-        let full_span = span::join(start_span, end_span);
-
-        Ok(Self::new(repr, full_span))
+        Ok(Self::new(repr, spans))
     }
 }
 
