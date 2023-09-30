@@ -112,6 +112,14 @@ The `view!` macros in Leptos is often the largest part of a component, and can g
 
 Currently, the macro expands to the [builder syntax](https://github.com/leptos-rs/leptos/blob/main/docs/book/src/view/builder.md) (ish), but it has some [performance downsides](https://github.com/leptos-rs/leptos/issues/1492#issuecomment-1664675672) in SSR mode. I may write up an alternative expansion that uses this SSR optimization, but it doesn't exist for now (feel free to contribute to this feature if you would like!).
 
+## Compatibility
+
+This macro will be compatible with the latest stable release of Leptos.
+
+| `leptos_mview` version | Compatible `leptos` version |
+| ---------------------- | --------------------------- |
+| `0.1.0`                | `0.5.0`                     |
+
 ## Syntax details
 
 ### Elements
