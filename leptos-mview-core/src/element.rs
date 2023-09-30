@@ -121,25 +121,15 @@ impl Element {
         }
     }
 
-    pub const fn tag(&self) -> &Tag {
-        &self.tag
-    }
+    pub const fn tag(&self) -> &Tag { &self.tag }
 
-    pub const fn selectors(&self) -> &SelectorShorthands {
-        &self.selectors
-    }
+    pub const fn selectors(&self) -> &SelectorShorthands { &self.selectors }
 
-    pub const fn attrs(&self) -> &Attrs {
-        &self.attrs
-    }
+    pub const fn attrs(&self) -> &Attrs { &self.attrs }
 
-    pub const fn children_args(&self) -> Option<&ClosureArgs> {
-        self.children_args.as_ref()
-    }
+    pub const fn children_args(&self) -> Option<&ClosureArgs> { self.children_args.as_ref() }
 
-    pub const fn children(&self) -> Option<&Children> {
-        self.children.as_ref()
-    }
+    pub const fn children(&self) -> Option<&Children> { self.children.as_ref() }
 }
 
 fn parse_closure_args(input: ParseStream) -> syn::Result<ClosureArgs> {

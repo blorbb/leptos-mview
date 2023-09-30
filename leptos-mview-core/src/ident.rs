@@ -19,21 +19,13 @@ pub struct KebabIdent {
 }
 
 impl KebabIdent {
-    pub const fn new(repr: String, span: Span) -> Self {
-        Self { repr, span }
-    }
+    pub const fn new(repr: String, span: Span) -> Self { Self { repr, span } }
 
-    pub fn repr(&self) -> &str {
-        self.repr.as_ref()
-    }
+    pub fn repr(&self) -> &str { self.repr.as_ref() }
 
-    pub fn to_lit_str(&self) -> syn::LitStr {
-        syn::LitStr::new(self.repr(), self.span())
-    }
+    pub fn to_lit_str(&self) -> syn::LitStr { syn::LitStr::new(self.repr(), self.span()) }
 
-    pub const fn span(&self) -> Span {
-        self.span
-    }
+    pub const fn span(&self) -> Span { self.span }
 
     pub fn to_snake_ident(&self) -> syn::Ident {
         let snake_string = self.repr().replace('-', "_");

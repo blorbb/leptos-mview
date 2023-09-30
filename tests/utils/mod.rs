@@ -30,13 +30,9 @@ pub enum Contains<'a> {
 }
 
 impl<'a> From<&'a str> for Contains<'a> {
-    fn from(value: &'a str) -> Self {
-        Self::Str(value)
-    }
+    fn from(value: &'a str) -> Self { Self::Str(value) }
 }
 
 impl<'a> From<&'a [&'a str]> for Contains<'a> {
-    fn from(value: &'a [&'a str]) -> Self {
-        Self::Slice(value)
-    }
+    fn from(value: &'a [&'a str]) -> Self { Self::Slice(value) }
 }

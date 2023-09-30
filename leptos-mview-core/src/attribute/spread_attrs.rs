@@ -34,13 +34,9 @@ impl Parse for SpreadAttr {
 }
 
 impl SpreadAttr {
-    pub const fn as_ident(&self) -> &syn::Ident {
-        &self.ident
-    }
+    pub const fn as_ident(&self) -> &syn::Ident { &self.ident }
 
-    pub const fn span(&self) -> Span {
-        self.span
-    }
+    pub const fn span(&self) -> Span { self.span }
 }
 
 #[cfg(test)]
@@ -50,7 +46,5 @@ mod tests {
     use super::SpreadAttr;
 
     #[test]
-    fn compiles() {
-        let _: SpreadAttr = parse_quote!({ ..a });
-    }
+    fn compiles() { let _: SpreadAttr = parse_quote!({ ..a }); }
 }

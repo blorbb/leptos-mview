@@ -1,9 +1,8 @@
 use proc_macro2::Span;
 use syn::parse::Parse;
 
-use crate::{ident::KebabIdent, span, value::Value};
-
 use super::parsing::parse_kebab_or_braced_or_bool;
+use crate::{ident::KebabIdent, span, value::Value};
 
 /// A `key = value` type of attribute.
 ///
@@ -33,21 +32,13 @@ pub struct KvAttr {
 }
 
 impl KvAttr {
-    pub const fn new(key: KebabIdent, value: Value) -> Self {
-        Self { key, value }
-    }
+    pub const fn new(key: KebabIdent, value: Value) -> Self { Self { key, value } }
 
-    pub const fn key(&self) -> &KebabIdent {
-        &self.key
-    }
+    pub const fn key(&self) -> &KebabIdent { &self.key }
 
-    pub const fn value(&self) -> &Value {
-        &self.value
-    }
+    pub const fn value(&self) -> &Value { &self.value }
 
-    pub fn span(&self) -> Span {
-        span::join(self.key().span(), self.value().span())
-    }
+    pub fn span(&self) -> Span { span::join(self.key().span(), self.value().span()) }
 }
 
 impl Parse for KvAttr {

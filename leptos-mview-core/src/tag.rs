@@ -90,6 +90,7 @@ impl Parse for Tag {
     }
 }
 
+#[rustfmt::skip]
 pub fn is_component(tag: &str) -> bool {
     tag.starts_with(|c: char| c.is_ascii_uppercase())
 }

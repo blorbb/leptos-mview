@@ -86,17 +86,11 @@ mod tests {
 
     // test only implementation, as it is not used anywhere else.
     impl Value {
-        pub fn is_lit(&self) -> bool {
-            matches!(self, Self::Lit(_))
-        }
+        pub fn is_lit(&self) -> bool { matches!(self, Self::Lit(_)) }
 
-        pub fn is_block(&self) -> bool {
-            matches!(self, Self::Block(..))
-        }
+        pub fn is_block(&self) -> bool { matches!(self, Self::Block(..)) }
 
-        pub fn is_bracketed(&self) -> bool {
-            matches!(self, Self::Bracket(..))
-        }
+        pub fn is_bracketed(&self) -> bool { matches!(self, Self::Bracket(..)) }
     }
 
     impl ValueKind {

@@ -8,13 +8,14 @@ use proc_macro_error::{abort, abort_call_site};
 pub trait ResultExt {
     type Ok;
 
-    /// Behaves like `Result::unwrap`: if self is `Ok` yield the contained value,
-    /// otherwise abort macro execution via `abort!`.
+    /// Behaves like `Result::unwrap`: if self is `Ok` yield the contained
+    /// value, otherwise abort macro execution via `abort!`.
     fn unwrap_or_abort(self) -> Self::Ok;
 
-    /// Behaves like `Result::expect`: if self is `Ok` yield the contained value,
-    /// otherwise abort macro execution via `abort!`.
-    /// If it aborts then resulting error message will be preceded with `message`.
+    /// Behaves like `Result::expect`: if self is `Ok` yield the contained
+    /// value, otherwise abort macro execution via `abort!`.
+    /// If it aborts then resulting error message will be preceded with
+    /// `message`.
     fn expect_or_abort(self, msg: &str) -> Self::Ok;
 
     /// Behaves like `expect_or_abort` but the existing error message is
@@ -26,9 +27,10 @@ pub trait ResultExt {
 pub trait OptionExt {
     type Some;
 
-    /// Behaves like `Option::expect`: if self is `Some` yield the contained value,
-    /// otherwise abort macro execution via `abort_call_site!`.
-    /// If it aborts the `message` will be used for [`compile_error!`][compl_err] invocation.
+    /// Behaves like `Option::expect`: if self is `Some` yield the contained
+    /// value, otherwise abort macro execution via `abort_call_site!`.
+    /// If it aborts the `message` will be used for
+    /// [`compile_error!`][compl_err] invocation.
     ///
     /// [compl_err]: https://doc.rust-lang.org/std/macro.compile_error.html
     fn expect_or_abort(self, msg: &str) -> Self::Some;

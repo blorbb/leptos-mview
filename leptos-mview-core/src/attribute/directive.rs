@@ -107,21 +107,13 @@ macro_rules! create_directive {
             type Key = $key;
             type Value = $value;
 
-            fn value(&self) -> &Self::Value {
-                &self.value
-            }
+            fn value(&self) -> &Self::Value { &self.value }
 
-            fn key(&self) -> &Self::Key {
-                &self.key
-            }
+            fn key(&self) -> &Self::Key { &self.key }
 
-            fn dir(&self) -> &Self::Dir {
-                &self.dir
-            }
+            fn dir(&self) -> &Self::Dir { &self.dir }
 
-            fn full_span(&self) -> Span {
-                crate::span::join(self.dir().span, self.value().span())
-            }
+            fn full_span(&self) -> Span { crate::span::join(self.dir().span, self.value().span()) }
         }
     };
 }

@@ -9,9 +9,8 @@ use std::ops::Deref;
 use proc_macro2::Span;
 use syn::{parse::Parse, Token};
 
-use crate::error_ext::ResultExt;
-
 use self::{directive::DirectiveAttr, kv::KvAttr, spread_attrs::SpreadAttr};
+use crate::error_ext::ResultExt;
 
 #[derive(Debug, Clone)]
 pub enum Attr {
@@ -58,9 +57,7 @@ pub struct Attrs(Vec<Attr>);
 impl Deref for Attrs {
     type Target = [Attr];
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+    fn deref(&self) -> &Self::Target { &self.0 }
 }
 
 impl Parse for Attrs {
@@ -91,17 +88,11 @@ mod tests {
     #[test]
     fn parse_complex_attrs() {
         impl Attr {
-            fn is_kv(&self) -> bool {
-                matches!(self, Self::Kv(..))
-            }
+            fn is_kv(&self) -> bool { matches!(self, Self::Kv(..)) }
 
-            fn is_dir(&self) -> bool {
-                matches!(self, Self::Directive(..))
-            }
+            fn is_dir(&self) -> bool { matches!(self, Self::Directive(..)) }
 
-            fn is_spread(&self) -> bool {
-                matches!(self, Self::Spread(..))
-            }
+            fn is_spread(&self) -> bool { matches!(self, Self::Spread(..)) }
         }
         let attrs: Attrs = parse_quote! {
             key-1 = "value"

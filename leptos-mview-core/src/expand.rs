@@ -307,7 +307,8 @@ fn component_children_tokens(
     let children_fragment = children_fragment_tokens(children);
 
     // children with arguments take a `Fn(T) -> impl IntoView`
-    // normal children (`Children`, `ChildrenFn`, ...) take `ToChildren::to_children`
+    // normal children (`Children`, `ChildrenFn`, ...) take
+    // `ToChildren::to_children`
     let wrapped_fragment = if args.is_none() {
         quote! {
             ::leptos::ToChildren::to_children(move || #children_fragment)

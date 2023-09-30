@@ -59,15 +59,11 @@ pub struct Children(Vec<Child>);
 impl Deref for Children {
     type Target = [Child];
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+    fn deref(&self) -> &Self::Target { &self.0 }
 }
 
 impl Children {
-    pub fn into_vec(self) -> Vec<Child> {
-        self.0
-    }
+    pub fn into_vec(self) -> Vec<Child> { self.0 }
 }
 
 impl Parse for Children {

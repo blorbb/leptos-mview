@@ -1,0 +1,9 @@
+imports_granularity = "Crate"
+group_imports = "StdExternalCrate"
+format_code_in_doc_comments = true
+wrap_comments = true
+fn_single_line = true
+overflow_delimited_expr = true
+single_line_if_else_max_width = 80
+single_line_let_else_max_width = 80
+use_field_init_shorthand = true

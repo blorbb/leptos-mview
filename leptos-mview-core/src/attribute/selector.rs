@@ -50,9 +50,7 @@ impl SelectorShorthand {
         punct
     }
 
-    pub fn span(&self) -> Span {
-        span::join(self.prefix().span(), self.ident().span())
-    }
+    pub fn span(&self) -> Span { span::join(self.prefix().span(), self.ident().span()) }
 }
 
 impl Parse for SelectorShorthand {
@@ -81,9 +79,7 @@ pub struct SelectorShorthands(Vec<SelectorShorthand>);
 impl Deref for SelectorShorthands {
     type Target = [SelectorShorthand];
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+    fn deref(&self) -> &Self::Target { &self.0 }
 }
 
 impl Parse for SelectorShorthands {
