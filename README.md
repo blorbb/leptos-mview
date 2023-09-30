@@ -86,7 +86,7 @@ fn MyComponent() -> impl IntoView {
                 future=[fetch_from_db(value())]
                 blocking // expanded to `blocking=true`
             // children take arguments with a 'closure'
-            // this is very different to `bind:db_info` in Leptos!
+            // this is very different to `let:db_info` in Leptos!
             |db_info| {
                 p { "Things found: " strong { {*db_info} } "!" }
                 // bracketed expansion works in children too!
@@ -248,6 +248,8 @@ Most attributes are `key=value` pairs. The `value` follows the rules from above.
 
     See also: [kebab-case identifiers with attribute shorthand](#kebab-case-identifiers-with-attribute-shorthand)
 
+Note that the special `node_ref` or `ref` or `_ref` or `ref_` attribute in Leptos to bind the element to a variable is just `ref={variable}` in here.
+
 #### Boolean attributes
 
 Another shortcut is that boolean attributes can be written without adding `=true`. Watch out though! `checked` is **very different** to `{checked}`.
@@ -284,7 +286,7 @@ view! {
 
 ### Children
 
-You may have noticed that the `bind:data` prop was missing from the previous section on directive attributes!
+You may have noticed that the `let:data` prop was missing from the previous section on directive attributes!
 
 This is replaced with a closure right before the children block. This way, you can pass in multiple arguments to the children more easily.
 ```rust
@@ -370,3 +372,4 @@ Please feel free to make a PR/issue if you have feature ideas/bugs to report/fee
 
 - [ ] [Extending `class` attribute support](https://github.com/leptos-rs/leptos/issues/1492)
 - [ ] [SSR optimisation](https://github.com/leptos-rs/leptos/issues/1492#issuecomment-1664675672) (potential `delegate` feature that transforms this macro into a `leptos::view!` macro call as well?)
+- [ ] Support slots
