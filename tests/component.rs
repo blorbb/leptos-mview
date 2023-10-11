@@ -60,4 +60,19 @@ fn generics() {
     check_str(result, ["alloc::string::String", "usize", "i32"].as_slice());
 }
 
+#[test]
+fn let_patterns() {
+    if false {
+        let letters = ['a', 'b', 'c'];
+        _ = view! {
+            For
+                each=[letters.into_iter().enumerate()]
+                key={|(i, _)| *i}
+            |(i, letter)| {
+                "letter " {i+1} " is " {letter}
+            }
+        };
+    }
+}
+
 fn main() {}
