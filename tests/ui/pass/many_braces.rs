@@ -3,14 +3,14 @@
 use leptos_mview::view;
 
 fn main() {
-    view! {
+    _ = view! {
         div a={3} b={"aaaaa"} {
             {1234}
             span class={"braces not needed"} { "hi" }
         }
     };
 
-    view! {
+    _ = view! {
         button class:primary-200={true};
         button on:click={move |_| println!("hi")} {
             span 
