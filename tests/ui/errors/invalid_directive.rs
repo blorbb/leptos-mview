@@ -1,25 +1,25 @@
-use leptos_mview::view;
+use leptos_mview::mview;
 
 fn not_directive() {
-    view! {
+    mview! {
         div something:yes="b" {}
     };
 }
 
 fn not_class_name() {
-    view! {
+    mview! {
         div class:("abcd") = true {}
     };
 }
 
 fn not_style_name() {
-    view! {
+    mview! {
         div style:[1, 2]="black" {}
     };
 }
 
 fn not_event_name() {
-    view! {
+    mview! {
         button on:clicky-click={move |_| ()};
     };
 }

@@ -1,7 +1,7 @@
-use leptos_mview::view;
+use leptos_mview::mview;
 
 fn main() {
-    view! {
+    mview! {
         Await
             future=[async { 1 }]
         |data| "no"

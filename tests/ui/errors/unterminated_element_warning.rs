@@ -1,7 +1,7 @@
-use leptos_mview::view;
+use leptos_mview::mview;
 
 fn main() {
-    _ = view! {
+    _ = mview! {
         div {
             "something"
             input.input type="text"

@@ -1,5 +1,5 @@
 use leptos::*;
-use leptos_mview::view;
+use leptos_mview::mview;
 mod utils;
 use utils::check_str;
 
@@ -7,11 +7,11 @@ use utils::check_str;
 fn clones() {
     #[component]
     fn Owning(children: ChildrenFn) -> impl IntoView {
-        view! { div { {children} } }
+        mview! { div { {children} } }
     }
 
     let notcopy = String::new();
-    _ = view! {
+    _ = mview! {
         Owning {
             Owning clone:notcopy {
                 {notcopy.clone()}
@@ -23,7 +23,7 @@ fn clones() {
 // TODO: not sure why this is creating an untracked resource warning
 #[test]
 fn children_args() {
-    _ = view! {
+    _ = mview! {
         Await future={|| async { 3 }} |data| {
             p { {*data} " little monkeys, jumping on the bed." }
         }
@@ -31,7 +31,7 @@ fn children_args() {
 
     // clone should also work
     let name = String::new();
-    _ = view! {
+    _ = mview! {
         Await
             future={move || async {"hi".to_string()}}
             clone:name
@@ -51,7 +51,7 @@ fn generics() {
         std::any::type_name::<S>()
     }
 
-    let result = view! {
+    let result = mview! {
         GenericComponent<String> ty={PhantomData};
         GenericComponent<usize> ty={PhantomData};
         GenericComponent<i32> ty={PhantomData};
@@ -64,7 +64,7 @@ fn generics() {
 fn let_patterns() {
     if false {
         let letters = ['a', 'b', 'c'];
-        _ = view! {
+        _ = mview! {
             For
                 each=[letters.into_iter().enumerate()]
                 key={|(i, _)| *i}

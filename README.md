@@ -12,14 +12,14 @@ A little preview of the syntax:
 
 ```rust
 use leptos::*;
-use leptos_mview::view;
+use leptos_mview::mview;
 
 #[component]
 fn MyComponent() -> impl IntoView {
     let (value, set_value) = create_signal(String::new());
     let red_input = move || value().len() % 2 == 0;
 
-    view! {
+    mview! {
         h1.title { "A great website" }
         br;
 
@@ -34,7 +34,7 @@ fn MyComponent() -> impl IntoView {
 
         Show
             when=[!value().is_empty()]
-            fallback=[view! { "..." }]
+            fallback=[mview! { "..." }]
         {
             Await
                 future=[fetch_from_db(value())]
@@ -55,14 +55,14 @@ async fn fetch_from_db(data: String) -> usize { data.len() }
 
 ```rust
 use leptos::*;
-use leptos_mview::view; // override leptos::view
+use leptos_mview::mview; // override leptos::view
 
 #[component]
 fn MyComponent() -> impl IntoView {
     let (value, set_value) = create_signal(String::new());
     let red_input = move || value().len() % 2 == 0;
 
-    view! {
+    mview! {
         // specify tags and attributes, children go in braces
         // classes (and ids) can be added like CSS selectors.
         // same as `h1 class="title"`
@@ -136,7 +136,7 @@ Elements have the following structure:
 
 Example:
 ```rust
-view! {
+mview! {
     div.primary { strong { "hello world" } }
     input type="text" on:input={handle_input};
     MyComponent data=3 other="hi";
@@ -152,7 +152,7 @@ pub fn GenericComponent<S>(ty: PhantomData<S>) -> impl IntoView {
 
 #[component]
 pub fn App() -> impl IntoView {
-    view! {
+    mview! {
         GenericComponent<String> ty={PhantomData};
         GenericComponent<usize> ty={PhantomData};
         GenericComponent<i32> ty={PhantomData};
@@ -163,7 +163,7 @@ pub fn App() -> impl IntoView {
 Note that due to [Reserving syntax](https://doc.rust-lang.org/edition-guide/rust-2021/reserving-syntax.html),
 the `#` for ids must have a space before it.
 ```rust
-view! {
+mview! {
     nav #primary { "..." }
     // not allowed: nav#primary { "..." }
 }
@@ -176,12 +176,12 @@ There are (currently) 3 main types of values you can pass in:
 - **Literals** can be passed in directly to attribute values (like `data=3`, `class="main"`, `checked=true`).
     - However, children do not accept literal numbers or bools - only strings.
         ```rust
-        view! { p { "this works " 0 " times: " true } }
+        mview! { p { "this works " 0 " times: " true } }
         ```
 
 - Everything else must be passed in as a **block**, including variables, closures, or expressions.
     ```rust
-    view! {
+    mview! {
         input
             class="main"
             checked=true
@@ -195,12 +195,12 @@ There are (currently) 3 main types of values you can pass in:
     ```rust
     let input_type = "text";
     // ❌ This is not valid! Wrap input_type in braces.
-    view! { input type=input_type }
+    mview! { input type=input_type }
     ```
 
 - Values wrapped in **brackets** (like `value=[a_bool().to_string()]`) are shortcuts for a block with an empty closure `move || ...` (to `value={move || a_bool().to_string()}`).
     ```rust
-    view! {
+    mview! {
         Show
             fallback=[()] // common for not wanting a fallback as `|| ()`
             when=[number() % 2 == 0] // `{move || number() % 2 == 0}`
@@ -211,15 +211,17 @@ There are (currently) 3 main types of values you can pass in:
     ```
 
     - Note that this always expands to `move || ...`: for any closures that take an argument, use the full closure block instead.
-        ```rust
-        view! {
+        ```compile_error
+        # use leptos_mview::mview;
+        # use leptos::logging::log;
+        mview! {
             input type="text" on:click=[log!("THIS DOESNT WORK")];
         }
         ```
 
         Instead:
         ```rust
-        view! {
+        mview! {
             input type="text" on:click={|_| log!("THIS WORKS!")};
         }
         ```
@@ -242,7 +244,7 @@ Most attributes are `key=value` pairs. The `value` follows the rules from above.
 
         Can be used elsewhere like this:
         ```rust
-        view! { Something some-attribute=5; }
+        mview! { Something some-attribute=5; }
         ```
 
         And the `some-attribute` will be passed in to the `some_attribute` argument.
@@ -251,7 +253,7 @@ Most attributes are `key=value` pairs. The `value` follows the rules from above.
     ```rust
     let class = "these are classes";
     let id = "primary";
-    view! {
+    mview! {
         div {class} {id} { "this has 3 classes and id='primary'" }
     }
     ```
@@ -268,9 +270,9 @@ Another shortcut is that boolean attributes can be written without adding `=true
 #[component]
 fn LotsOfFlags(wide: bool, tall: bool, red: bool, curvy: bool, count: i32) -> impl IntoView {}
 
-view! { LotsOfFlags wide tall red=false curvy count=3; }
+mview! { LotsOfFlags wide tall red=false curvy count=3; }
 // same as...
-view! { LotsOfFlags wide=true tall=true red=false curvy=true count=3; }
+mview! { LotsOfFlags wide=true tall=true red=false curvy=true count=3; }
 ```
 
 See also: [boolean attributes on HTML elements](#boolean-attributes-on-html-elements)
@@ -290,7 +292,7 @@ All of these directives except `clone` also support the attribute shorthand:
 ```rust
 let color = create_rw_signal("red".to_string());
 let disabled = false;
-view! {
+mview! {
     div style:{color} class:{disabled};
 }
 ```
@@ -298,7 +300,7 @@ view! {
 The `class` and `style` directives also support using string literals, for more complicated names or multiple classes at once.
 ```rust
 let yes = move || true;
-view! {
+mview! {
     div class:"complex-[class]-name"={yes}
         style:"doesn't-exist"="white"
         class:"class-one class-two"={yes};
@@ -311,7 +313,7 @@ You may have noticed that the `let:data` prop was missing from the previous sect
 
 This is replaced with a closure right before the children block. This way, you can pass in multiple arguments to the children more easily.
 ```rust
-view! {
+mview! {
     Await
         future=[async { 3 }]
     |monkeys| {
@@ -332,19 +334,19 @@ If an attribute shorthand has hyphens:
 - On components, both the key and value will be converted to underscores.
     ```rust
     let some_attribute = 5;
-    view! { Something {some-attribute}; }
+    mview! { Something {some-attribute}; }
     // same as...
-    view! { Something {some_attribute}; }
+    mview! { Something {some_attribute}; }
     // same as...
-    view! { Something some_attribute={some_attribute}; }
+    mview! { Something some_attribute={some_attribute}; }
     ```
 
 - On HTML elements, the key will keep hyphens, but the value will be turned into an identifier with underscores.
     ```rust
     let aria_label = "a good label";
-    view! { input {aria-label}; }
+    mview! { input {aria-label}; }
     // same as...
-    view! { input aria-label={aria_label}; }
+    mview! { input aria-label={aria_label}; }
     ```
 
 ### Boolean attributes on HTML elements
@@ -361,9 +363,9 @@ To have the attribute have a value of the string "true" or "false", use `.to_str
 Especially using the closure shorthand `[...]`, this can be pretty simple when working with signals:
 ```rust
 use leptos::*;
-use leptos_mview::view;
+use leptos_mview::mview;
 let boolean_signal = create_rw_signal(true);
-view! { input type="checkbox" checked=[boolean_signal().to_string()]; }
+mview! { input type="checkbox" checked=[boolean_signal().to_string()]; }
 ```
 
 ## Contributing
