@@ -1,6 +1,6 @@
 [package]
 name = "leptos-mview-macro"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Proc macro export for leptos-mview"
@@ -15,4 +15,4 @@ proc-macro = true
 [dependencies]
 proc-macro2 = "1"
 proc-macro-error = { version = "1", default-features = false }
-leptos-mview-core = { path = "../leptos-mview-core", version = "0.1.0" }
+leptos-mview-core = { path = "../leptos-mview-core", version = "0.2.0" }
