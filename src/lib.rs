@@ -413,7 +413,7 @@ Inside the component's children, trying to access `ident_to_clone` wouldn't work
 let not_copy = String::new();
 view! {
     Owning {
-        Owning clone:{not_copy} {
+        Owning clone:not_copy {
             {not_copy.clone()}
         }
     }

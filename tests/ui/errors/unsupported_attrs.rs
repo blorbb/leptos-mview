@@ -41,7 +41,7 @@ fn clone_on_element() {
     let notcopy = String::new();
     view! {
         div {
-            span clone:{notcopy} {
+            span clone:notcopy {
                 {notcopy.clone()}
             }
         }

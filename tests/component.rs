@@ -13,7 +13,7 @@ fn clones() {
     let notcopy = String::new();
     _ = view! {
         Owning {
-            Owning clone:{notcopy} {
+            Owning clone:notcopy {
                 {notcopy.clone()}
             }
         }
@@ -34,7 +34,7 @@ fn children_args() {
     _ = view! {
         Await
             future={move || async {"hi".to_string()}}
-            clone:{name}
+            clone:name
         |greeting| {
             {greeting} " " {name.clone()}
         }

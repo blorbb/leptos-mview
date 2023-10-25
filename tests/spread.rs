@@ -17,7 +17,7 @@ fn spread_html_element() {
     };
     check_str(
         res,
-        r#"<div class="b" a="b" data-index="0" class="c" data-hk="0-0-1">children</div>"#,
+        r#"<div class="b" a="b" data-index="0" class="c" data-hk="0-0-0-1">children</div>"#,
     );
 }
 
@@ -35,6 +35,6 @@ fn spread_on_component() {
     };
     check_str(
         res,
-        r#"<div class="b" contenteditable data-index="0" data-hk="0-0-2"></div>"#,
+        r#"<div class="b" contenteditable data-index="0" data-hk="0-0-0-2"></div>"#,
     );
 }
