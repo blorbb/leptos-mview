@@ -1,10 +1,13 @@
 use proc_macro2::Span;
-use quote::ToTokens;
-use syn::parse::{Parse, ParseStream};
+use syn::{
+    parse::{Parse, ParseStream},
+    token::Token,
+    Token,
+};
 
 use super::parsing::{
-    parse_dir_then, parse_ident_or_braced, parse_kebab_or_braced_or_bool,
-    parse_kebab_or_braced_or_str,
+    parse_dir_then, parse_ident_optional_value, parse_ident_or_braced,
+    parse_kebab_or_braced_or_bool, parse_kebab_or_braced_or_str,
 };
 use crate::{ident::KebabIdent, kw, value::Value};
 
@@ -36,6 +39,7 @@ pub enum DirectiveAttr {
     On(On),
     Prop(Prop),
     Clone(Clone),
+    Use(Use),
 }
 
 impl DirectiveAttr {
@@ -47,6 +51,7 @@ impl DirectiveAttr {
             Self::On(a) => a.full_span(),
             Self::Prop(a) => a.full_span(),
             Self::Clone(a) => a.full_span(),
+            Self::Use(a) => a.full_span(),
         }
     }
 }
@@ -65,25 +70,12 @@ impl Parse for DirectiveAttr {
             Ok(Self::Prop(prop))
         } else if let Ok(clone) = input.parse::<Clone>() {
             Ok(Self::Clone(clone))
+        } else if let Ok(u) = input.parse::<Use>() {
+            Ok(Self::Use(u))
         } else {
             Err(input.error("unknown directive"))
         }
     }
-}
-
-pub trait Directive {
-    type Dir: ToTokens + syn::token::CustomToken + std::clone::Clone;
-    type Key: ToTokens + std::clone::Clone;
-    type Value: ToTokens + std::clone::Clone;
-    fn dir(&self) -> &Self::Dir;
-    fn key(&self) -> &Self::Key;
-    fn value(&self) -> &Self::Value;
-
-    fn explode(&self) -> (&Self::Dir, &Self::Key, &Self::Value) {
-        (self.dir(), self.key(), self.value())
-    }
-
-    fn full_span(&self) -> Span;
 }
 
 macro_rules! create_directive {
@@ -102,18 +94,50 @@ macro_rules! create_directive {
             }
         }
 
-        impl Directive for $struct_name {
-            type Dir = $dir;
-            type Key = $key;
-            type Value = $value;
+        #[allow(dead_code)]
+        impl $struct_name {
+            pub fn dir_name() -> &'static str { <$dir>::display() }
 
-            fn value(&self) -> &Self::Value { &self.value }
+            pub const fn dir(&self) -> &$dir { &self.dir }
+            pub const fn key(&self) -> &$key { &self.key }
+            pub const fn value(&self) -> &$value { &self.value }
 
-            fn key(&self) -> &Self::Key { &self.key }
+            pub const fn explode(&self) -> (&$dir, &$key, &$value) {
+                (self.dir(), self.key(), self.value())
+            }
 
-            fn dir(&self) -> &Self::Dir { &self.dir }
+            pub fn full_span(&self) -> Span {
+                crate::span::join(self.dir().span, self.key().span())
+            }
+        }
+    };
+    // no value
+    ($struct_name:ident { $dir:ty : $key:ty } uses $parser:expr) => {
+        #[derive(Debug, Clone)]
+        pub struct $struct_name {
+            dir: $dir,
+            key: $key,
+        }
 
-            fn full_span(&self) -> Span { crate::span::join(self.dir().span, self.value().span()) }
+        impl Parse for $struct_name {
+            fn parse(input: ParseStream) -> syn::Result<Self> {
+                let (dir, key) = parse_dir_then(input, $parser)?;
+                Ok(Self { dir, key })
+            }
+        }
+
+        #[allow(dead_code)]
+        impl $struct_name {
+            pub fn dir_name() -> &'static str { <$dir>::display() }
+
+            pub const fn dir(&self) -> &$dir { &self.dir }
+            pub const fn key(&self) -> &$key { &self.key }
+
+            pub const fn explode(&self) -> (&$dir, &$key) { (self.dir(), self.key()) }
+
+            pub fn full_span(&self) -> Span {
+                crate::span::join(self.dir().span, self.key().span())
+            }
         }
     };
 }
@@ -123,4 +147,5 @@ create_directive! { Style { kw::style : syn::LitStr = Value } uses parse_kebab_o
 create_directive! { Attr { kw::attr : KebabIdent = Value } uses parse_kebab_or_braced_or_bool }
 create_directive! { On { kw::on : syn::Ident = Value } uses parse_ident_or_braced }
 create_directive! { Prop { kw::prop : syn::Ident = Value } uses parse_ident_or_braced }
-create_directive! { Clone { kw::clone : syn::Ident = Value } uses parse_ident_or_braced }
+create_directive! { Clone { kw::clone : syn::Ident } uses syn::Ident::parse }
+create_directive! { Use { Token![use] : syn::Ident = Option<Value> } uses parse_ident_optional_value }

@@ -4,7 +4,7 @@ use quote::ToTokens;
 use syn::{
     parse::{discouraged::Speculative, Parse, ParseStream},
     parse_quote,
-    token::{Brace, CustomToken},
+    token::Brace,
     Token,
 };
 
@@ -90,6 +90,34 @@ pub fn parse_ident_or_braced(input: ParseStream) -> syn::Result<(syn::Ident, Val
     }
 }
 
+/// Parsing functions for attributes that can accept:
+/// - Normal `key={value}` pairs
+/// - Shorthand attributes like `{class}` to `class={class}`
+/// - Just an ident, no value afterward.
+/// - All idents must be a regular ident, cannot be a keyword.
+///
+/// # Errors
+/// Returns `Err`s if the input cannot be parsed. Does not advance the
+/// token stream if so.
+pub fn parse_ident_optional_value(input: ParseStream) -> syn::Result<(syn::Ident, Option<Value>)> {
+    if input.peek(syn::token::Brace) {
+        // TODO: give these better errors
+        let ident = input.parse::<BracedIdent>()?;
+        Ok((ident.ident().clone(), Some(ident.into_block_value())))
+    } else {
+        let ident = input.parse::<syn::Ident>()?;
+        if input.peek(Token![=]) {
+            input.parse::<Token![=]>().unwrap();
+            // add a value
+            let value = input.parse::<Value>().unwrap_or_abort();
+            Ok((ident, Some(value)))
+        } else {
+            // no value
+            Ok((ident, None))
+        }
+    }
+}
+
 /// Generic parsing function for directives.
 ///
 /// Tries the parse the `Kw` and colon, then parses the `next` function.
@@ -99,7 +127,7 @@ pub fn parse_ident_or_braced(input: ParseStream) -> syn::Result<(syn::Ident, Val
 /// after the keyword. Otherwise, this function will abort.
 ///
 /// Input stream will not be advanced if unable to parse.
-pub fn parse_dir_then<Kw: CustomToken + Parse, R>(
+pub fn parse_dir_then<Kw: syn::token::Token + Parse, R>(
     input: ParseStream,
     next: fn(ParseStream) -> syn::Result<R>,
 ) -> syn::Result<(Kw, R)> {

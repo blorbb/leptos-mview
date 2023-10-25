@@ -7,7 +7,7 @@ pub mod spread_attrs;
 use std::ops::Deref;
 
 use proc_macro2::Span;
-use syn::{parse::Parse, Token};
+use syn::{ext::IdentExt, parse::Parse, Token};
 
 use self::{directive::DirectiveAttr, kv::KvAttr, spread_attrs::SpreadAttr};
 use crate::error_ext::ResultExt;
@@ -34,7 +34,7 @@ impl Parse for Attr {
         // ident then colon must be directive
         // just ident must be regular kv attribute
         // otherwise, try kv or spread
-        if input.peek(syn::Ident) && input.peek2(Token![:]) {
+        if input.peek(syn::Ident::peek_any) && input.peek2(Token![:]) {
             let dir = input.parse::<DirectiveAttr>().unwrap_or_abort();
             Ok(Self::Directive(dir))
         } else if input.peek(syn::Ident) {

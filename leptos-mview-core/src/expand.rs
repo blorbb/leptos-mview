@@ -3,14 +3,13 @@
 // putting specific `-> TokenStream` implementations here to have it all
 // grouped instead of scattered throughout struct impls.
 
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use proc_macro_error::abort;
-use quote::{quote, quote_spanned};
-use syn::token::CustomToken;
+use quote::{quote, quote_spanned, ToTokens};
 
 use crate::{
     attribute::{
-        directive::{self, Directive, DirectiveAttr},
+        directive::{self, DirectiveAttr},
         kv::KvAttr,
         selector::{SelectorShorthand, SelectorShorthands},
         spread_attrs::SpreadAttr,
@@ -151,8 +150,17 @@ fn xml_directive_tokens(element: &Element, directive: &DirectiveAttr) -> TokenSt
             let (dir, ev, value) = o.explode();
             quote! { .#dir(::leptos::ev::#ev, #value) }
         }
-        DirectiveAttr::Attr(a) => abort_not_supported(&element.tag().kind(), a),
-        DirectiveAttr::Clone(c) => abort_not_supported(&element.tag().kind(), c),
+        DirectiveAttr::Use(u) => use_directive_to_method(u),
+        DirectiveAttr::Attr(a) => abort_not_supported(
+            &element.tag().kind(),
+            a.full_span(),
+            directive::Attr::dir_name(),
+        ),
+        DirectiveAttr::Clone(c) => abort_not_supported(
+            &element.tag().kind(),
+            c.full_span(),
+            directive::Attr::dir_name(),
+        ),
     }
 }
 
@@ -226,8 +234,9 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
     // attribute methods to add when building
     let mut attrs = TokenStream::new();
     let mut dyn_attrs: Vec<&directive::Attr> = Vec::new();
+    let mut use_directives: Vec<&directive::Use> = Vec::new();
     // the variables (idents) to clone before making children
-    // in the form `let value = name.clone()`
+    // in the form `let name = name.clone()`
     let mut clones = TokenStream::new();
     let mut event_listeners = TokenStream::new();
 
@@ -244,9 +253,22 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
                 DirectiveAttr::On(o) => event_listeners.extend(component_event_listener_tokens(o)),
                 DirectiveAttr::Attr(a) => dyn_attrs.push(a),
                 DirectiveAttr::Clone(c) => clones.extend(component_clone_tokens(c)),
-                DirectiveAttr::Class(c) => abort_not_supported(&element.tag().kind(), c),
-                DirectiveAttr::Style(s) => abort_not_supported(&element.tag().kind(), s),
-                DirectiveAttr::Prop(p) => abort_not_supported(&element.tag().kind(), p),
+                DirectiveAttr::Use(u) => use_directives.push(u),
+                DirectiveAttr::Class(c) => abort_not_supported(
+                    &element.tag().kind(),
+                    c.full_span(),
+                    directive::Class::dir_name(),
+                ),
+                DirectiveAttr::Style(s) => abort_not_supported(
+                    &element.tag().kind(),
+                    s.full_span(),
+                    directive::Style::dir_name(),
+                ),
+                DirectiveAttr::Prop(p) => abort_not_supported(
+                    &element.tag().kind(),
+                    p.full_span(),
+                    directive::Prop::dir_name(),
+                ),
             },
         }
     }
@@ -256,6 +278,7 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
         .map(|children| component_children_tokens(children, element.children_args(), &clones));
 
     let dyn_attrs = dyn_attrs_to_methods(&dyn_attrs);
+    let use_directives = use_directives.into_iter().map(use_directive_to_method);
 
     Some(quote! {
         ::leptos::component_view(
@@ -265,6 +288,7 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
                 #children
                 .build()
                 #dyn_attrs
+                #(#use_directives)*
         )
         .into_view()
         #event_listeners
@@ -288,15 +312,8 @@ fn component_event_listener_tokens(dir: &directive::On) -> TokenStream {
 
 /// Aborts if the directive value is not a block with an ident.
 fn component_clone_tokens(dir: &directive::Clone) -> TokenStream {
-    let (_, to_clone, cloned_ident) = dir.explode();
-    let Some(cloned_ident) = cloned_ident.as_block_with_ident() else {
-        abort!(
-            cloned_ident.span(),
-            "value of a `clone:` directive must be an ident like `{{{}}}`",
-            to_clone
-        )
-    };
-    quote! { let #cloned_ident = #to_clone.clone(); }
+    let to_clone = dir.key();
+    quote! { let #to_clone = #to_clone.clone(); }
 }
 
 fn component_children_tokens(
@@ -345,6 +362,23 @@ fn dyn_attrs_to_methods(dyn_attrs: &[&directive::Attr]) -> Option<TokenStream> {
     })
 }
 
+/// Converts a `use:directive={value}` to a method.
+///
+/// The expansion for components and xml elements are the same.
+///
+/// ```text
+/// use:d => .directive(d, ())
+/// use:d={some_value} => .directive(d, some_value)
+/// ```
+fn use_directive_to_method(u: &directive::Use) -> TokenStream {
+    let (use_token, func, value) = u.explode();
+    let directive = syn::Ident::new("directive", use_token.span);
+    let value = value
+        .as_ref()
+        .map_or(quote_spanned! {func.span()=> () }, |v| v.to_token_stream());
+    quote! { .#directive(#func, #value) }
+}
+
 /// Converts the children into a `leptos::Fragment::lazy()` token stream.
 ///
 /// Example:
@@ -378,7 +412,7 @@ pub fn children_fragment_tokens(children: &Children) -> TokenStream {
 }
 
 /// Aborts with an appropriate message when a directive is not supported.
-fn abort_not_supported<D: Directive>(tag: &TagKind, dir: &D) -> ! {
+fn abort_not_supported(tag: &TagKind, span: Span, dir_name: &str) -> ! {
     let suffix = match tag {
         TagKind::Html => "html elements",
         TagKind::Component => "components",
@@ -387,9 +421,9 @@ fn abort_not_supported<D: Directive>(tag: &TagKind, dir: &D) -> ! {
         TagKind::Unknown => "web components",
     };
     abort!(
-        dir.full_span(),
+        span,
         "directive {} is not supported on {}",
-        D::Dir::display(),
+        dir_name,
         suffix
     )
 }

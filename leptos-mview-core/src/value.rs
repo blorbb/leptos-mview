@@ -50,18 +50,6 @@ impl ToTokens for Value {
 }
 
 impl Value {
-    /// Tries to convert a `Value` into a single ident.
-    ///
-    /// Example: the value `{something}` becomes the ident `something`.
-    ///
-    /// Returns `None` if the block does not only contain an ident.
-    pub fn as_block_with_ident(&self) -> Option<syn::Ident> {
-        let Self::Block(inner, _) = self else {
-            return None;
-        };
-        syn::parse2::<syn::Ident>(inner.clone()).ok()
-    }
-
     pub fn span(&self) -> Span {
         match self {
             Self::Lit(lit) => lit.span(),
