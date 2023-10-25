@@ -54,7 +54,7 @@ async fn fetch_from_db(data: String) -> usize { data.len() }
 
 ```
 use leptos::*;
-use leptos_mview::mview; // override leptos::view
+use leptos_mview::mview;
 
 #[component]
 fn MyComponent() -> impl IntoView {
@@ -118,7 +118,8 @@ This macro will be compatible with the latest stable release of Leptos.
 
 | `leptos_mview` version | Compatible `leptos` version |
 | ---------------------- | --------------------------- |
-| `0.1.0`                | `0.5.0`                     |
+| `0.1.0`                | `0.5.0`-`0.5.1`             |
+| `0.2.0`                | `0.5.2`                     |
 
 ## Syntax details
 
