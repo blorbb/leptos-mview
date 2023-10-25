@@ -308,15 +308,16 @@ See also: [boolean attributes on HTML elements](#boolean-attributes-on-html-elem
 
 #### Directives
 
-Some special attributes (distinguished by the `:`) called **directives** have special functionality. Most have the same behaviour as Leptos. These include:
+Some special attributes (distinguished by the `:`) called **directives** have special functionality. All have the same behaviour as Leptos. These include:
 - `class:class-name=[when to show]`
 - `style:style-key=[style value]`
 - `on:event={move |ev| event handler}`
 - `prop:property-name={signal}`
 - `attr:name={value}`
-- `clone:{ident_to_clone}`: This differs slightly from Leptos, which just has `clone:ident_to_clone`. See [clone directive](#clone-directive) for more details - tldr: just use `clone:{ident_to_clone}`.
+- `clone:ident_to_clone`
+- `use:directive_name` or `use:directive_name={params}`
 
-All of these directives also support the attribute shorthand:
+All of these directives except `clone` also support the attribute shorthand:
 ```
 # use leptos::*; use leptos_mview::view;
 let color = create_rw_signal("red".to_string());
@@ -397,27 +398,6 @@ use leptos::*;
 use leptos_mview::view;
 let boolean_signal = create_rw_signal(true);
 view! { input type="checkbox" checked=[boolean_signal().to_string()]; }
-# ;
-```
-
-### Clone directive
-
-The clone directive follows the same syntrax as all other directives, `clone:ident_to_clone={cloned_name}`. The `ident_to_clone` is the variable you are cloning, and `cloned_name` is how you can access the cloned value within the children.
-
-Inside the component's children, trying to access `ident_to_clone` wouldn't work anyways. The variable is usually shadowed (which Leptos does with just `clone:ident_to_clone`), which can be done in this macro with `clone:{ident_to_clone}`.
-
-```
-# use leptos::*; use leptos_mview::view;
-#[component] fn Owning(children: ChildrenFn) -> impl IntoView { children }
-
-let not_copy = String::new();
-view! {
-    Owning {
-        Owning clone:not_copy {
-            {not_copy.clone()}
-        }
-    }
-}
 # ;
 ```
 
