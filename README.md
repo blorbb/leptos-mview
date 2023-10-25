@@ -1,6 +1,8 @@
-<!-- cargo-rdme start -->
-
 # Leptos mview
+
+[![crates.io](https://img.shields.io/crates/v/leptos-mview.svg)](https://crates.io/crates/leptos-mview)
+
+<!-- cargo-rdme start -->
 
 An alternative `view!` macro for [Leptos](https://github.com/leptos-rs/leptos/tree/main) inspired by [maud](https://maud.lambda.xyz/).
 
@@ -55,7 +57,7 @@ async fn fetch_from_db(data: String) -> usize { data.len() }
 
 ```rust
 use leptos::*;
-use leptos_mview::mview; // override leptos::view
+use leptos_mview::mview;
 
 #[component]
 fn MyComponent() -> impl IntoView {
@@ -82,7 +84,7 @@ fn MyComponent() -> impl IntoView {
         Show
             // values wrapped in brackets `[body]` are expanded to `{move || body}`
             when=[!value().is_empty()] // `{move || !value().is_empty()}`
-            fallback=[view! { "..." }] // `{move || view! { "..." }}`
+            fallback=[mview! { "..." }] // `{move || mview! { "..." }}`
         { // I recommend placing children like this when attributes are multi-line
             Await
                 future=[fetch_from_db(value())]
@@ -119,7 +121,8 @@ This macro will be compatible with the latest stable release of Leptos.
 
 | `leptos_mview` version | Compatible `leptos` version |
 | ---------------------- | --------------------------- |
-| `0.1.0`                | `0.5.0`                     |
+| `0.1.0`                | `0.5.0`-`0.5.1`             |
+| `0.2.0`                | `0.5.2`                     |
 
 ## Syntax details
 

@@ -1,11 +1,9 @@
 /*!
-# Leptos mview
-
 An alternative `view!` macro for [Leptos](https://github.com/leptos-rs/leptos/tree/main) inspired by [maud](https://maud.lambda.xyz/).
 
 This crate is still very new and probably has loads of bugs as my first attempt at proc macros - please open an issue if you find any!
 
-## Example
+# Example
 
 A little preview of the syntax:
 
@@ -104,15 +102,15 @@ async fn fetch_from_db(data: String) -> usize { data.len() }
 
 </details>
 
-## Purpose
+# Purpose
 
 The `view!` macros in Leptos is often the largest part of a component, and can get extremely long when writing complex components. This macro aims to be as **concise** as possible, trying to **minimise unnecessary punctuation/words** and **shorten common patterns**.
 
-## Performance note
+# Performance note
 
 Currently, the macro expands to the [builder syntax](https://github.com/leptos-rs/leptos/blob/main/docs/book/src/view/builder.md) (ish), but it has some [performance downsides](https://github.com/leptos-rs/leptos/issues/1492#issuecomment-1664675672) in SSR mode. I may write up an alternative expansion that uses this SSR optimization, but it doesn't exist for now (feel free to contribute to this feature if you would like!).
 
-## Compatibility
+# Compatibility
 
 This macro will be compatible with the latest stable release of Leptos.
 
@@ -121,9 +119,9 @@ This macro will be compatible with the latest stable release of Leptos.
 | `0.1.0`                | `0.5.0`-`0.5.1`             |
 | `0.2.0`                | `0.5.2`                     |
 
-## Syntax details
+# Syntax details
 
-### Elements
+## Elements
 
 Elements have the following structure:
 
@@ -177,7 +175,7 @@ mview! {
 # ;
 ```
 
-### Values
+## Values
 
 There are (currently) 3 main types of values you can pass in:
 
@@ -248,9 +246,9 @@ There are (currently) 3 main types of values you can pass in:
         # ;
         ```
 
-### Attributes
+## Attributes
 
-#### Key-value attributes
+### Key-value attributes
 
 Most attributes are `key=value` pairs. The `value` follows the rules from above. The `key` has a few variations:
 
@@ -289,7 +287,7 @@ Most attributes are `key=value` pairs. The `value` follows the rules from above.
 
 Note that the special `node_ref` or `ref` or `_ref` or `ref_` attribute in Leptos to bind the element to a variable is just `ref={variable}` in here.
 
-#### Boolean attributes
+### Boolean attributes
 
 Another shortcut is that boolean attributes can be written without adding `=true`. Watch out though! `checked` is **very different** to `{checked}`.
 ```
@@ -307,7 +305,7 @@ mview! { LotsOfFlags wide=true tall=true red=false curvy=true count=3; }
 
 See also: [boolean attributes on HTML elements](#boolean-attributes-on-html-elements)
 
-#### Directives
+### Directives
 
 Some special attributes (distinguished by the `:`) called **directives** have special functionality. All have the same behaviour as Leptos. These include:
 - `class:class-name=[when to show]`
@@ -341,7 +339,7 @@ mview! {
 # ;
 ```
 
-### Children
+## Children
 
 You may have noticed that the `let:data` prop was missing from the previous section on directive attributes!
 
@@ -362,9 +360,9 @@ Note that you will usually need to add a `*` before the data you are using. If y
 
 Summary from the previous section on values in case you missed it: children can be literal strings (not bools or numbers!), blocks with Rust code inside (`{*monkeys}`), or the closure shorthand `[number() + 1]`.
 
-## Extra details
+# Extra details
 
-### Kebab-case identifiers with attribute shorthand
+## Kebab-case identifiers with attribute shorthand
 
 If an attribute shorthand has hyphens:
 - On components, both the key and value will be converted to underscores.
@@ -393,7 +391,7 @@ If an attribute shorthand has hyphens:
     # ;
     ```
 
-### Boolean attributes on HTML elements
+## Boolean attributes on HTML elements
 
 Note the behaviour from Leptos: setting an HTML attribute to true adds the attribute with no value associated.
 ```
@@ -414,11 +412,11 @@ mview! { input type="checkbox" checked=[boolean_signal().to_string()]; }
 # ;
 ```
 
-## Contributing
+# Contributing
 
 Please feel free to make a PR/issue if you have feature ideas/bugs to report/feedback :)
 
-### Extra feature ideas
+## Extra feature ideas
 
 - [ ] [Extending `class` attribute support](https://github.com/leptos-rs/leptos/issues/1492)
 - [ ] [SSR optimisation](https://github.com/leptos-rs/leptos/issues/1492#issuecomment-1664675672) (potential `delegate` feature that transforms this macro into a `leptos::view!` macro call as well?)
