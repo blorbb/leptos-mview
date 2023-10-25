@@ -288,9 +288,9 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
                 #children
                 .build()
                 #dyn_attrs
-                #(#use_directives)*
-        )
+            )
         .into_view()
+        #(#use_directives)*
         #event_listeners
     })
 }
