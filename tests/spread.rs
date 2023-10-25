@@ -1,5 +1,5 @@
 use leptos::*;
-use leptos_mview::view;
+use leptos_mview::mview;
 mod utils;
 use utils::check_str;
 
@@ -10,7 +10,7 @@ fn spread_html_element() {
         ("data-index", 0.into_attribute()),
         ("class", "c".into_attribute()),
     ];
-    let res = view! {
+    let res = mview! {
         div {..attrs} class="b" {
             "children"
         }
@@ -25,12 +25,12 @@ fn spread_html_element() {
 fn spread_on_component() {
     #[component]
     fn Spreadable(#[prop(attrs)] attrs: Vec<(&'static str, Attribute)>) -> impl IntoView {
-        view! {
+        mview! {
             div {..attrs};
         }
     }
 
-    let res = view! {
+    let res = mview! {
         Spreadable attr:class="b" attr:contenteditable=true attr:data-index=0;
     };
     check_str(

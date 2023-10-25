@@ -1,8 +1,8 @@
-use leptos_mview::view;
+use leptos_mview::mview;
 
 fn main() {
     // should not get an "unexpected end of macro invocation"
-    let expr = view! {
+    let expr = mview! {
         div class=;
     };
 }

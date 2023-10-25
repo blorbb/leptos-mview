@@ -28,8 +28,9 @@ use crate::{
 /// # Example
 /// ```ignore
 /// use leptos::*;
+/// use leptos_mview::mview;
 /// let div = create_node_ref::<html::Div>();
-/// view! {
+/// mview! {
 ///     div
 ///         class="component"
 ///         style:color="black"

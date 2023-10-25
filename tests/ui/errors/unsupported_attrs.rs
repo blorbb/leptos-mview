@@ -1,20 +1,20 @@
 use leptos::*;
-use leptos_mview::view;
+use leptos_mview::mview;
 
 fn style_on_component() {
-    view! {
+    mview! {
         Component style:color="white";
     };
 }
 
 fn class_on_component() {
-    view! {
+    mview! {
         Component class:red={true};
     };
 }
 
 fn prop_on_component() {
-    view! {
+    mview! {
         Component prop:value="1";
     };
 }
@@ -26,20 +26,20 @@ fn SpreadOnComponent() -> impl IntoView {
         ("class", "something"),
         ("data", "a"),
     ];
-    view! {
+    mview! {
         Component {..attrs};
     };
 }
 
 fn attr_on_element() {
-    view! {
+    mview! {
         input attr:class="no" type="text";
     };
 }
 
 fn clone_on_element() {
     let notcopy = String::new();
-    view! {
+    mview! {
         div {
             span clone:notcopy {
                 {notcopy.clone()}
@@ -49,14 +49,14 @@ fn clone_on_element() {
 }
 
 fn sel_shorthand_on_components() {
-    view! {
+    mview! {
         Component.not-working #some-id;
     };
 }
 
 #[component]
 fn Component() -> impl IntoView {
-    view! {
+    mview! {
         button;
     };
 }

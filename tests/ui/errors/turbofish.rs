@@ -1,5 +1,5 @@
 use leptos::*;
-use leptos_mview::view;
+use leptos_mview::mview;
 
 fn main() {
     use core::marker::PhantomData;
@@ -10,7 +10,7 @@ fn main() {
         std::any::type_name::<S>()
     }
 
-    view! {
+    mview! {
         GenericComponent::<String> ty={PhantomData};
     };
 }

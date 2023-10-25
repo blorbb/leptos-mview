@@ -1,8 +1,8 @@
-use leptos_mview::view;
+use leptos_mview::mview;
 
 fn main() {
     let a = "a";
-    view! {
+    mview! {
         (a)
     };
 }

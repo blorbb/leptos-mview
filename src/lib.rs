@@ -11,14 +11,14 @@ A little preview of the syntax:
 
 ```
 use leptos::*;
-use leptos_mview::view;
+use leptos_mview::mview;
 
 #[component]
 fn MyComponent() -> impl IntoView {
     let (value, set_value) = create_signal(String::new());
     let red_input = move || value().len() % 2 == 0;
 
-    view! {
+    mview! {
         h1.title { "A great website" }
         br;
 
@@ -33,7 +33,7 @@ fn MyComponent() -> impl IntoView {
 
         Show
             when=[!value().is_empty()]
-            fallback=[view! { "..." }]
+            fallback=[mview! { "..." }]
         {
             Await
                 future=[fetch_from_db(value())]
@@ -54,14 +54,14 @@ async fn fetch_from_db(data: String) -> usize { data.len() }
 
 ```
 use leptos::*;
-use leptos_mview::view; // override leptos::view
+use leptos_mview::mview; // override leptos::view
 
 #[component]
 fn MyComponent() -> impl IntoView {
     let (value, set_value) = create_signal(String::new());
     let red_input = move || value().len() % 2 == 0;
 
-    view! {
+    mview! {
         // specify tags and attributes, children go in braces
         // classes (and ids) can be added like CSS selectors.
         // same as `h1 class="title"`
@@ -81,7 +81,7 @@ fn MyComponent() -> impl IntoView {
         Show
             // values wrapped in brackets `[body]` are expanded to `{move || body}`
             when=[!value().is_empty()] // `{move || !value().is_empty()}`
-            fallback=[view! { "..." }] // `{move || view! { "..." }}`
+            fallback=[mview! { "..." }] // `{move || mview! { "..." }}`
         { // I recommend placing children like this when attributes are multi-line
             Await
                 future=[fetch_from_db(value())]
@@ -135,10 +135,10 @@ Elements have the following structure:
 
 Example:
 ```
-# use leptos_mview::view; use leptos::*;
+# use leptos_mview::mview; use leptos::*;
 # let handle_input = |_| ();
 # #[component] fn MyComponent(data: i32, other: &'static str) -> impl IntoView {}
-view! {
+mview! {
     div.primary { strong { "hello world" } }
     input type="text" on:input={handle_input};
     MyComponent data=3 other="hi";
@@ -148,7 +148,7 @@ view! {
 
 Adding generics is the same as in leptos: add it directly after the component name, without the turbofish `::<...>`.
 ```
-# use leptos::*; use leptos_mview::view;
+# use leptos::*; use leptos_mview::mview;
 # use core::marker::PhantomData;
 #[component]
 pub fn GenericComponent<S>(ty: PhantomData<S>) -> impl IntoView {
@@ -157,7 +157,7 @@ pub fn GenericComponent<S>(ty: PhantomData<S>) -> impl IntoView {
 
 #[component]
 pub fn App() -> impl IntoView {
-    view! {
+    mview! {
         GenericComponent<String> ty={PhantomData};
         GenericComponent<usize> ty={PhantomData};
         GenericComponent<i32> ty={PhantomData};
@@ -168,8 +168,8 @@ pub fn App() -> impl IntoView {
 Note that due to [Reserving syntax](https://doc.rust-lang.org/edition-guide/rust-2021/reserving-syntax.html),
 the `#` for ids must have a space before it.
 ```
-# use leptos_mview::view;
-view! {
+# use leptos_mview::mview;
+mview! {
     nav #primary { "..." }
     // not allowed: nav#primary { "..." }
 }
@@ -183,17 +183,17 @@ There are (currently) 3 main types of values you can pass in:
 - **Literals** can be passed in directly to attribute values (like `data=3`, `class="main"`, `checked=true`).
     - However, children do not accept literal numbers or bools - only strings.
         ```compile_fail
-        # use leptos_mview::view;
-        view! { p { "this works " 0 " times: " true } }
+        # use leptos_mview::mview;
+        mview! { p { "this works " 0 " times: " true } }
         # ;
         ```
 
 - Everything else must be passed in as a **block**, including variables, closures, or expressions.
     ```
-    # use leptos_mview::view;
+    # use leptos_mview::mview;
     # let input_type = "text";
     # let handle_input = |_a: i32| ();
-    view! {
+    mview! {
         input
             class="main"
             checked=true
@@ -206,18 +206,18 @@ There are (currently) 3 main types of values you can pass in:
 
     This is not valid:
     ```compile_fail
-    # use leptos_mview::view;
+    # use leptos_mview::mview;
     let input_type = "text";
     // ❌ This is not valid! Wrap input_type in braces.
-    view! { input type=input_type }
+    mview! { input type=input_type }
     # ;
     ```
 
 - Values wrapped in **brackets** (like `value=[a_bool().to_string()]`) are shortcuts for a block with an empty closure `move || ...` (to `value={move || a_bool().to_string()}`).
     ```rust
-    # use leptos::*; use leptos_mview::view;
+    # use leptos::*; use leptos_mview::mview;
     # let number = || 3;
-    view! {
+    mview! {
         Show
             fallback=[()] // common for not wanting a fallback as `|| ()`
             when=[number() % 2 == 0] // `{move || number() % 2 == 0}`
@@ -230,18 +230,18 @@ There are (currently) 3 main types of values you can pass in:
 
     - Note that this always expands to `move || ...`: for any closures that take an argument, use the full closure block instead.
         ```compile_error
-        # use leptos_mview::view;
+        # use leptos_mview::mview;
         # use leptos::logging::log;
-        view! {
+        mview! {
             input type="text" on:click=[log!("THIS DOESNT WORK")];
         }
         ```
 
         Instead:
         ```
-        # use leptos_mview::view;
+        # use leptos_mview::mview;
         # use leptos::logging::log;
-        view! {
+        mview! {
             input type="text" on:click={|_| log!("THIS WORKS!")};
         }
         # ;
@@ -265,9 +265,9 @@ Most attributes are `key=value` pairs. The `value` follows the rules from above.
 
         Can be used elsewhere like this:
         ```
-        # use leptos::*; use leptos_mview::view;
+        # use leptos::*; use leptos_mview::mview;
         # #[component] fn Something(some_attribute: i32) -> impl IntoView {}
-        view! { Something some-attribute=5; }
+        mview! { Something some-attribute=5; }
         # ;
         ```
 
@@ -275,10 +275,10 @@ Most attributes are `key=value` pairs. The `value` follows the rules from above.
 
 - Attribute shorthand: if the name of the attribute and value are the same, e.g. `class={class}`, you can replace this with `{class}` to mean the same thing.
     ```
-    # use leptos_mview::view;
+    # use leptos_mview::mview;
     let class = "these are classes";
     let id = "primary";
-    view! {
+    mview! {
         div {class} {id} { "this has 3 classes and id='primary'" }
     }
     # ;
@@ -292,15 +292,15 @@ Note that the special `node_ref` or `ref` or `_ref` or `ref_` attribute in Lepto
 
 Another shortcut is that boolean attributes can be written without adding `=true`. Watch out though! `checked` is **very different** to `{checked}`.
 ```
-# use leptos::*; use leptos_mview::view;
+# use leptos::*; use leptos_mview::mview;
 // recommend usually adding #[prop(optional)] to all these
 #[component]
 fn LotsOfFlags(wide: bool, tall: bool, red: bool, curvy: bool, count: i32) -> impl IntoView {}
 
-view! { LotsOfFlags wide tall red=false curvy count=3; }
+mview! { LotsOfFlags wide tall red=false curvy count=3; }
 # ;
 // same as...
-view! { LotsOfFlags wide=true tall=true red=false curvy=true count=3; }
+mview! { LotsOfFlags wide=true tall=true red=false curvy=true count=3; }
 # ;
 ```
 
@@ -319,10 +319,10 @@ Some special attributes (distinguished by the `:`) called **directives** have sp
 
 All of these directives except `clone` also support the attribute shorthand:
 ```
-# use leptos::*; use leptos_mview::view;
+# use leptos::*; use leptos_mview::mview;
 let color = create_rw_signal("red".to_string());
 let disabled = false;
-view! {
+mview! {
     div style:{color} class:{disabled};
 }
 # ;
@@ -330,9 +330,9 @@ view! {
 
 The `class` and `style` directives also support using string literals, for more complicated names or multiple classes at once.
 ```
-# use leptos::*; use leptos_mview::view;
+# use leptos::*; use leptos_mview::mview;
 let yes = move || true;
-view! {
+mview! {
     div class:"complex-[class]-name"={yes}
         style:"doesn't-exist"="white"
         class:"class-one class-two"={yes};
@@ -346,8 +346,8 @@ You may have noticed that the `let:data` prop was missing from the previous sect
 
 This is replaced with a closure right before the children block. This way, you can pass in multiple arguments to the children more easily.
 ```
-# use leptos::*; use leptos_mview::view;
-view! {
+# use leptos::*; use leptos_mview::mview;
+mview! {
     Await
         future=[async { 3 }]
     |monkeys| {
@@ -368,27 +368,27 @@ Summary from the previous section on values in case you missed it: children can 
 If an attribute shorthand has hyphens:
 - On components, both the key and value will be converted to underscores.
     ```
-    # use leptos::*; use leptos_mview::view;
+    # use leptos::*; use leptos_mview::mview;
     # #[component] fn Something(some_attribute: i32) -> impl IntoView {}
     let some_attribute = 5;
-    view! { Something {some-attribute}; }
+    mview! { Something {some-attribute}; }
     # ;
     // same as...
-    view! { Something {some_attribute}; }
+    mview! { Something {some_attribute}; }
     # ;
     // same as...
-    view! { Something some_attribute={some_attribute}; }
+    mview! { Something some_attribute={some_attribute}; }
     # ;
     ```
 
 - On HTML elements, the key will keep hyphens, but the value will be turned into an identifier with underscores.
     ```
-    # use leptos_mview::view;
+    # use leptos_mview::mview;
     let aria_label = "a good label";
-    view! { input {aria-label}; }
+    mview! { input {aria-label}; }
     # ;
     // same as...
-    view! { input aria-label={aria_label}; }
+    mview! { input aria-label={aria_label}; }
     # ;
     ```
 
@@ -407,9 +407,9 @@ To have the attribute have a value of the string "true" or "false", use `.to_str
 Especially using the closure shorthand `[...]`, this can be pretty simple when working with signals:
 ```
 use leptos::*;
-use leptos_mview::view;
+use leptos_mview::mview;
 let boolean_signal = create_rw_signal(true);
-view! { input type="checkbox" checked=[boolean_signal().to_string()]; }
+mview! { input type="checkbox" checked=[boolean_signal().to_string()]; }
 # ;
 ```
 
@@ -429,4 +429,4 @@ Please feel free to make a PR/issue if you have feature ideas/bugs to report/fee
 // Some bits are slightly broken, fix up stray `compile_error`/
 // `ignore`, missing `rust` annotations and remove `#` lines.
 
-pub use leptos_mview_macro::view;
+pub use leptos_mview_macro::mview;

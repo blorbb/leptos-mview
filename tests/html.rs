@@ -1,11 +1,11 @@
 use leptos::*;
-use leptos_mview::view;
+use leptos_mview::mview;
 mod utils;
 use utils::check_str;
 
 #[test]
 fn strings() {
-    let result: &str = view! {
+    let result: &str = mview! {
         "hello there!"
     };
     assert_eq!(result, "hello there!");
@@ -17,7 +17,7 @@ fn strings() {
 
 #[test]
 fn single_element() {
-    let result: HtmlElement<html::Div> = view! {
+    let result: HtmlElement<html::Div> = mview! {
         div {
             "hi"
         }
@@ -27,7 +27,7 @@ fn single_element() {
 
 #[test]
 fn multi_element_is_fragment() {
-    let _fragment: Fragment = view! {
+    let _fragment: Fragment = mview! {
         div { "a" }
         span { "b" }
     };
@@ -35,7 +35,7 @@ fn multi_element_is_fragment() {
 
 #[test]
 fn a_bunch() {
-    let result = view! {
+    let result = mview! {
         "hi"
         span class="abc" data-index={0} {
             strong { "d" }
@@ -59,12 +59,12 @@ fn a_bunch() {
 
 #[test]
 fn directive_before_attr() {
-    let result = view! {
+    let result = mview! {
         span class:exist=true class="dont override";
     };
     check_str(result, "dont override exist");
 
-    let result = view! {
+    let result = mview! {
         span style:color="black" style="font-size: 1em;";
     };
     check_str(result, "font-size: 1em; color: black;");
@@ -75,7 +75,7 @@ fn multiple_directives() {
     let yes = move || true;
     let no = move || false;
     let color = move || "white";
-    let result = view! {
+    let result = mview! {
         div
             class:here={yes}
             style:color={color}
@@ -95,7 +95,7 @@ fn multiple_directives() {
 #[test]
 fn string_directives() {
     let yes = move || true;
-    let result = view! {
+    let result = mview! {
         div
             class:"complex[class]-name"={yes}
             style:"doesn't-exist"="black"
