@@ -328,6 +328,18 @@ view! {
 # ;
 ```
 
+The `class` and `style` directives also support using string literals, for more complicated names or multiple classes at once.
+```
+# use leptos::*; use leptos_mview::view;
+let yes = move || true;
+view! {
+    div class:"complex-[class]-name"={yes}
+        style:"doesn't-exist"="white"
+        class:"class-one class-two"={yes};
+}
+# ;
+```
+
 ### Children
 
 You may have noticed that the `let:data` prop was missing from the previous section on directive attributes!
@@ -412,9 +424,9 @@ Please feel free to make a PR/issue if you have feature ideas/bugs to report/fee
 - [ ] Support slots
  */
 
-// note: to transfer above to README.md, install `cargo-readme` and run
-// `cargo readme --no-indent-headings --no-title > README.md`
-// cargo readme seems to be slightly broken rn, fix up stray `compile_error`/
+// note: to transfer above to README.md, install `cargo-rdme` and run
+// `cargo rdme`
+// Some bits are slightly broken, fix up stray `compile_error`/
 // `ignore`, missing `rust` annotations and remove `#` lines.
 
 pub use leptos_mview_macro::view;

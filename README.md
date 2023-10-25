@@ -1,3 +1,5 @@
+<!-- cargo-rdme start -->
+
 # Leptos mview
 
 An alternative `view!` macro for [Leptos](https://github.com/leptos-rs/leptos/tree/main) inspired by [maud](https://maud.lambda.xyz/).
@@ -293,6 +295,16 @@ view! {
 }
 ```
 
+The `class` and `style` directives also support using string literals, for more complicated names or multiple classes at once.
+```rust
+let yes = move || true;
+view! {
+    div class:"complex-[class]-name"={yes}
+        style:"doesn't-exist"="white"
+        class:"class-one class-two"={yes};
+}
+```
+
 ### Children
 
 You may have noticed that the `let:data` prop was missing from the previous section on directive attributes!
@@ -363,3 +375,6 @@ Please feel free to make a PR/issue if you have feature ideas/bugs to report/fee
 - [ ] [Extending `class` attribute support](https://github.com/leptos-rs/leptos/issues/1492)
 - [ ] [SSR optimisation](https://github.com/leptos-rs/leptos/issues/1492#issuecomment-1664675672) (potential `delegate` feature that transforms this macro into a `leptos::view!` macro call as well?)
 - [ ] Support slots
+ 
+
+<!-- cargo-rdme end -->
