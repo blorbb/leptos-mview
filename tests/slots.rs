@@ -92,3 +92,41 @@ pub fn multiple_slots() {
         check_str(r, ans);
     }
 }
+
+#[test]
+pub fn accept_multiple_use_single() {
+    // else_if takes Vec<ElseIf>, check if just giving a single one
+    // (which should just pass a single ElseIf instead of a vec)
+    // still works
+    let r = mview! {
+        SlotIf cond=false {
+            slot:Then { "no!" }
+            slot:ElseIf cond=true { "yes!" }
+            slot:Fallback { "absolutely not" }
+        }
+    };
+
+    check_str(r, "yes!");
+}
+
+#[test]
+pub fn optional_slots() {
+    let no_other = mview! {
+        SlotIf cond=true {
+            slot:Then { "yay!" }
+        }
+    };
+
+    check_str(no_other, "yay!");
+
+    let no_fallback = mview! {
+        div {
+            SlotIf cond=false {
+                slot:Then { "not here" }
+                slot:ElseIf cond=false { "not this either" }
+            }
+        }
+    };
+
+    check_str(no_fallback, "></div>")
+}
