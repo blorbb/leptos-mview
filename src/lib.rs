@@ -175,6 +175,56 @@ mview! {
 # ;
 ```
 
+## Slots
+
+[Slots](https://docs.rs/leptos/latest/leptos/attr.slot.html) ([another example](https://github.com/leptos-rs/leptos/blob/main/examples/slots/src/lib.rs)) are supported by prefixing the struct with `slot:` inside the parent's children.
+
+Using the slots defined by the [`SlotIf` example linked](https://github.com/leptos-rs/leptos/blob/main/examples/slots/src/lib.rs):
+```
+use leptos::*;
+use leptos_mview::mview;
+
+#[component]
+pub fn App() -> impl IntoView {
+    let (count, set_count) = RwSignal::new(0).split();
+    let is_even = MaybeSignal::derive(move || count() % 2 == 0);
+    let is_div5 = MaybeSignal::derive(move || count() % 5 == 0);
+    let is_div7 = MaybeSignal::derive(move || count() % 7 == 0);
+
+    mview! {
+        SlotIf cond={is_even} {
+            slot:Then { "even" }
+            slot:ElseIf cond={is_div5} { "divisible by 5" }
+            slot:ElseIf cond={is_div7} { "divisible by 7" }
+            slot:Fallback { "odd" }
+        }
+    }
+}
+# #[slot] struct Then { children: ChildrenFn }
+# #[slot] struct ElseIf { #[prop(into)] cond: MaybeSignal<bool>, children: ChildrenFn }
+# #[slot] struct Fallback { children: ChildrenFn }
+#
+# #[component]
+# fn SlotIf(
+#     #[prop(into)] cond: MaybeSignal<bool>,
+#     then: Then,
+#     #[prop(optional)] else_if: Vec<ElseIf>,
+#     #[prop(optional)] fallback: Option<Fallback>,
+# ) -> impl IntoView {
+#     move || {
+#         if cond() {
+#             (then.children)().into_view()
+#         } else if let Some(else_if) = else_if.iter().find(|i| (i.cond)()) {
+#             (else_if.children)().into_view()
+#         } else if let Some(fallback) = &fallback {
+#             (fallback.children)().into_view()
+#         } else {
+#             ().into_view()
+#         }
+#     }
+# }
+```
+
 ## Values
 
 There are (currently) 3 main types of values you can pass in:
@@ -420,7 +470,7 @@ Please feel free to make a PR/issue if you have feature ideas/bugs to report/fee
 
 - [ ] [Extending `class` attribute support](https://github.com/leptos-rs/leptos/issues/1492)
 - [ ] [SSR optimisation](https://github.com/leptos-rs/leptos/issues/1492#issuecomment-1664675672) (potential `delegate` feature that transforms this macro into a `leptos::view!` macro call as well?)
-- [ ] Support slots
+- [x] Support slots
  */
 
 // note: to transfer above to README.md, install `cargo-rdme` and run

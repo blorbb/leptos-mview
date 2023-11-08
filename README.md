@@ -172,6 +172,33 @@ mview! {
 }
 ```
 
+### Slots
+
+[Slots](https://docs.rs/leptos/latest/leptos/attr.slot.html) ([another example](https://github.com/leptos-rs/leptos/blob/main/examples/slots/src/lib.rs)) are supported by prefixing the struct with `slot:` inside the parent's children.
+
+Using the slots defined by the [`SlotIf` example linked](https://github.com/leptos-rs/leptos/blob/main/examples/slots/src/lib.rs):
+```rust
+use leptos::*;
+use leptos_mview::mview;
+
+#[component]
+pub fn App() -> impl IntoView {
+    let (count, set_count) = RwSignal::new(0).split();
+    let is_even = MaybeSignal::derive(move || count() % 2 == 0);
+    let is_div5 = MaybeSignal::derive(move || count() % 5 == 0);
+    let is_div7 = MaybeSignal::derive(move || count() % 7 == 0);
+
+    mview! {
+        SlotIf cond={is_even} {
+            slot:Then { "even" }
+            slot:ElseIf cond={is_div5} { "divisible by 5" }
+            slot:ElseIf cond={is_div7} { "divisible by 7" }
+            slot:Fallback { "odd" }
+        }
+    }
+}
+```
+
 ### Values
 
 There are (currently) 3 main types of values you can pass in:
@@ -379,7 +406,7 @@ Please feel free to make a PR/issue if you have feature ideas/bugs to report/fee
 
 - [ ] [Extending `class` attribute support](https://github.com/leptos-rs/leptos/issues/1492)
 - [ ] [SSR optimisation](https://github.com/leptos-rs/leptos/issues/1492#issuecomment-1664675672) (potential `delegate` feature that transforms this macro into a `leptos::view!` macro call as well?)
-- [ ] Support slots
+- [x] Support slots
  
 
 <!-- cargo-rdme end -->

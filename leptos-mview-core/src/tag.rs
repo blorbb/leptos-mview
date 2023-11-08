@@ -40,6 +40,16 @@ pub enum Tag {
 }
 
 impl Tag {
+    pub fn ident(&self) -> KebabIdent {
+        match self {
+            Self::Html(ident)
+            | Self::Component(ident, _)
+            | Self::Svg(ident)
+            | Self::Math(ident) => ident.clone().into(),
+            Self::Unknown(ident) => ident.clone(),
+        }
+    }
+
     pub fn span(&self) -> Span {
         match self {
             Self::Html(ident)
