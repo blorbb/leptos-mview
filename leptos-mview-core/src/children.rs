@@ -64,6 +64,22 @@ impl Deref for Children {
 
 impl Children {
     pub fn into_vec(self) -> Vec<Child> { self.0 }
+
+    /// Returns an iterator of all children that are not slots.
+    pub fn element_children(&self) -> impl Iterator<Item = &Child> {
+        self.0.iter().filter(|child| match child {
+            Child::Value(_) => true,
+            Child::Element(e) => e.slot_token().is_none(),
+        })
+    }
+
+    /// Returns an iterator of all children that are slots.
+    pub fn slot_children(&self) -> impl Iterator<Item = &Element> {
+        self.0.iter().filter_map(|child| match child {
+            Child::Value(_) => None,
+            Child::Element(elem) => elem.slot_token().is_some().then(|| elem),
+        })
+    }
 }
 
 impl Parse for Children {

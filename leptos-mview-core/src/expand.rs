@@ -3,6 +3,8 @@
 // putting specific `-> TokenStream` implementations here to have it all
 // grouped instead of scattered throughout struct impls.
 
+use std::collections::HashMap;
+
 use proc_macro2::{Span, TokenStream};
 use proc_macro_error::abort;
 use quote::{quote, quote_spanned, ToTokens};
@@ -15,8 +17,9 @@ use crate::{
         spread_attrs::SpreadAttr,
         Attr,
     },
-    children::Children,
+    children::{Child, Children},
     element::{ClosureArgs, Element},
+    ident::KebabIdent,
     span,
     tag::{Tag, TagKind},
 };
@@ -59,6 +62,11 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
             let custom = syn::Ident::new("custom", ident.span());
             quote! { ::leptos::html::#custom(::leptos::html::Custom::new(#ident)) }
         }
+    };
+
+    // slots only work on components, would have early returned by now.
+    if let Some(slot) = element.slot_token() {
+        abort!(slot.span, "slots are only supported on components");
     };
 
     // add selector-style ids/classes (div.some-class #some-id)
@@ -222,6 +230,11 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
         return None;
     };
 
+    // use slot-specific expansion
+    if let Some(slot) = element.slot_token() {
+        abort!(slot.span, "should not be a slot");
+    };
+
     // selectors not supported on components (for now)
     if !element.selectors().is_empty() {
         let first_prefix = element.selectors()[0].prefix();
@@ -274,9 +287,19 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
         }
     }
 
-    let children = element
+    // TODO: is it even possible for there to be both element and slot children?
+    let children = element.children().map(|children| {
+        let mut it = children.element_children().peekable();
+        // need to check that there are any element children at all,
+        // as components that accept slots may not accept children.
+        it.peek()
+            .is_some()
+            .then(|| component_children_tokens(it, element.children_args(), &clones))
+    });
+
+    let slot_children = element
         .children()
-        .map(|children| component_children_tokens(children, element.children_args(), &clones));
+        .map(|children| slots_to_tokens(children.slot_children()));
 
     let dyn_attrs = dyn_attrs_to_methods(&dyn_attrs);
     let use_directives = use_directives.into_iter().map(use_directive_to_method);
@@ -287,6 +310,7 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
             ::leptos::component_props_builder(&#ident #generics)
                 #attrs
                 #children
+                #slot_children
                 .build()
                 #dyn_attrs
             )
@@ -311,14 +335,49 @@ fn component_event_listener_tokens(dir: &directive::On) -> TokenStream {
     }
 }
 
-/// Aborts if the directive value is not a block with an ident.
+/// Expands to a `let` statement `let to_clone = to_clone.clone();`.
 fn component_clone_tokens(dir: &directive::Clone) -> TokenStream {
     let to_clone = dir.key();
     quote! { let #to_clone = #to_clone.clone(); }
 }
 
-fn component_children_tokens(
-    children: &Children,
+/// Converts children to tokens for use by components.
+///
+/// The expansion is generally:
+///
+/// If there are no closure arguments,
+/// ```ignore
+/// .children({
+///     // any clones
+///     let clone = clone.clone();
+///     // the children themself
+///     leptos::ToChildren::to_children(move || {
+///         leptos::Fragment::lazy(|| {
+///             [
+///                 child1.into_view(),
+///                 child2.into_view(),
+///             ].to_vec()
+///         })
+///     })
+/// })
+/// ```
+///
+/// If there are closure arguments,
+/// ```ignore
+/// .children({
+///     // any clones
+///     let clone = clone.clone();
+///     // the children
+///     move |args| leptos::Fragment::lazy(|| {
+///         [
+///             child1.into_view(),
+///             child2.into_view(),
+///         ].to_vec()
+///     })
+/// })
+/// ```
+fn component_children_tokens<'a>(
+    children: impl Iterator<Item = &'a Child>,
     args: Option<&ClosureArgs>,
     clones: &TokenStream,
 ) -> TokenStream {
@@ -397,10 +456,10 @@ fn use_directive_to_method(u: &directive::Use) -> TokenStream {
 ///         {var}.into_view(),
 ///         {"b"}.into_view(),
 ///     ].to_vec()
-/// )
+/// })
 /// ```
-pub fn children_fragment_tokens(children: &Children) -> TokenStream {
-    let children = children.iter();
+pub fn children_fragment_tokens<'a>(children: impl Iterator<Item = &'a Child>) -> TokenStream {
+    // let children = children.iter();
     quote! {
         ::leptos::Fragment::lazy(|| {
             <[_]>::into_vec(
@@ -427,4 +486,142 @@ fn abort_not_supported(tag: &TagKind, span: Span, dir_name: &str) -> ! {
         dir_name,
         suffix
     )
+}
+
+/// Expands a slot.
+///
+/// Roughly, `slot:Tab label="aaa" { "child" }` expands to:
+///
+/// ```ignore
+/// Tab::builder()
+///     .label("aaa")
+///     // same as component_children_tokens
+///     .children(ToChildren::to_children(move || {
+///         Fragment::lazy(|| {
+///             <[_]>::into_vec(Box::new([{ "child" }.into_view()]))
+///         })
+///      })
+///     .build()
+///     .into()
+/// ```
+pub fn slot_to_tokens(element: &Element) -> Option<TokenStream> {
+    if element.slot_token().is_none() {
+        return None;
+    };
+
+    if !element.selectors().is_empty() {
+        abort!(
+            element.selectors()[0].span(),
+            "selectors are not supported on slots"
+        );
+    };
+
+    let Tag::Component(ident, generics) = element.tag() else {
+        abort!(element.tag().span(), "slots must be components")
+    };
+    let mut attrs = TokenStream::new();
+
+    for a in element.attrs().iter() {
+        match a {
+            Attr::Kv(kv) => attrs.extend(component_kv_attribute_tokens(kv)),
+            Attr::Directive(d) => abort!(d.span(), "directives are not supported on slots"),
+            Attr::Spread(s) => abort!(s.span(), "spread attrs are not supported on slots"),
+        };
+    }
+
+    // TODO: how does slots in slots work
+    let children = element.children().map(|children| {
+        // no clones
+        component_children_tokens(
+            children.element_children(),
+            element.children_args(),
+            &TokenStream::new(),
+        )
+    });
+
+    Some(quote! {
+        <#ident #generics>::builder()
+            #attrs
+            #children
+            .build()
+            .into()
+    })
+}
+
+/// The iterator must have only elements that are slots.
+///
+/// Slots are expanded from:
+/// ```ignore
+/// Tabs {
+///     slot:Tab label="tab1" { "content" }
+/// }
+/// ```
+/// to:
+/// ```ignore
+/// leptos::component_props_builder(&Tabs)
+///     .tab(vec![
+///         Tab::builder()
+///             .label("tab1")
+///             .children( /* expansion of "content" to a component child */ )
+///             .build()
+///             .into()
+///     ])
+/// ```
+/// Where the slot's name is converted to snake case for the method name.
+fn slots_to_tokens<'a>(children: impl Iterator<Item = &'a Element>) -> TokenStream {
+    // collect to hashmap //
+
+    // Mapping from the slot name (component, UpperCamelCase name, not snake_case)
+    // to a vec of the each slot's expansion.
+    let mut slot_children = HashMap::<KebabIdent, Vec<TokenStream>>::new();
+    for el in children {
+        let component_name = el.tag().ident();
+
+        let slot_component = slot_to_tokens(el).expect("element should be a slot");
+        slot_children
+            .entry(component_name)
+            .or_default()
+            .push(slot_component);
+    }
+
+    // convert to tokens //
+    slot_children
+        .into_iter()
+        .map(|(slot_name, slot_tokens)| {
+            let method = syn::Ident::new_raw(
+                &upper_camel_to_snake_case(slot_name.repr()),
+                slot_name.span(),
+            );
+
+            if slot_tokens.len() == 1 {
+                // don't wrap in a vec
+                quote! {
+                    .#method(#(#slot_tokens)*)
+                }
+            } else {
+                quote! {
+                    .#method(::std::vec![
+                        #(#slot_tokens),*
+                    ])
+                }
+            }
+        })
+        .collect()
+}
+
+// just doing a manual implementation as theres only one need for this (slots).
+// Use the `paste` crate if more are needed in the future.
+/// `ident` must be an UpperCamelCase word with only ascii word characters.
+fn upper_camel_to_snake_case(ident: &str) -> String {
+    let mut new = String::with_capacity(ident.len());
+    // all characters should be ascii
+    for char in ident.chars() {
+        // skip the first `_`.
+        if char.is_ascii_uppercase() && !new.is_empty() {
+            new.push('_');
+        };
+        new.push(char.to_ascii_lowercase());
+    }
+
+    new
 }

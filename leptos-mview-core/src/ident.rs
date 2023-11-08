@@ -1,3 +1,5 @@
+use std::hash::Hash;
+
 use proc_macro2::Span;
 use quote::{quote_spanned, ToTokens};
 use syn::{
@@ -12,6 +14,8 @@ use crate::span;
 ///
 /// The identifier must start with a letter, underscore or dash.
 /// The rest of the identifier can have numbers as well.
+///
+/// Equality and hashing are based only on the repr, not the spans.
 #[derive(Debug, Clone)]
 pub struct KebabIdent {
     repr: String,
@@ -96,6 +100,22 @@ impl ToTokens for KebabIdent {
         let repr = self.repr();
         tokens.extend(quote_spanned!(self.span()=> #repr));
     }
+}
+
+impl From<proc_macro2::Ident> for KebabIdent {
+    fn from(value: proc_macro2::Ident) -> Self { Self::new(value.to_string(), vec![value.span()]) }
+}
+
+// eq and hash are only based on the repr
+
+impl PartialEq for KebabIdent {
+    fn eq(&self, other: &Self) -> bool { self.repr == other.repr }
+}
+
+impl Eq for KebabIdent {}
+
+impl Hash for KebabIdent {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.repr.hash(state); }
 }
 
 #[cfg(test)]

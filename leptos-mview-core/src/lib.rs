@@ -18,7 +18,9 @@ mod tag;
 mod value;
 
 use proc_macro2::TokenStream;
+use proc_macro_error::abort;
 use quote::quote;
+use syn::spanned::Spanned;
 
 use crate::{children::Children, expand::children_fragment_tokens};
 
@@ -44,7 +46,15 @@ pub fn mview_impl(input: TokenStream) -> TokenStream {
             }
         }
     } else {
-        let fragment = children_fragment_tokens(&children);
+        // look for any slots
+        if let Some(slot) = children.slot_children().next() {
+            abort!(
+                slot.slot_token().span(),
+                "slots should be inside a parent that supports slots"
+            );
+        };
+
+        let fragment = children_fragment_tokens(children.element_children());
         quote! {
             {
                 #[allow(unused_braces)]
