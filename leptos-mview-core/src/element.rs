@@ -132,7 +132,7 @@ impl ToTokens for Element {
 }
 
 impl Element {
-    pub fn new(
+    pub const fn new(
         slot_token: Option<kw::slot>,
         tag: Tag,
         selectors: SelectorShorthands,

@@ -433,9 +433,10 @@ fn dyn_attrs_to_methods(dyn_attrs: &[&directive::Attr]) -> Option<TokenStream> {
 fn use_directive_to_method(u: &directive::Use) -> TokenStream {
     let (use_token, func, value) = u.explode();
     let directive = syn::Ident::new("directive", use_token.span);
-    let value = value
-        .as_ref()
-        .map_or(quote_spanned! {func.span()=> () }, |v| v.to_token_stream());
+    let value = value.as_ref().map_or(
+        quote_spanned! {func.span()=> () },
+        ToTokens::to_token_stream,
+    );
     quote! { .#directive(#func, #value) }
 }
 
@@ -505,6 +506,7 @@ fn abort_not_supported(tag: &TagKind, span: Span, dir_name: &str) -> ! {
 ///     .into()
 /// ```
 pub fn slot_to_tokens(element: &Element) -> Option<TokenStream> {
+    #[allow(clippy::question_mark)]
     if element.slot_token().is_none() {
         return None;
     };
@@ -548,6 +550,7 @@ pub fn slot_to_tokens(element: &Element) -> Option<TokenStream> {
     })
 }
 
+#[allow(clippy::doc_markdown)]
 /// The iterator must have only elements that are slots.
 ///
 /// Slots are expanded from:
@@ -567,7 +570,7 @@ pub fn slot_to_tokens(element: &Element) -> Option<TokenStream> {
 ///             .into()
 ///     ])
 /// ```
-/// Where the slot's name is converted to snake case for the method name.
+/// Where the slot's name is converted to snake_case for the method name.
 fn slots_to_tokens<'a>(children: impl Iterator<Item = &'a Element>) -> TokenStream {
     // collect to hashmap //
 
@@ -609,6 +612,7 @@ fn slots_to_tokens<'a>(children: impl Iterator<Item = &'a Element>) -> TokenStre
         .collect()
 }
 
+#[allow(clippy::doc_markdown)]
 // just doing a manual implementation as theres only one need for this (slots).
 // Use the `paste` crate if more are needed in the future.
 /// `ident` must be an UpperCamelCase word with only ascii word characters.

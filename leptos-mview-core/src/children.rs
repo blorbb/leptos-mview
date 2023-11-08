@@ -77,7 +77,7 @@ impl Children {
     pub fn slot_children(&self) -> impl Iterator<Item = &Element> {
         self.0.iter().filter_map(|child| match child {
             Child::Value(_) => None,
-            Child::Element(elem) => elem.slot_token().is_some().then(|| elem),
+            Child::Element(elem) => elem.slot_token().is_some().then_some(elem),
         })
     }
 }
