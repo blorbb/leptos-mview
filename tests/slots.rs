@@ -219,3 +219,21 @@ fn children_and_slots() {
         ]),
     );
 }
+
+#[test]
+fn clone_in_slot() {
+    let notcopy = String::new();
+    _ = mview! {
+        ChildThenIf cond=true {
+            "yes"
+            slot:Fallback {
+                ChildThenIf cond=true {
+                    "no"
+                    slot:Fallback clone:notcopy {
+                        {notcopy.clone()}
+                    }
+                }
+            }
+        }
+    };
+}

@@ -250,7 +250,7 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
     let mut dyn_attrs: Vec<&directive::Attr> = Vec::new();
     let mut use_directives: Vec<&directive::Use> = Vec::new();
     // the variables (idents) to clone before making children
-    // in the form `let name = name.clone()`
+    // in the form `let name = name.clone();`
     let mut clones = TokenStream::new();
     let mut event_listeners = TokenStream::new();
 
@@ -522,27 +522,35 @@ pub fn slot_to_tokens(element: &Element) -> Option<TokenStream> {
         abort!(element.tag().span(), "slots must be components")
     };
     let mut attrs = TokenStream::new();
+    let mut clones = TokenStream::new();
 
     for a in element.attrs().iter() {
         match a {
             Attr::Kv(kv) => attrs.extend(component_kv_attribute_tokens(kv)),
-            Attr::Directive(d) => abort!(d.span(), "directives are not supported on slots"),
+            Attr::Directive(d) => match d {
+                DirectiveAttr::Clone(c) => {
+                    clones.extend(component_clone_tokens(c));
+                }
+                _ => abort!(
+                    d.span(),
+                    "only `clone:` directives are not supported on slots"
+                ),
+            },
             Attr::Spread(s) => abort!(s.span(), "spread attrs are not supported on slots"),
         };
     }
 
     // TODO: how does slots in slots work
     let children = element.children().map(|children| {
-        // no clones
         component_children_tokens(
             children.element_children(),
             element.children_args(),
-            &TokenStream::new(),
+            &clones,
         )
     });
 
     Some(quote! {
-        <#ident #generics>::builder()
+        #ident #generics::builder()
             #attrs
             #children
             .build()
