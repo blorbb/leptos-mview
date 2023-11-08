@@ -8,7 +8,11 @@ use syn::{
     Token,
 };
 
-use crate::{error_ext::ResultExt, ident::KebabIdent, parse, value::Value};
+use crate::{
+    ast::{KebabIdent, Value},
+    error_ext::ResultExt,
+    parse,
+};
 
 /// Parsing function for attributes that can accept:
 /// - Normal `key={value}` pairs

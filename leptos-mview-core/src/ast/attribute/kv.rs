@@ -2,7 +2,10 @@ use proc_macro2::Span;
 use syn::parse::Parse;
 
 use super::parsing::parse_kebab_or_braced_or_bool;
-use crate::{ident::KebabIdent, span, value::Value};
+use crate::{
+    ast::{KebabIdent, Value},
+    span,
+};
 
 /// A `key = value` type of attribute.
 ///

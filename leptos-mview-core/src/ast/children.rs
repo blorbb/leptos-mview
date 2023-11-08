@@ -1,10 +1,24 @@
-use std::ops::Deref;
-
 use proc_macro_error::abort;
 use quote::ToTokens;
-use syn::parse::Parse;
+use syn::{parse::Parse, Token};
 
-use crate::{element::Element, value::Value};
+use super::{derive_multi_ast_for, Element};
+use crate::{ast::Value, error_ext::ResultExt, kw};
+
+#[derive(Debug)]
+pub enum NodeChild {
+    Value(Value),
+    Element(Element),
+}
+
+impl ToTokens for NodeChild {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        match self {
+            Self::Value(v) => tokens.extend(v.into_token_stream()),
+            Self::Element(e) => tokens.extend(e.into_token_stream()),
+        }
+    }
+}
 
 /// Possible child nodes inside a component.
 ///
@@ -12,8 +26,8 @@ use crate::{element::Element, value::Value};
 /// Parsing will abort if the lit is not a string.
 #[derive(Debug)]
 pub enum Child {
-    Value(Value),
-    Element(Element),
+    Node(NodeChild),
+    Slot(kw::slot, Element),
 }
 
 impl Parse for Child {
@@ -22,26 +36,24 @@ impl Parse for Child {
             // only allow literals if they are a string.
             if let Value::Lit(ref lit) = value {
                 if let syn::Lit::Str(_) = lit {
-                    Ok(Self::Value(value))
+                    Ok(Self::Node(NodeChild::Value(value)))
                 } else {
                     abort!(lit.span(), "only string literals are allowed in children");
                 }
             } else {
-                Ok(Self::Value(value))
+                Ok(Self::Node(NodeChild::Value(value)))
             }
+        } else if input.peek(kw::slot) && input.peek2(Token![:]) {
+            let slot = input.parse::<kw::slot>().unwrap();
+            input.parse::<Token![:]>().unwrap();
+            let elem = input
+                .parse::<Element>()
+                .expect_or_abort("expected struct after `slot:`");
+            Ok(Self::Slot(slot, elem))
         } else if let Ok(elem) = input.parse::<Element>() {
-            Ok(Self::Element(elem))
+            Ok(Self::Node(NodeChild::Element(elem)))
         } else {
             Err(input.error("invalid child"))
-        }
-    }
-}
-
-impl ToTokens for Child {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        match self {
-            Self::Value(v) => tokens.extend(v.into_token_stream()),
-            Self::Element(e) => tokens.extend(e.into_token_stream()),
         }
     }
 }
@@ -55,47 +67,27 @@ impl ToTokens for Child {
 /// is provided. Use `to_child_methods` or `to_fragment` instead.
 #[derive(Debug)]
 pub struct Children(Vec<Child>);
-
-impl Deref for Children {
-    type Target = [Child];
-
-    fn deref(&self) -> &Self::Target { &self.0 }
+derive_multi_ast_for! {
+    struct Children(Vec<Child>);
+    impl Parse(non_empty_error = "invalid child: expected literal, block, bracket or element");
 }
 
 impl Children {
     pub fn into_vec(self) -> Vec<Child> { self.0 }
 
     /// Returns an iterator of all children that are not slots.
-    pub fn element_children(&self) -> impl Iterator<Item = &Child> {
-        self.0.iter().filter(|child| match child {
-            Child::Value(_) => true,
-            Child::Element(e) => e.slot_token().is_none(),
+    pub fn element_children(&self) -> impl Iterator<Item = &NodeChild> {
+        self.0.iter().filter_map(|child| match child {
+            Child::Node(node) => Some(node),
+            Child::Slot(..) => None,
         })
     }
 
     /// Returns an iterator of all children that are slots.
     pub fn slot_children(&self) -> impl Iterator<Item = &Element> {
         self.0.iter().filter_map(|child| match child {
-            Child::Value(_) => None,
-            Child::Element(elem) => elem.slot_token().is_some().then_some(elem),
+            Child::Node(_) => None,
+            Child::Slot(_, elem) => Some(elem),
         })
-    }
-}
-
-impl Parse for Children {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let mut vec = Vec::new();
-        while let Ok(child) = input.parse::<Child>() {
-            vec.push(child);
-        }
-        // children should be empty, otherwise there are more tokens that
-        // havent been parsed, i.e. invalid children.
-        if !input.is_empty() {
-            abort!(
-                input.span(),
-                "invalid child: expected literal, block, bracket or element"
-            );
-        };
-        Ok(Self(vec))
     }
 }

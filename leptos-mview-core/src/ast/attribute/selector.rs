@@ -1,9 +1,8 @@
-use std::ops::Deref;
-
 use proc_macro2::Span;
 use syn::{parse::Parse, Token};
 
-use crate::{error_ext::ResultExt, ident::KebabIdent, span};
+use super::derive_multi_ast_for;
+use crate::{ast::KebabIdent, error_ext::ResultExt, span};
 
 /// A shorthand for adding class or ids to an element.
 ///
@@ -76,20 +75,9 @@ impl Parse for SelectorShorthand {
 #[derive(Debug, Clone)]
 pub struct SelectorShorthands(Vec<SelectorShorthand>);
 
-impl Deref for SelectorShorthands {
-    type Target = [SelectorShorthand];
-
-    fn deref(&self) -> &Self::Target { &self.0 }
-}
-
-impl Parse for SelectorShorthands {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let mut selectors = Vec::new();
-        while let Ok(selector) = input.parse::<SelectorShorthand>() {
-            selectors.push(selector);
-        }
-        Ok(Self(selectors))
-    }
+derive_multi_ast_for! {
+    struct SelectorShorthands(Vec<SelectorShorthand>);
+    impl Parse(allow_non_empty);
 }
 
 #[cfg(test)]

@@ -9,7 +9,10 @@ use super::parsing::{
     parse_dir_then, parse_ident_optional_value, parse_ident_or_braced,
     parse_kebab_or_braced_or_bool, parse_kebab_or_braced_or_str,
 };
-use crate::{ident::KebabIdent, kw, value::Value};
+use crate::{
+    ast::{KebabIdent, Value},
+    kw,
+};
 
 /// A special attribute like `on:click={...}`.
 ///

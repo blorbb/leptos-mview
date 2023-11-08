@@ -10,18 +10,16 @@ use proc_macro_error::abort;
 use quote::{quote, quote_spanned, ToTokens};
 
 use crate::{
-    attribute::{
-        directive::{self, DirectiveAttr},
-        kv::KvAttr,
-        selector::{SelectorShorthand, SelectorShorthands},
-        spread_attrs::SpreadAttr,
-        Attr,
+    ast::{
+        attribute::{
+            directive::{self, DirectiveAttr},
+            kv::KvAttr,
+            selector::{SelectorShorthand, SelectorShorthands},
+            spread_attrs::SpreadAttr,
+        },
+        Attr, ClosureArgs, Element, KebabIdent, NodeChild, Tag, TagKind,
     },
-    children::{Child, Children},
-    element::{ClosureArgs, Element},
-    ident::KebabIdent,
     span,
-    tag::{Tag, TagKind},
 };
 
 /// Converts an xml (like html, svg or math) element to tokens.
@@ -64,11 +62,6 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
         }
     };
 
-    // slots only work on components, would have early returned by now.
-    if let Some(slot) = element.slot_token() {
-        abort!(slot.span, "slots are only supported on components");
-    };
-
     // add selector-style ids/classes (div.some-class #some-id)
     let selector_methods = xml_selectors_tokens(element.selectors());
 
@@ -87,7 +80,9 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
         }
     }
 
-    let children = element.children().map(child_methods_tokens);
+    let children = element
+        .children()
+        .map(|children| child_methods_tokens(children.element_children()));
 
     Some(quote! {
         #tag_path
@@ -191,8 +186,7 @@ fn xml_spread_tokens(attr: &SpreadAttr) -> TokenStream {
 /// ```ignore
 /// div().child("a").child({var}).child("b")
 /// ```
-pub fn child_methods_tokens(children: &Children) -> TokenStream {
-    let children = children.iter();
+pub fn child_methods_tokens<'a>(children: impl Iterator<Item = &'a NodeChild>) -> TokenStream {
     quote! {
         #( .child(#children) )*
     }
@@ -228,11 +222,6 @@ pub fn child_methods_tokens(children: &Children) -> TokenStream {
 pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
     let Tag::Component(ident, generics) = element.tag() else {
         return None;
-    };
-
-    // use slot-specific expansion
-    if let Some(slot) = element.slot_token() {
-        abort!(slot.span, "should not be a slot");
     };
 
     // selectors not supported on components (for now)
@@ -287,7 +276,6 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
         }
     }
 
-    // TODO: is it even possible for there to be both element and slot children?
     let children = element.children().map(|children| {
         let mut it = children.element_children().peekable();
         // need to check that there are any element children at all,
@@ -377,7 +365,7 @@ fn component_clone_tokens(dir: &directive::Clone) -> TokenStream {
 /// })
 /// ```
 fn component_children_tokens<'a>(
-    children: impl Iterator<Item = &'a Child>,
+    children: impl Iterator<Item = &'a NodeChild>,
     args: Option<&ClosureArgs>,
     clones: &TokenStream,
 ) -> TokenStream {
@@ -459,7 +447,7 @@ fn use_directive_to_method(u: &directive::Use) -> TokenStream {
 ///     ].to_vec()
 /// })
 /// ```
-pub fn children_fragment_tokens<'a>(children: impl Iterator<Item = &'a Child>) -> TokenStream {
+pub fn children_fragment_tokens<'a>(children: impl Iterator<Item = &'a NodeChild>) -> TokenStream {
     // let children = children.iter();
     quote! {
         ::leptos::Fragment::lazy(|| {
@@ -505,12 +493,10 @@ fn abort_not_supported(tag: &TagKind, span: Span, dir_name: &str) -> ! {
 ///     .build()
 ///     .into()
 /// ```
-pub fn slot_to_tokens(element: &Element) -> Option<TokenStream> {
-    #[allow(clippy::question_mark)]
-    if element.slot_token().is_none() {
-        return None;
-    };
-
+///
+/// # Aborts
+/// Aborts if `element` is not a component.
+pub fn slot_to_tokens(element: &Element) -> TokenStream {
     if !element.selectors().is_empty() {
         abort!(
             element.selectors()[0].span(),
@@ -549,13 +535,13 @@ pub fn slot_to_tokens(element: &Element) -> Option<TokenStream> {
         )
     });
 
-    Some(quote! {
+    quote! {
         #ident #generics::builder()
             #attrs
             #children
             .build()
             .into()
-    })
+    }
 }
 
 #[allow(clippy::doc_markdown)]
@@ -588,7 +574,7 @@ fn slots_to_tokens<'a>(children: impl Iterator<Item = &'a Element>) -> TokenStre
     for el in children {
         let component_name = el.tag().ident();
 
-        let slot_component = slot_to_tokens(el).expect("element should be a slot");
+        let slot_component = slot_to_tokens(el);
         slot_children
             .entry(component_name)
             .or_default()

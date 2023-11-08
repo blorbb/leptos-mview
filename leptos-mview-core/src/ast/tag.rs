@@ -2,7 +2,7 @@ use proc_macro2::Span;
 use proc_macro_error::abort;
 use syn::{parse::Parse, parse_quote, Token};
 
-use crate::{error_ext::ResultExt, ident::KebabIdent};
+use crate::{ast::KebabIdent, error_ext::ResultExt};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum TagKind {

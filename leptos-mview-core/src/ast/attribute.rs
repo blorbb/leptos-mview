@@ -4,12 +4,11 @@ mod parsing;
 pub mod selector;
 pub mod spread_attrs;
 
-use std::ops::Deref;
-
 use proc_macro2::Span;
 use syn::{ext::IdentExt, parse::Parse, Token};
 
 use self::{directive::DirectiveAttr, kv::KvAttr, spread_attrs::SpreadAttr};
+use super::derive_multi_ast_for;
 use crate::error_ext::ResultExt;
 
 #[derive(Debug, Clone)]
@@ -54,21 +53,9 @@ impl Parse for Attr {
 #[derive(Debug, Clone)]
 pub struct Attrs(Vec<Attr>);
 
-impl Deref for Attrs {
-    type Target = [Attr];
-
-    fn deref(&self) -> &Self::Target { &self.0 }
-}
-
-impl Parse for Attrs {
-    /// If no attributes are present, an empty vector will be returned.
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let mut vec = Vec::new();
-        while let Ok(attr) = input.parse::<Attr>() {
-            vec.push(attr);
-        }
-        Ok(Self(vec))
-    }
+derive_multi_ast_for! {
+    struct Attrs(Vec<Attr>);
+    impl Parse(allow_non_empty);
 }
 
 #[cfg(test)]
@@ -76,7 +63,7 @@ mod tests {
     use syn::parse_quote;
 
     use super::{Attr, KvAttr};
-    use crate::attribute::Attrs;
+    use crate::ast::Attrs;
 
     #[test]
     fn simple_kv_attr() {

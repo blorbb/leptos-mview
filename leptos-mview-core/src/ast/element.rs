@@ -6,16 +6,17 @@ use syn::{
     Token,
 };
 
-use crate::{
+use super::{
     attribute::{
         selector::{SelectorShorthand, SelectorShorthands},
-        Attr, Attrs,
+        Attr,
     },
-    children::Children,
+    Attrs, Children, Tag,
+};
+use crate::{
     error_ext::ResultExt,
-    expand::{component_to_tokens, slot_to_tokens, xml_to_tokens},
-    kw, parse, span,
-    tag::Tag,
+    expand::{component_to_tokens, xml_to_tokens},
+    parse, span,
 };
 
 pub type ClosureArgs = Punctuated<syn::Pat, Token![,]>;
@@ -34,9 +35,11 @@ pub type ClosureArgs = Punctuated<syn::Pat, Token![,]>;
 /// input type="text";
 /// br;
 /// ```
+///
+/// Whether the element is a slot or not is distinguished by
+/// [`Child`](crate::children::Child).
 #[derive(Debug)]
 pub struct Element {
-    slot_token: Option<kw::slot>,
     tag: Tag,
     selectors: SelectorShorthands,
     attrs: Attrs,
@@ -46,15 +49,6 @@ pub struct Element {
 
 impl Parse for Element {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        // check if it is a slot: like `slot:Tab ...`
-        let slot_token = if input.peek(kw::slot) && input.peek2(Token![:]) {
-            let slot = input.parse::<kw::slot>().unwrap();
-            input.parse::<Token![:]>().unwrap();
-            Some(slot)
-        } else {
-            None
-        };
-
         let tag: Tag = input.parse()?;
         let selectors: SelectorShorthands = input.parse()?;
         let attrs: Attrs = input.parse()?;
@@ -62,7 +56,7 @@ impl Parse for Element {
         if input.peek(Token![;]) {
             // no children, terminated by semicolon.
             input.parse::<Token![;]>().unwrap();
-            Ok(Self::new(slot_token, tag, selectors, attrs, None, None))
+            Ok(Self::new(tag, selectors, attrs, None, None))
         } else if input.is_empty() {
             // allow no ending token if its the last child
             // makes for better editing experience when writing sequentially,
@@ -79,18 +73,11 @@ impl Parse for Element {
                 allowed for better rust-analyzer support. do not leave \
                 elements unterminated to avoid ambiguities"
             );
-            Ok(Self::new(slot_token, tag, selectors, attrs, None, None))
+            Ok(Self::new(tag, selectors, attrs, None, None))
         } else if input.peek(syn::token::Brace) {
             // has children in brace.
             let (children, _) = parse::parse_braced::<Children>(input).unwrap_or_abort();
-            Ok(Self::new(
-                slot_token,
-                tag,
-                selectors,
-                attrs,
-                None,
-                Some(children),
-            ))
+            Ok(Self::new(tag, selectors, attrs, None, Some(children)))
         } else if input.peek(Token![|]) {
             // maybe extra args for the children
             let args = parse_closure_args(input).unwrap_or_abort();
@@ -102,14 +89,7 @@ impl Parse for Element {
                 )
             }
             let (children, _) = parse::parse_braced::<Children>(input).unwrap_or_abort();
-            Ok(Self::new(
-                slot_token,
-                tag,
-                selectors,
-                attrs,
-                Some(args),
-                Some(children),
-            ))
+            Ok(Self::new(tag, selectors, attrs, Some(args), Some(children)))
         } else {
             // add error at the unknown token
             emit_error!(input.span(), "unknown attribute");
@@ -124,16 +104,16 @@ impl Parse for Element {
 
 impl ToTokens for Element {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        tokens.extend(xml_to_tokens(self).unwrap_or_else(|| {
-            component_to_tokens(self)
-                .unwrap_or_else(|| slot_to_tokens(self).expect("element should be a slot"))
-        }));
+        tokens.extend(
+            xml_to_tokens(self).unwrap_or_else(|| {
+                component_to_tokens(self).expect("element should be a component")
+            }),
+        );
     }
 }
 
 impl Element {
     pub const fn new(
-        slot_token: Option<kw::slot>,
         tag: Tag,
         selectors: SelectorShorthands,
         attrs: Attrs,
@@ -141,7 +121,6 @@ impl Element {
         children: Option<Children>,
     ) -> Self {
         Self {
-            slot_token,
             tag,
             selectors,
             attrs,
@@ -159,8 +138,6 @@ impl Element {
     pub const fn children_args(&self) -> Option<&ClosureArgs> { self.children_args.as_ref() }
 
     pub const fn children(&self) -> Option<&Children> { self.children.as_ref() }
-
-    pub const fn slot_token(&self) -> Option<kw::slot> { self.slot_token }
 }
 
 fn parse_closure_args(input: ParseStream) -> syn::Result<ClosureArgs> {
