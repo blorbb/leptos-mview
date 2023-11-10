@@ -1,4 +1,4 @@
-//! Miscellaneous functions to convert structs to `TokenStream`s.
+//! Miscellaneous functions to convert structs to [`TokenStream`]s.
 
 // putting specific `-> TokenStream` implementations here to have it all
 // grouped instead of scattered throughout struct impls.
@@ -8,20 +8,19 @@ use std::collections::HashMap;
 use proc_macro2::{Span, TokenStream};
 use proc_macro_error::abort;
 use quote::{quote, quote_spanned, ToTokens};
+use syn::spanned::Spanned;
 
 use crate::{
-    attribute::{
-        directive::{self, DirectiveAttr},
-        kv::KvAttr,
-        selector::{SelectorShorthand, SelectorShorthands},
-        spread_attrs::SpreadAttr,
-        Attr,
+    ast::{
+        attribute::{
+            directive::{self, DirectiveAttr},
+            kv::KvAttr,
+            selector::{SelectorShorthand, SelectorShorthands},
+            spread_attrs::SpreadAttr,
+        },
+        Attr, Element, KebabIdent, NodeChild, Tag, TagKind,
     },
-    children::{Child, Children},
-    element::{ClosureArgs, Element},
-    ident::KebabIdent,
     span,
-    tag::{Tag, TagKind},
 };
 
 /// Converts an xml (like html, svg or math) element to tokens.
@@ -58,15 +57,10 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
         Tag::Html(ident) => quote! { ::leptos::html::#ident() },
         Tag::Svg(ident) => quote! { ::leptos::svg::#ident() },
         Tag::Math(ident) => quote! { ::leptos::math::#ident() },
-        Tag::Unknown(ident) => {
+        Tag::WebComponent(ident) => {
             let custom = syn::Ident::new("custom", ident.span());
             quote! { ::leptos::html::#custom(::leptos::html::Custom::new(#ident)) }
         }
-    };
-
-    // slots only work on components, would have early returned by now.
-    if let Some(slot) = element.slot_token() {
-        abort!(slot.span, "slots are only supported on components");
     };
 
     // add selector-style ids/classes (div.some-class #some-id)
@@ -87,7 +81,9 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
         }
     }
 
-    let children = element.children().map(child_methods_tokens);
+    let children = element
+        .children()
+        .map(|children| child_methods_tokens(children.element_children()));
 
     Some(quote! {
         #tag_path
@@ -174,10 +170,10 @@ fn xml_directive_tokens(element: &Element, directive: &DirectiveAttr) -> TokenSt
 }
 
 fn xml_spread_tokens(attr: &SpreadAttr) -> TokenStream {
-    let ident = attr.as_ident();
-    let attrs = syn::Ident::new("attrs", ident.span());
+    let (dotdot, expr) = (attr.dotdot(), attr.expr());
+    let attrs = syn::Ident::new("attrs", dotdot.span());
     quote! {
-        .#attrs(#ident)
+        .#attrs(#expr)
     }
 }
 
@@ -191,8 +187,7 @@ fn xml_spread_tokens(attr: &SpreadAttr) -> TokenStream {
 /// ```ignore
 /// div().child("a").child({var}).child("b")
 /// ```
-pub fn child_methods_tokens(children: &Children) -> TokenStream {
-    let children = children.iter();
+pub fn child_methods_tokens<'a>(children: impl Iterator<Item = &'a NodeChild>) -> TokenStream {
     quote! {
         #( .child(#children) )*
     }
@@ -228,11 +223,6 @@ pub fn child_methods_tokens(children: &Children) -> TokenStream {
 pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
     let Tag::Component(ident, generics) = element.tag() else {
         return None;
-    };
-
-    // use slot-specific expansion
-    if let Some(slot) = element.slot_token() {
-        abort!(slot.span, "should not be a slot");
     };
 
     // selectors not supported on components (for now)
@@ -287,7 +277,6 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
         }
     }
 
-    // TODO: is it even possible for there to be both element and slot children?
     let children = element.children().map(|children| {
         let mut it = children.element_children().peekable();
         // need to check that there are any element children at all,
@@ -304,14 +293,21 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
     let dyn_attrs = dyn_attrs_to_methods(&dyn_attrs);
     let use_directives = use_directives.into_iter().map(use_directive_to_method);
 
+    // if attributes are missing, an error is made in `.build()` by the component
+    // builder.
+    let build = quote_spanned!(ident.span()=> .build());
+    // `unreachable_code` warning is generated in both of these
+    let component_view = quote_spanned!(ident.span()=> ::leptos::component_view);
+    let component_props_builder = quote_spanned!(ident.span()=> ::leptos::component_props_builder);
+
     Some(quote! {
-        ::leptos::component_view(
+        #component_view(
             &#ident,
-            ::leptos::component_props_builder(&#ident #generics)
+            #component_props_builder(&#ident #generics)
                 #attrs
                 #children
                 #slot_children
-                .build()
+                #build
                 #dyn_attrs
             )
         .into_view()
@@ -322,7 +318,7 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
 
 fn component_kv_attribute_tokens(attr: &KvAttr) -> TokenStream {
     let (key, value) = (attr.key().to_snake_ident(), attr.value());
-    quote! { .#key(#value) }
+    quote_spanned! {attr.span()=> .#key(#value) }
 }
 
 fn component_event_listener_tokens(dir: &directive::On) -> TokenStream {
@@ -377,25 +373,35 @@ fn component_clone_tokens(dir: &directive::Clone) -> TokenStream {
 /// })
 /// ```
 fn component_children_tokens<'a>(
-    children: impl Iterator<Item = &'a Child>,
-    args: Option<&ClosureArgs>,
+    children: impl Iterator<Item = &'a NodeChild>,
+    args: Option<&TokenStream>,
     clones: &TokenStream,
 ) -> TokenStream {
-    let children_fragment = children_fragment_tokens(children);
+    let mut children = children.peekable();
+    let child_span = children
+        .peek()
+        // not sure why `child.span()` is calling `syn::spanned::Spanned` instead
+        .map_or_else(Span::call_site, |child| (*child).span());
+
+    let children_fragment =
+        children_fragment_tokens(children, args.map_or(child_span, Spanned::span));
 
     // children with arguments take a `Fn(T) -> impl IntoView`
     // normal children (`Children`, `ChildrenFn`, ...) take
     // `ToChildren::to_children`
-    let wrapped_fragment = if args.is_none() {
+    let wrapped_fragment = if let Some(args) = args {
+        // `args` includes the pipes
+        quote_spanned!(args.span()=> move #args #children_fragment)
+    } else {
         quote! {
             ::leptos::ToChildren::to_children(move || #children_fragment)
         }
-    } else {
-        quote! { move |#args| #children_fragment }
     };
 
+    let children_method = quote_spanned!(child_span=> children);
+
     quote! {
-        .children({
+        .#children_method({
             #clones
             #wrapped_fragment
         })
@@ -413,11 +419,9 @@ fn dyn_attrs_to_methods(dyn_attrs: &[&directive::Attr]) -> Option<TokenStream> {
     let (keys, values): (Vec<_>, Vec<_>) = dyn_attrs.iter().map(|a| (a.key(), a.value())).unzip();
     Some(quote! {
         .#dyn_attrs_method(
-            <[_]>::into_vec(
-                ::std::boxed::Box::new([
-                    #( (#keys, ::leptos::IntoAttribute::into_attribute(#values)) ),*
-                ])
-            )
+            ::std::vec![
+                #( (#keys, ::leptos::IntoAttribute::into_attribute(#values)) ),*
+            ]
         )
     })
 }
@@ -459,15 +463,15 @@ fn use_directive_to_method(u: &directive::Use) -> TokenStream {
 ///     ].to_vec()
 /// })
 /// ```
-pub fn children_fragment_tokens<'a>(children: impl Iterator<Item = &'a Child>) -> TokenStream {
-    // let children = children.iter();
-    quote! {
+pub fn children_fragment_tokens<'a>(
+    children: impl Iterator<Item = &'a NodeChild>,
+    span: Span,
+) -> TokenStream {
+    quote_spanned! { span=>
         ::leptos::Fragment::lazy(|| {
-            <[_]>::into_vec(
-                ::std::boxed::Box::new([
-                    #(  ::leptos::IntoView::into_view(#children) ),*
-                ])
-            )
+            ::std::vec![
+                #(  ::leptos::IntoView::into_view(#children) ),*
+            ]
         })
     }
 }
@@ -479,7 +483,7 @@ fn abort_not_supported(tag: &TagKind, span: Span, dir_name: &str) -> ! {
         TagKind::Component => "components",
         TagKind::Svg => "svgs",
         TagKind::Math => "math elements",
-        TagKind::Unknown => "web components",
+        TagKind::WebComponent => "web components",
     };
     abort!(
         span,
@@ -499,18 +503,16 @@ fn abort_not_supported(tag: &TagKind, span: Span, dir_name: &str) -> ! {
 ///     // same as component_children_tokens
 ///     .children(ToChildren::to_children(move || {
 ///         Fragment::lazy(|| {
-///             <[_]>::into_vec(Box::new([{ "child" }.into_view()]))
+///            vec![{ "child" }.into_view()]
 ///         })
 ///      })
 ///     .build()
 ///     .into()
 /// ```
-pub fn slot_to_tokens(element: &Element) -> Option<TokenStream> {
-    #[allow(clippy::question_mark)]
-    if element.slot_token().is_none() {
-        return None;
-    };
-
+///
+/// # Aborts
+/// Aborts if `element` is not a component.
+pub fn slot_to_tokens(element: &Element) -> TokenStream {
     if !element.selectors().is_empty() {
         abort!(
             element.selectors()[0].span(),
@@ -549,13 +551,13 @@ pub fn slot_to_tokens(element: &Element) -> Option<TokenStream> {
         )
     });
 
-    Some(quote! {
+    quote! {
         #ident #generics::builder()
             #attrs
             #children
             .build()
             .into()
-    })
+    }
 }
 
 #[allow(clippy::doc_markdown)]
@@ -588,7 +590,7 @@ fn slots_to_tokens<'a>(children: impl Iterator<Item = &'a Element>) -> TokenStre
     for el in children {
         let component_name = el.tag().ident();
 
-        let slot_component = slot_to_tokens(el).expect("element should be a slot");
+        let slot_component = slot_to_tokens(el);
         slot_children
             .entry(component_name)
             .or_default()

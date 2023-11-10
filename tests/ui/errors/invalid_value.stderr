@@ -3,3 +3,21 @@ error: invalid value: expected bracket, block or literal
   |
 5 |         div a=a {}
   |               ^
+
+error[E0061]: this method takes 1 argument but 0 arguments were supplied
+  --> tests/ui/errors/invalid_value.rs:11:14
+   |
+11 |           div {..};
+   |  ______________^^-
+12 | |     };
+   | |_____- an argument is missing
+   |
+note: method defined here
+  --> $CARGO/leptos_dom-0.5.2/src/html.rs
+   |
+   |     pub fn attrs(
+   |            ^^^^^
+help: provide the argument
+   |
+10 |     _ = ..(/* attrs */);
+   |         ~~~~~~~~~~~~~~~

@@ -12,24 +12,47 @@ use crate::span;
 
 /// A kebab-cased identifier.
 ///
-/// The identifier must start with a letter, underscore or dash.
-/// The rest of the identifier can have numbers as well.
+/// The identifier must start with a letter, underscore or dash. The rest of
+/// the identifier can have numbers as well. Rust keywords are also allowed.
 ///
-/// Equality and hashing are based only on the repr, not the spans.
-#[derive(Debug, Clone)]
+/// Because whitespace is ignored in macros, and a dash is usually interpreted
+/// as subtraction, spaces between each segment is allowed but will be ignored.
+///
+/// Valid [`KebabIdent`]s include `one`, `two-bits`, `--css-variable`,
+/// `blue-100`, `-0`, `--a---b_c`, `_a`; but does not include `3d-thing`.
+///
+/// Equality and hashing are implemented and only based on the repr, not the
+/// spans.
+///
+/// # Parsing
+/// If the next token is not a `-` or ident, an [`Err`] is returned and the
+/// [`ParseStream`] is not advanced. Otherwise, parsing will stop once the ident
+/// ends, and the `ParseStream` is advanced to after this kebab-ident.
+///
+/// # Expanding
+/// The default [`ToTokens`] implementation expands this to a string literal
+/// with the appropriate [`Span`]. If a [`syn::Ident`] is desired, use
+/// [`Self::to_snake_ident`] instead.
+///
+/// # Invariants
+/// The [`repr`](Self::repr) and [`spans`](Self::spans) fields are not empty. To
+/// construct a new [`KebabIdent`], use the [`From<proc_macro2::Ident>`]
+/// implementation or parse one with the [`Parse`] implementation.
+#[derive(Clone)]
 pub struct KebabIdent {
     repr: String,
     spans: Vec<Span>,
 }
 
 impl KebabIdent {
-    /// Both `repr` and `spans` should not be empty.
-    const fn new(repr: String, spans: Vec<Span>) -> Self { Self { repr, spans } }
-
+    /// Returns a reference to the repr of this [`KebabIdent`].
     pub fn repr(&self) -> &str { self.repr.as_ref() }
 
-    pub fn to_lit_str(&self) -> syn::LitStr { syn::LitStr::new(self.repr(), self.span()) }
-
+    /// Returns the span of this [`KebabIdent`].
+    ///
+    /// The span of the first and last 'section' (dash, ident or lit int) are
+    /// joined. This only works on nightly, so only the first section's span is
+    /// returned on stable.
     pub fn span(&self) -> Span {
         span::join(
             self.spans[0],
@@ -37,8 +60,22 @@ impl KebabIdent {
         )
     }
 
+    /// Converts this ident to a `syn::LitStr` of the ident's repr with the
+    /// appropriate span.
+    pub fn to_lit_str(&self) -> syn::LitStr { syn::LitStr::new(self.repr(), self.span()) }
+
+    /// Converts this ident to a `syn::Ident` with the appropriate span, by
+    /// replacing all `-`s with `_`.
+    ///
+    /// The span will only be the first 'section' on stable, but correctly
+    /// covers the full ident on nightly. See [`KebabIdent::span`] for more
+    /// details.
     pub fn to_snake_ident(&self) -> syn::Ident {
         let snake_string = self.repr().replace('-', "_");
+        // This will always be valid as the first 'section' must be a `-` or rust ident,
+        // which means it starts with `_` or another valid identifier beginning. The int
+        // literals within the ident (e.g. between `-`s, like `blue-100`) are allowed
+        // since the ident does not start with a number.
         syn::Ident::new(&snake_string, self.span())
     }
 }
@@ -89,7 +126,8 @@ impl Parse for KebabIdent {
             };
         }
 
-        Ok(Self::new(repr, spans))
+        // both repr and spans are not empty due to the first-segment check
+        Ok(Self { repr, spans })
     }
 }
 
@@ -103,7 +141,14 @@ impl ToTokens for KebabIdent {
 }
 
 impl From<proc_macro2::Ident> for KebabIdent {
-    fn from(value: proc_macro2::Ident) -> Self { Self::new(value.to_string(), vec![value.span()]) }
+    fn from(value: proc_macro2::Ident) -> Self {
+        // repr is not empty as `proc_macro2::Ident` must be a valid Rust identifier,
+        // and "" is not.
+        Self {
+            repr: value.to_string(),
+            spans: vec![value.span()],
+        }
+    }
 }
 
 // eq and hash are only based on the repr

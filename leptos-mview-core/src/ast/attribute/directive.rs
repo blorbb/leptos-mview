@@ -9,7 +9,10 @@ use super::parsing::{
     parse_dir_then, parse_ident_optional_value, parse_ident_or_braced,
     parse_kebab_or_braced_or_bool, parse_kebab_or_braced_or_str,
 };
-use crate::{ident::KebabIdent, kw, value::Value};
+use crate::{
+    ast::{KebabIdent, Value},
+    kw,
+};
 
 /// A special attribute like `on:click={...}`.
 ///
@@ -31,7 +34,7 @@ use crate::{ident::KebabIdent, kw, value::Value};
 ///
 /// If a `:` is found but any other part of the parsing fails (including unknown
 /// directives), the macro will abort.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum DirectiveAttr {
     Class(Class),
     Style(Style),
@@ -80,7 +83,7 @@ impl Parse for DirectiveAttr {
 
 macro_rules! create_directive {
     ($struct_name:ident { $dir:ty : $key:ty = $value:ty } uses $parser:ident) => {
-        #[derive(Debug, Clone)]
+        #[derive(Clone)]
         pub struct $struct_name {
             dir: $dir,
             key: $key,
@@ -113,7 +116,7 @@ macro_rules! create_directive {
     };
     // no value
     ($struct_name:ident { $dir:ty : $key:ty } uses $parser:expr) => {
-        #[derive(Debug, Clone)]
+        #[derive(Clone)]
         pub struct $struct_name {
             dir: $dir,
             key: $key,

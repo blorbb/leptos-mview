@@ -5,24 +5,20 @@
     clippy::module_name_repetitions
 )]
 
-mod attribute;
-mod children;
-mod element;
+mod ast;
 mod error_ext;
 mod expand;
-mod ident;
 mod kw;
 mod parse;
 mod span;
-mod tag;
-mod value;
 
-use proc_macro2::TokenStream;
+use ast::Child;
+use proc_macro2::{Span, TokenStream};
 use proc_macro_error::abort;
 use quote::quote;
 use syn::spanned::Spanned;
 
-use crate::{children::Children, expand::children_fragment_tokens};
+use crate::{ast::Children, expand::children_fragment_tokens};
 
 #[must_use]
 pub fn mview_impl(input: TokenStream) -> TokenStream {
@@ -39,22 +35,25 @@ pub fn mview_impl(input: TokenStream) -> TokenStream {
     // If there are multiple top-level children, need to use the fragment.
     if children.len() == 1 {
         let child = children.into_vec().remove(0);
-        quote! {
-            {
-                #[allow(unused_braces)]
-                #child
-            }
+        match child {
+            Child::Node(node) => quote! {
+                { #[allow(unused_braces)] #node }
+            },
+            Child::Slot(slot, _) => abort!(
+                slot.span(),
+                "slots should be inside a parent that supports slots"
+            ),
         }
     } else {
         // look for any slots
         if let Some(slot) = children.slot_children().next() {
             abort!(
-                slot.slot_token().span(),
+                slot.tag().span(),
                 "slots should be inside a parent that supports slots"
             );
         };
 
-        let fragment = children_fragment_tokens(children.element_children());
+        let fragment = children_fragment_tokens(children.element_children(), Span::call_site());
         quote! {
             {
                 #[allow(unused_braces)]

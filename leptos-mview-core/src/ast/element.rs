@@ -1,26 +1,37 @@
+use proc_macro2::{TokenStream, TokenTree};
 use proc_macro_error::{abort, emit_error, emit_warning};
-use quote::ToTokens;
+use quote::{ToTokens, TokenStreamExt};
 use syn::{
     parse::{Parse, ParseStream},
-    punctuated::Punctuated,
     Token,
 };
 
-use crate::{
+use super::{
     attribute::{
         selector::{SelectorShorthand, SelectorShorthands},
-        Attr, Attrs,
+        Attr,
     },
-    children::Children,
+    Attrs, Children, Tag,
+};
+use crate::{
     error_ext::ResultExt,
-    expand::{component_to_tokens, slot_to_tokens, xml_to_tokens},
-    kw, parse, span,
-    tag::Tag,
+    expand::{component_to_tokens, xml_to_tokens},
+    parse, span,
 };
 
-pub type ClosureArgs = Punctuated<syn::Pat, Token![,]>;
-
 /// A HTML or custom component.
+///
+/// Consists of:
+/// 1. [`tag`](Tag): The HTML/SVG/MathML element name, or leptos component name.
+/// 2. [`selectors`](SelectorShorthands): Shortcut ways of writing `class="..."`
+///    or `id="..."`. A list of classes or ids prefixed with a `.` or `#`
+///    respectively.
+/// 3. [`attrs`](Attrs): A space-separated list of attributes.
+/// 4. [`children_args`](TokenStream): Optional arguments for the children,
+///    placed in closure pipes `|...|` immediately before the children block.
+///    The closure pipes **are included** in the stored [`TokenStream`].
+/// 5. [`children`](Children): Either no children (ends with `;`) or a children
+///    block `{ ... }` that contains more elements/values.
 ///
 /// Syntax mostly looks like this:
 /// ```text
@@ -34,35 +45,32 @@ pub type ClosureArgs = Punctuated<syn::Pat, Token![,]>;
 /// input type="text";
 /// br;
 /// ```
-#[derive(Debug)]
+///
+/// Whether the element is a slot or not is distinguished by
+/// [`Child`](crate::ast::Child).
+///
+/// # Parsing
+/// Parsing will return an [`Err`] if parsing the [`Tag`] fails (i.e. the next
+/// token is not an ident; however, will abort if a component is found +
+/// generics fail). If anything else fails, parsing will **abort**.
 pub struct Element {
-    slot_token: Option<kw::slot>,
     tag: Tag,
     selectors: SelectorShorthands,
     attrs: Attrs,
-    children_args: Option<ClosureArgs>,
+    children_args: Option<TokenStream>,
     children: Option<Children>,
 }
 
 impl Parse for Element {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        // check if it is a slot: like `slot:Tab ...`
-        let slot_token = if input.peek(kw::slot) && input.peek2(Token![:]) {
-            let slot = input.parse::<kw::slot>().unwrap();
-            input.parse::<Token![:]>().unwrap();
-            Some(slot)
-        } else {
-            None
-        };
-
         let tag: Tag = input.parse()?;
-        let selectors: SelectorShorthands = input.parse()?;
-        let attrs: Attrs = input.parse()?;
+        let selectors: SelectorShorthands = input.parse().unwrap_or_abort();
+        let attrs: Attrs = input.parse().unwrap_or_abort();
 
         if input.peek(Token![;]) {
             // no children, terminated by semicolon.
             input.parse::<Token![;]>().unwrap();
-            Ok(Self::new(slot_token, tag, selectors, attrs, None, None))
+            Ok(Self::new(tag, selectors, attrs, None, None))
         } else if input.is_empty() {
             // allow no ending token if its the last child
             // makes for better editing experience when writing sequentially,
@@ -79,18 +87,11 @@ impl Parse for Element {
                 allowed for better rust-analyzer support. do not leave \
                 elements unterminated to avoid ambiguities"
             );
-            Ok(Self::new(slot_token, tag, selectors, attrs, None, None))
+            Ok(Self::new(tag, selectors, attrs, None, None))
         } else if input.peek(syn::token::Brace) {
             // has children in brace.
             let (children, _) = parse::parse_braced::<Children>(input).unwrap_or_abort();
-            Ok(Self::new(
-                slot_token,
-                tag,
-                selectors,
-                attrs,
-                None,
-                Some(children),
-            ))
+            Ok(Self::new(tag, selectors, attrs, None, Some(children)))
         } else if input.peek(Token![|]) {
             // maybe extra args for the children
             let args = parse_closure_args(input).unwrap_or_abort();
@@ -102,14 +103,7 @@ impl Parse for Element {
                 )
             }
             let (children, _) = parse::parse_braced::<Children>(input).unwrap_or_abort();
-            Ok(Self::new(
-                slot_token,
-                tag,
-                selectors,
-                attrs,
-                Some(args),
-                Some(children),
-            ))
+            Ok(Self::new(tag, selectors, attrs, Some(args), Some(children)))
         } else {
             // add error at the unknown token
             emit_error!(input.span(), "unknown attribute");
@@ -124,28 +118,27 @@ impl Parse for Element {
 
 impl ToTokens for Element {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        tokens.extend(xml_to_tokens(self).unwrap_or_else(|| {
-            component_to_tokens(self)
-                .unwrap_or_else(|| slot_to_tokens(self).expect("element should be a slot"))
-        }));
+        tokens.extend(
+            xml_to_tokens(self).unwrap_or_else(|| {
+                component_to_tokens(self).expect("element should be a component")
+            }),
+        );
     }
 }
 
 impl Element {
     pub const fn new(
-        slot_token: Option<kw::slot>,
         tag: Tag,
         selectors: SelectorShorthands,
         attrs: Attrs,
-        child_args: Option<ClosureArgs>,
+        children_args: Option<TokenStream>,
         children: Option<Children>,
     ) -> Self {
         Self {
-            slot_token,
             tag,
             selectors,
             attrs,
-            children_args: child_args,
+            children_args,
             children,
         }
     }
@@ -156,30 +149,41 @@ impl Element {
 
     pub const fn attrs(&self) -> &Attrs { &self.attrs }
 
-    pub const fn children_args(&self) -> Option<&ClosureArgs> { self.children_args.as_ref() }
+    pub const fn children_args(&self) -> Option<&TokenStream> { self.children_args.as_ref() }
 
     pub const fn children(&self) -> Option<&Children> { self.children.as_ref() }
-
-    pub const fn slot_token(&self) -> Option<kw::slot> { self.slot_token }
 }
 
-fn parse_closure_args(input: ParseStream) -> syn::Result<ClosureArgs> {
-    input.parse::<Token![|]>()?;
-    let mut args = Punctuated::new();
+/// Parses closure arguments like `|binding|` or `|(index, item)|`.
+///
+/// Patterns are supported within the closure.
+///
+/// # Parsing
+/// If the first pipe is not found, an [`Err`] will be returned. Otherwise,
+/// tokens are parsed until a second `|` is found. Aborts if a second `|` is not
+/// found.
+///
+/// This is ok because closure params take a
+/// [*PatternNoTopAlt*](https://doc.rust-lang.org/beta/reference/expressions/closure-expr.html),
+/// so no other `|` characters are allowed within a pattern that is outside of a
+/// nested group.
+fn parse_closure_args(input: ParseStream) -> syn::Result<TokenStream> {
+    let first_pipe = input.parse::<Token![|]>()?;
+
+    let mut tokens = TokenStream::new();
+    first_pipe.to_tokens(&mut tokens);
+
     loop {
-        if input.peek(Token![|]) {
-            break;
+        // parse until second `|` is found
+        if let Ok(pipe) = input.parse::<Token![|]>() {
+            pipe.to_tokens(&mut tokens);
+            break Ok(tokens);
+        } else if let Ok(tt) = input.parse::<TokenTree>() {
+            tokens.append(tt);
+        } else {
+            abort!(first_pipe.span, "closure arguments not closed");
         }
-        let value = syn::Pat::parse_single(input)?;
-        args.push_value(value);
-        if input.peek(Token![|]) {
-            break;
-        }
-        let punct: Token![,] = input.parse()?;
-        args.push_punct(punct);
     }
-    input.parse::<Token![|]>().unwrap();
-    Ok(args)
 }
 
 #[cfg(test)]
