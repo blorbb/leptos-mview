@@ -1,0 +1,165 @@
+warning: use of deprecated method `leptos::ForPropsBuilder::<IF, I, T, EF, N, KF, K, ((IF,), (), __children)>::build`: Missing required field key
+  --> tests/ui/errors/com_builder_spans.rs:10:9
+   |
+10 |         For each=[[1, 2, 3]] |i| { {i} }
+   |         ^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+
+error[E0061]: this method takes 1 argument but 0 arguments were supplied
+  --> tests/ui/errors/com_builder_spans.rs:10:9
+   |
+10 |         For each=[[1, 2, 3]] |i| { {i} }
+   |         ^^^ an argument of type `ForPropsBuilder_Error_Missing_required_field_key` is missing
+   |
+note: method defined here
+  --> $CARGO/leptos-0.5.2/src/for_loop.rs
+   |
+   | #[component(transparent)]
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^
+   = note: this error originates in the derive macro `::leptos::typed_builder_macro::TypedBuilder` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: provide the argument
+   |
+10 |         For(/* ForPropsBuilder_Error_Missing_required_field_key */) each=[[1, 2, 3]] |i| { {i} }
+   |            ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+warning: unreachable call
+  --> tests/ui/errors/com_builder_spans.rs:10:9
+   |
+10 |         For each=[[1, 2, 3]] |i| { {i} }
+   |         ^^^
+   |         |
+   |         unreachable call
+   |         any code following this expression is unreachable
+   |
+   = note: `#[warn(unreachable_code)]` on by default
+
+error[E0277]: expected a `Fn()` closure, found `str`
+  --> tests/ui/errors/com_builder_spans.rs:17:14
+   |
+17 |         Show when={"no"} {
+   |              ^^^^ expected an `Fn()` closure, found `str`
+   |
+   = help: the trait `std::ops::Fn<()>` is not implemented for `str`
+   = note: wrap the `str` in a closure with no arguments: `|| { /* code */ }`
+   = note: required for `&str` to implement `FnOnce<()>`
+note: required by a bound in `ShowPropsBuilder::<W, (__children, (), __fallback)>::when`
+  --> $CARGO/leptos-0.5.2/src/show.rs
+   |
+   |     when: W,
+   |     ---- required by a bound in this associated function
+...
+   |     W: Fn() -> bool + 'static,
+   |                ^^^^ required by this bound in `ShowPropsBuilder::<W, (__children, (), __fallback)>::when`
+
+error[E0277]: expected a `Fn()` closure, found `str`
+  --> tests/ui/errors/com_builder_spans.rs:17:9
+   |
+17 |         Show when={"no"} {
+   |         ^^^^ expected an `Fn()` closure, found `str`
+   |
+   = help: the trait `std::ops::Fn<()>` is not implemented for `str`
+   = note: wrap the `str` in a closure with no arguments: `|| { /* code */ }`
+   = note: required for `&str` to implement `std::ops::Fn<()>`
+note: required by a bound in `leptos::Show`
+  --> $CARGO/leptos-0.5.2/src/show.rs
+   |
+   | pub fn Show<W>(
+   |        ---- required by a bound in this function
+...
+   |     W: Fn() -> bool + 'static,
+   |        ^^^^^^^^^^^^ required by this bound in `Show`
+
+error[E0599]: the method `children` exists for struct `ShowPropsBuilder<&str, ((), (&str,), ())>`, but its trait bounds were not satisfied
+  --> tests/ui/errors/com_builder_spans.rs:18:13
+   |
+16 |       _ = mview! {
+   |  _________-
+17 | |         Show when={"no"} {
+18 | |             "hi"
+   | |            -^^^^ method cannot be called on `ShowPropsBuilder<&str, ((), (&str,), ())>` due to unsatisfied trait bounds
+   | |____________|
+   |
+   |
+   = note: the following trait bounds were not satisfied:
+           `<&str as FnOnce<()>>::Output = bool`
+           `&str: std::ops::Fn<()>`
+           `&str: FnMut<()>`
+           which is required by `&str: std::ops::Fn<()>`
+           `&str: FnOnce<()>`
+           which is required by `&str: std::ops::Fn<()>`
+
+error[E0308]: mismatched types
+  --> tests/ui/errors/com_builder_spans.rs:29:21
+   |
+29 |         Thing label=[false];
+   |               ----- ^^^^^^^ expected `&str`, found closure
+   |               |
+   |               arguments to this method are incorrect
+   |
+   = note: expected reference `&'static str`
+                found closure `{closure@$DIR/tests/ui/errors/com_builder_spans.rs:29:21: 29:28}`
+note: method defined here
+  --> tests/ui/errors/com_builder_spans.rs:25:14
+   |
+25 |     fn Thing(label: &'static str) -> impl IntoView { label }
+   |              ^^^^^--------------
+
+error[E0308]: mismatched types
+  --> tests/ui/errors/com_builder_spans.rs:40:15
+   |
+40 |         Thing |s| { "hello" }
+   |               ^^^ expected `Box<dyn FnOnce() -> Fragment>`, found closure
+   |
+   = note: expected struct `Box<(dyn FnOnce() -> Fragment + 'static)>`
+             found closure `{closure@$DIR/tests/ui/errors/com_builder_spans.rs:40:15: 40:18}`
+
+error[E0283]: type annotations needed
+  --> tests/ui/errors/com_builder_spans.rs:49:9
+   |
+49 |         Await future=[async { 3 }] { "no args" }
+   |         ^^^^^ cannot infer type of the type parameter `V` declared on the function `Await`
+   |
+   = note: cannot satisfy `_: leptos::IntoView`
+   = help: the following types implement trait `leptos::IntoView`:
+             bool
+             char
+             isize
+             i8
+             i16
+             i32
+             i64
+             i128
+           and $N others
+note: required by a bound in `leptos::Await`
+  --> $CARGO/leptos-0.5.2/src/await_.rs
+   |
+   | pub fn Await<T, Fut, FF, VF, V>(
+   |        ----- required by a bound in this function
+...
+   |     V: IntoView,
+   |        ^^^^^^^^ required by this bound in `Await`
+help: consider specifying the generic arguments
+   |
+49 |         Await::<i32, _, _, VF, V> future=[async { 3 }] { "no args" }
+   |              ++++++++++++++++++++
+
+error[E0283]: type annotations needed
+  --> tests/ui/errors/com_builder_spans.rs:49:9
+   |
+49 |         Await future=[async { 3 }] { "no args" }
+   |         ^^^^^ cannot infer type of the type parameter `VF` declared on the function `Await`
+   |
+   = note: multiple `impl`s satisfying `_: ToChildren<{closure@$DIR/tests/ui/errors/com_builder_spans.rs:48:9: 50:6}>` found in the `leptos` crate:
+           - impl<F> ToChildren<F> for Box<(dyn FnMut() -> Fragment + 'static)>
+             where <F as FnOnce<()>>::Output == Fragment, F: FnMut<()>, F: 'static;
+           - impl<F> ToChildren<F> for Box<(dyn FnOnce() -> Fragment + 'static)>
+             where <F as FnOnce<()>>::Output == Fragment, F: FnOnce<()>, F: 'static;
+           - impl<F> ToChildren<F> for Box<(dyn std::ops::Fn() -> Fragment + 'static)>
+             where <F as FnOnce<()>>::Output == Fragment, F: std::ops::Fn<()>, F: 'static;
+           - impl<F> ToChildren<F> for Rc<(dyn std::ops::Fn() -> Fragment + 'static)>
+             where <F as FnOnce<()>>::Output == Fragment, F: std::ops::Fn<()>, F: 'static;
+help: consider specifying the generic arguments
+   |
+49 |         Await::<i32, _, _, VF, V> future=[async { 3 }] { "no args" }
+   |              ++++++++++++++++++++

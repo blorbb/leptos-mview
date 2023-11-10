@@ -1,5 +1,5 @@
 use proc_macro2::{Span, TokenStream};
-use quote::{quote, quote_spanned, ToTokens};
+use quote::{quote_spanned, ToTokens};
 use syn::parse::{Parse, ParseStream};
 
 use crate::parse;
@@ -55,7 +55,7 @@ impl ToTokens for Value {
         tokens.extend(match self {
             Self::Lit(lit) => lit.into_token_stream(),
             Self::Block(stream, braces) => quote_spanned!(braces.span.join()=> {#stream}),
-            Self::Bracket(expr, _) => quote! {move || #expr},
+            Self::Bracket(expr, brackets) => quote_spanned! {brackets.span.join()=> move || #expr},
         });
     }
 }

@@ -1,3 +1,4 @@
+use proc_macro2::Span;
 use proc_macro_error::abort;
 use quote::ToTokens;
 use syn::{
@@ -21,6 +22,15 @@ impl ToTokens for NodeChild {
         match self {
             Self::Value(v) => tokens.extend(v.into_token_stream()),
             Self::Element(e) => tokens.extend(e.into_token_stream()),
+        }
+    }
+}
+
+impl NodeChild {
+    pub fn span(&self) -> Span {
+        match self {
+            NodeChild::Value(v) => v.span(),
+            NodeChild::Element(e) => e.tag().span(),
         }
     }
 }

@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use proc_macro2::{Span, TokenStream};
 use proc_macro_error::abort;
 use quote::{quote, quote_spanned, ToTokens};
+use syn::spanned::Spanned;
 
 use crate::{
     ast::{
@@ -292,14 +293,21 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
     let dyn_attrs = dyn_attrs_to_methods(&dyn_attrs);
     let use_directives = use_directives.into_iter().map(use_directive_to_method);
 
+    // if attributes are missing, an error is made in `.build()` by the component
+    // builder.
+    let build = quote_spanned!(ident.span()=> .build());
+    // `unreachable_code` warning is generated in both of these
+    let component_view = quote_spanned!(ident.span()=> ::leptos::component_view);
+    let component_props_builder = quote_spanned!(ident.span()=> ::leptos::component_props_builder);
+
     Some(quote! {
-        ::leptos::component_view(
+        #component_view(
             &#ident,
-            ::leptos::component_props_builder(&#ident #generics)
+            #component_props_builder(&#ident #generics)
                 #attrs
                 #children
                 #slot_children
-                .build()
+                #build
                 #dyn_attrs
             )
         .into_view()
@@ -310,7 +318,7 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
 
 fn component_kv_attribute_tokens(attr: &KvAttr) -> TokenStream {
     let (key, value) = (attr.key().to_snake_ident(), attr.value());
-    quote! { .#key(#value) }
+    quote_spanned! {attr.span()=> .#key(#value) }
 }
 
 fn component_event_listener_tokens(dir: &directive::On) -> TokenStream {
@@ -369,22 +377,31 @@ fn component_children_tokens<'a>(
     args: Option<&TokenStream>,
     clones: &TokenStream,
 ) -> TokenStream {
-    let children_fragment = children_fragment_tokens(children);
+    let mut children = children.peekable();
+    let child_span = children
+        .peek()
+        // not sure why `child.span()` is calling `syn::spanned::Spanned` instead
+        .map_or_else(Span::call_site, |child| (*child).span());
+
+    let children_fragment =
+        children_fragment_tokens(children, args.map_or(child_span, |tokens| tokens.span()));
 
     // children with arguments take a `Fn(T) -> impl IntoView`
     // normal children (`Children`, `ChildrenFn`, ...) take
     // `ToChildren::to_children`
-    let wrapped_fragment = if args.is_none() {
+    let wrapped_fragment = if let Some(args) = args {
+        // `args` includes the pipes
+        quote_spanned!(args.span()=> move #args #children_fragment)
+    } else {
         quote! {
             ::leptos::ToChildren::to_children(move || #children_fragment)
         }
-    } else {
-        // `args` includes the pipes
-        quote! { move #args #children_fragment }
     };
 
+    let children_method = quote_spanned!(child_span=> children);
+
     quote! {
-        .children({
+        .#children_method({
             #clones
             #wrapped_fragment
         })
@@ -446,9 +463,11 @@ fn use_directive_to_method(u: &directive::Use) -> TokenStream {
 ///     ].to_vec()
 /// })
 /// ```
-pub fn children_fragment_tokens<'a>(children: impl Iterator<Item = &'a NodeChild>) -> TokenStream {
-    // let children = children.iter();
-    quote! {
+pub fn children_fragment_tokens<'a>(
+    children: impl Iterator<Item = &'a NodeChild>,
+    span: Span,
+) -> TokenStream {
+    quote_spanned! { span=>
         ::leptos::Fragment::lazy(|| {
             ::std::vec![
                 #(  ::leptos::IntoView::into_view(#children) ),*

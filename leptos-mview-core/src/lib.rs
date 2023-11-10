@@ -13,7 +13,7 @@ mod parse;
 mod span;
 
 use ast::Child;
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use proc_macro_error::abort;
 use quote::quote;
 use syn::spanned::Spanned;
@@ -53,7 +53,7 @@ pub fn mview_impl(input: TokenStream) -> TokenStream {
             );
         };
 
-        let fragment = children_fragment_tokens(children.element_children());
+        let fragment = children_fragment_tokens(children.element_children(), Span::call_site());
         quote! {
             {
                 #[allow(unused_braces)]
