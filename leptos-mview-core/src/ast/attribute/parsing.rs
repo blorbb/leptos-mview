@@ -191,10 +191,10 @@ impl BracedKebabIdent {
     pub const fn ident(&self) -> &KebabIdent { &self.ident }
 
     pub fn into_block_value(self) -> Value {
-        Value::Block(
-            self.ident().to_snake_ident().into_token_stream(),
-            self.brace_token,
-        )
+        Value::Block {
+            tokens: self.ident().to_snake_ident().into_token_stream(),
+            braces: self.brace_token,
+        }
     }
 }
 
@@ -226,7 +226,10 @@ impl BracedIdent {
     pub const fn ident(&self) -> &syn::Ident { &self.ident }
 
     pub fn into_block_value(self) -> Value {
-        Value::Block(self.ident().into_token_stream(), self.brace_token)
+        Value::Block {
+            tokens: self.ident().into_token_stream(),
+            braces: self.brace_token,
+        }
     }
 }
 

@@ -38,7 +38,7 @@ fn MyComponent() -> impl IntoView {
                 blocking
             |db_info| {
                 p { "Things found: " strong { {*db_info} } "!" }
-                p { "Is bad: " [red_input().to_string()] }
+                p { "Is bad: " f["{}", red_input()] }
             }
         }
     }
@@ -89,8 +89,9 @@ fn MyComponent() -> impl IntoView {
             |db_info| {
                 p { "Things found: " strong { {*db_info} } "!" }
                 // bracketed expansion works in children too!
-                //             {move || red_input().to_string()}
-                p { "Is bad: " [red_input().to_string()] }
+                // this one also has a special prefix to add `format!` into the expansion!
+                //    {move || format!("{}", red_input()}
+                p { "Is bad: " f["{}", red_input()] }
             }
         }
     }
@@ -295,6 +296,9 @@ There are (currently) 3 main types of values you can pass in:
         }
         # ;
         ```
+
+The bracketed values can also have some special prefixes for even more common shortcuts!
+- Currently, the only one is `f` - e.g. `f["{:.2}", stuff()]`. Adding an `f` will add `format!` into the closure. This is equivalent to `[format!("{:.2}", stuff())]` or `{move || format!("{:.2}", stuff())}`.
 
 ## Attributes
 
