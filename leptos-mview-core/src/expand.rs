@@ -1,4 +1,4 @@
-//! Miscellaneous functions to convert structs to `TokenStream`s.
+//! Miscellaneous functions to convert structs to [`TokenStream`]s.
 
 // putting specific `-> TokenStream` implementations here to have it all
 // grouped instead of scattered throughout struct impls.
@@ -56,7 +56,7 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
         Tag::Html(ident) => quote! { ::leptos::html::#ident() },
         Tag::Svg(ident) => quote! { ::leptos::svg::#ident() },
         Tag::Math(ident) => quote! { ::leptos::math::#ident() },
-        Tag::Unknown(ident) => {
+        Tag::WebComponent(ident) => {
             let custom = syn::Ident::new("custom", ident.span());
             quote! { ::leptos::html::#custom(::leptos::html::Custom::new(#ident)) }
         }
@@ -467,7 +467,7 @@ fn abort_not_supported(tag: &TagKind, span: Span, dir_name: &str) -> ! {
         TagKind::Component => "components",
         TagKind::Svg => "svgs",
         TagKind::Math => "math elements",
-        TagKind::Unknown => "web components",
+        TagKind::WebComponent => "web components",
     };
     abort!(
         span,

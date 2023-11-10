@@ -4,14 +4,25 @@ use syn::parse::{Parse, ParseStream};
 
 use crate::parse;
 
-/// Interpolated values.
-/// Plain expressions or block expressions like `{move || !is_red.get()}`
-/// are placed as so.
+/// Interpolated Rust expressions within the macro.
+///
+/// Block expressions like `{move || !is_red.get()}` are placed as so.
 ///
 /// Expressions within brackets are wrapped in a closure, e.g. `[!is_red.get()]`
 /// is expanded to `{move || !is_red.get()}`.
 ///
 /// Only literals can have no delimiter, to avoid ambiguity.
+///
+/// Block and bracketed expressions are not parsed as [`syn::Expr`]s as the
+/// specific details of what is contained is not required (they are expanded
+/// as-is). Instead, a plain [`TokenStream`] is taken, which allows for invalid
+/// expressions. rust-analyzer can produce errors at the correct span using this
+/// `TokenStream`, and provides better autocompletion (e.g. when looking for
+/// methods by entering `something.`).
+///
+/// # Parsing
+/// This AST is considered 'basic', so if parsing fails, an [`Err`] will be
+/// returned and it will not advance the [`ParseStream`].
 #[derive(Debug, Clone)]
 pub enum Value {
     Lit(syn::Lit),
@@ -50,6 +61,9 @@ impl ToTokens for Value {
 }
 
 impl Value {
+    /// Returns the [`Span`] of this [`Value`].
+    ///
+    /// If the value is a block/bracket, the span includes the delimiters.
     pub fn span(&self) -> Span {
         match self {
             Self::Lit(lit) => lit.span(),
