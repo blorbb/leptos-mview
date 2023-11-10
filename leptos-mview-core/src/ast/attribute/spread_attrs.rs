@@ -1,42 +1,51 @@
-use proc_macro2::Span;
+use proc_macro2::{Span, TokenStream};
 use syn::{
     braced,
-    parse::{discouraged::Speculative, Parse},
+    parse::{discouraged::Speculative, Parse, ParseStream},
     Token,
 };
 
+/// A spread attribute like `{..attrs}`.
+///
+/// The spread after the `..` can be any expression.
 #[derive(Clone)]
 pub struct SpreadAttr {
-    ident: syn::Ident,
-    span: Span,
+    braces: syn::token::Brace,
+    dotdot: Token![..],
+    rest: TokenStream,
 }
 
 impl Parse for SpreadAttr {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
         // try parse spread attributes `{..attrs}`
         let fork = input.fork();
         let stream;
-        let brace_token = braced!(stream in fork);
-        if stream.peek(Token![..]) && stream.peek3(syn::Ident) {
-            _ = stream.parse::<Token![..]>();
-            let ident = stream.parse::<syn::Ident>()?;
-            // if not empty, do not parse
-            if stream.is_empty() {
-                input.advance_to(&fork);
-                return Ok(Self {
-                    ident,
-                    span: brace_token.span.join(),
-                });
-            };
-        };
-        Err(input.error("invalid spread attribute"))
+        let braces = braced!(stream in fork);
+        if stream.peek(Token![..]) {
+            let dotdot = stream.parse::<Token![..]>().expect("peeked");
+            let rest = stream.parse::<TokenStream>().unwrap();
+            input.advance_to(&fork);
+
+            Ok(Self {
+                braces,
+                dotdot,
+                rest,
+            })
+        } else {
+            Err(input.error("invalid spread attribute"))
+        }
     }
 }
 
 impl SpreadAttr {
-    pub const fn as_ident(&self) -> &syn::Ident { &self.ident }
+    /// Returns the `..` in the spread attr
+    pub const fn dotdot(&self) -> &Token![..] { &self.dotdot }
 
-    pub const fn span(&self) -> Span { self.span }
+    /// Returns the expression after the `..`.
+    pub const fn expr(&self) -> &TokenStream { &self.rest }
+
+    /// Returns the span of the wrapping braces.
+    pub fn span(&self) -> Span { self.braces.span.join() }
 }
 
 #[cfg(test)]

@@ -170,10 +170,10 @@ fn xml_directive_tokens(element: &Element, directive: &DirectiveAttr) -> TokenSt
 }
 
 fn xml_spread_tokens(attr: &SpreadAttr) -> TokenStream {
-    let ident = attr.as_ident();
-    let attrs = syn::Ident::new("attrs", ident.span());
+    let (dotdot, expr) = (attr.dotdot(), attr.expr());
+    let attrs = syn::Ident::new("attrs", dotdot.span());
     quote! {
-        .#attrs(#ident)
+        .#attrs(#expr)
     }
 }
 
