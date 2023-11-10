@@ -17,7 +17,7 @@ use crate::{
             selector::{SelectorShorthand, SelectorShorthands},
             spread_attrs::SpreadAttr,
         },
-        Attr, ClosureArgs, Element, KebabIdent, NodeChild, Tag, TagKind,
+        Attr, Element, KebabIdent, NodeChild, Tag, TagKind,
     },
     span,
 };
@@ -366,7 +366,7 @@ fn component_clone_tokens(dir: &directive::Clone) -> TokenStream {
 /// ```
 fn component_children_tokens<'a>(
     children: impl Iterator<Item = &'a NodeChild>,
-    args: Option<&ClosureArgs>,
+    args: Option<&TokenStream>,
     clones: &TokenStream,
 ) -> TokenStream {
     let children_fragment = children_fragment_tokens(children);
@@ -379,7 +379,8 @@ fn component_children_tokens<'a>(
             ::leptos::ToChildren::to_children(move || #children_fragment)
         }
     } else {
-        quote! { move |#args| #children_fragment }
+        // `args` includes the pipes
+        quote! { move #args #children_fragment }
     };
 
     quote! {

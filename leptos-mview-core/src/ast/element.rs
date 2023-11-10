@@ -1,8 +1,8 @@
+use proc_macro2::{TokenStream, TokenTree};
 use proc_macro_error::{abort, emit_error, emit_warning};
-use quote::ToTokens;
+use quote::{ToTokens, TokenStreamExt};
 use syn::{
     parse::{Parse, ParseStream},
-    punctuated::Punctuated,
     Token,
 };
 
@@ -19,9 +19,19 @@ use crate::{
     parse, span,
 };
 
-pub type ClosureArgs = Punctuated<syn::Pat, Token![,]>;
-
 /// A HTML or custom component.
+///
+/// Consists of:
+/// 1. [`tag`](Tag): The HTML/SVG/MathML element name, or leptos component name.
+/// 2. [`selectors`](SelectorShorthands): Shortcut ways of writing `class="..."`
+///    or `id="..."`. A list of classes or ids prefixed with a `.` or `#`
+///    respectively.
+/// 3. [`attrs`](Attrs): A space-separated list of attributes.
+/// 4. [`children_args`](TokenStream): Optional arguments for the children,
+///    placed in closure pipes `|...|` immediately before the children block.
+///    The closure pipes **are included** in the stored [`TokenStream`].
+/// 5. [`children`](Children): Either no children (ends with `;`) or a children
+///    block `{ ... }` that contains more elements/values.
 ///
 /// Syntax mostly looks like this:
 /// ```text
@@ -37,21 +47,26 @@ pub type ClosureArgs = Punctuated<syn::Pat, Token![,]>;
 /// ```
 ///
 /// Whether the element is a slot or not is distinguished by
-/// [`Child`](crate::children::Child).
+/// [`Child`](crate::ast::Child).
+///
+/// # Parsing
+/// Parsing will return an [`Err`] if parsing the [`Tag`] fails (i.e. the next
+/// token is not an ident; however, will abort if a component is found +
+/// generics fail). If anything else fails, parsing will **abort**.
 #[derive(Debug)]
 pub struct Element {
     tag: Tag,
     selectors: SelectorShorthands,
     attrs: Attrs,
-    children_args: Option<ClosureArgs>,
+    children_args: Option<TokenStream>,
     children: Option<Children>,
 }
 
 impl Parse for Element {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let tag: Tag = input.parse()?;
-        let selectors: SelectorShorthands = input.parse()?;
-        let attrs: Attrs = input.parse()?;
+        let selectors: SelectorShorthands = input.parse().unwrap_or_abort();
+        let attrs: Attrs = input.parse().unwrap_or_abort();
 
         if input.peek(Token![;]) {
             // no children, terminated by semicolon.
@@ -117,14 +132,14 @@ impl Element {
         tag: Tag,
         selectors: SelectorShorthands,
         attrs: Attrs,
-        child_args: Option<ClosureArgs>,
+        children_args: Option<TokenStream>,
         children: Option<Children>,
     ) -> Self {
         Self {
             tag,
             selectors,
             attrs,
-            children_args: child_args,
+            children_args,
             children,
         }
     }
@@ -135,28 +150,41 @@ impl Element {
 
     pub const fn attrs(&self) -> &Attrs { &self.attrs }
 
-    pub const fn children_args(&self) -> Option<&ClosureArgs> { self.children_args.as_ref() }
+    pub const fn children_args(&self) -> Option<&TokenStream> { self.children_args.as_ref() }
 
     pub const fn children(&self) -> Option<&Children> { self.children.as_ref() }
 }
 
-fn parse_closure_args(input: ParseStream) -> syn::Result<ClosureArgs> {
-    input.parse::<Token![|]>()?;
-    let mut args = Punctuated::new();
+/// Parses closure arguments like `|binding|` or `|(index, item)|`.
+///
+/// Patterns are supported within the closure.
+///
+/// # Parsing
+/// If the first pipe is not found, an [`Err`] will be returned. Otherwise,
+/// tokens are parsed until a second `|` is found. Aborts if a second `|` is not
+/// found.
+///
+/// This is ok because closure params take a
+/// [*PatternNoTopAlt*](https://doc.rust-lang.org/beta/reference/expressions/closure-expr.html),
+/// so no other `|` characters are allowed within a pattern that is outside of a
+/// nested group.
+fn parse_closure_args(input: ParseStream) -> syn::Result<TokenStream> {
+    let first_pipe = input.parse::<Token![|]>()?;
+
+    let mut tokens = TokenStream::new();
+    first_pipe.to_tokens(&mut tokens);
+
     loop {
-        if input.peek(Token![|]) {
-            break;
+        // parse until second `|` is found
+        if let Ok(pipe) = input.parse::<Token![|]>() {
+            pipe.to_tokens(&mut tokens);
+            break Ok(tokens);
+        } else if let Ok(tt) = input.parse::<TokenTree>() {
+            tokens.append(tt);
+        } else {
+            abort!(first_pipe.span, "closure arguments not closed");
         }
-        let value = syn::Pat::parse_single(input)?;
-        args.push_value(value);
-        if input.peek(Token![|]) {
-            break;
-        }
-        let punct: Token![,] = input.parse()?;
-        args.push_punct(punct);
     }
-    input.parse::<Token![|]>().unwrap();
-    Ok(args)
 }
 
 #[cfg(test)]
