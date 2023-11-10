@@ -402,11 +402,9 @@ fn dyn_attrs_to_methods(dyn_attrs: &[&directive::Attr]) -> Option<TokenStream> {
     let (keys, values): (Vec<_>, Vec<_>) = dyn_attrs.iter().map(|a| (a.key(), a.value())).unzip();
     Some(quote! {
         .#dyn_attrs_method(
-            <[_]>::into_vec(
-                ::std::boxed::Box::new([
-                    #( (#keys, ::leptos::IntoAttribute::into_attribute(#values)) ),*
-                ])
-            )
+            ::std::vec![
+                #( (#keys, ::leptos::IntoAttribute::into_attribute(#values)) ),*
+            ]
         )
     })
 }
@@ -452,11 +450,9 @@ pub fn children_fragment_tokens<'a>(children: impl Iterator<Item = &'a NodeChild
     // let children = children.iter();
     quote! {
         ::leptos::Fragment::lazy(|| {
-            <[_]>::into_vec(
-                ::std::boxed::Box::new([
-                    #(  ::leptos::IntoView::into_view(#children) ),*
-                ])
-            )
+            ::std::vec![
+                #(  ::leptos::IntoView::into_view(#children) ),*
+            ]
         })
     }
 }
@@ -488,7 +484,7 @@ fn abort_not_supported(tag: &TagKind, span: Span, dir_name: &str) -> ! {
 ///     // same as component_children_tokens
 ///     .children(ToChildren::to_children(move || {
 ///         Fragment::lazy(|| {
-///             <[_]>::into_vec(Box::new([{ "child" }.into_view()]))
+///            vec![{ "child" }.into_view()]
 ///         })
 ///      })
 ///     .build()
