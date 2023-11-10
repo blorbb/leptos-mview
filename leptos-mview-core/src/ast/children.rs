@@ -1,10 +1,16 @@
 use proc_macro_error::abort;
 use quote::ToTokens;
-use syn::{parse::Parse, Token};
+use syn::{
+    parse::{Parse, ParseStream},
+    Token,
+};
 
 use super::{derive_multi_ast_for, Element};
 use crate::{ast::Value, error_ext::ResultExt, kw};
 
+/// A child that is an actual HTML value (i.e. not a slot).
+///
+/// Use [`Child`] to try and parse these.
 pub enum NodeChild {
     Value(Value),
     Element(Element),
@@ -19,17 +25,24 @@ impl ToTokens for NodeChild {
     }
 }
 
-/// Possible child nodes inside a component.
+/// Possible child items inside a component.
 ///
-/// If the child is a `Value::Lit`, this lit must be a string.
-/// Parsing will abort if the lit is not a string.
+/// If the child is a `Value::Lit`, this lit must be a string. Parsing will
+/// abort if the lit is not a string.
+///
+/// Children can either be a [`NodeChild`] (i.e. an actual element), or a slot.
+/// Slots are distinguished by prefixing the child with `slot:`.
+///
+/// # Parsing
+/// Mostly **aborts** if parsing fails. An [`Err`] is only returned if there are
+/// no tokens remaining.
 pub enum Child {
     Node(NodeChild),
     Slot(kw::slot, Element),
 }
 
 impl Parse for Child {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
         if let Ok(value) = input.parse::<Value>() {
             // only allow literals if they are a string.
             if let Value::Lit(ref lit) = value {
@@ -51,7 +64,7 @@ impl Parse for Child {
         } else if let Ok(elem) = input.parse::<Element>() {
             Ok(Self::Node(NodeChild::Element(elem)))
         } else {
-            Err(input.error("invalid child"))
+            Err(input.error("no children remaining"))
         }
     }
 }
