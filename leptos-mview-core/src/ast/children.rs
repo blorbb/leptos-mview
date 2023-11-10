@@ -5,7 +5,6 @@ use syn::{parse::Parse, Token};
 use super::{derive_multi_ast_for, Element};
 use crate::{ast::Value, error_ext::ResultExt, kw};
 
-#[derive(Debug)]
 pub enum NodeChild {
     Value(Value),
     Element(Element),
@@ -24,7 +23,6 @@ impl ToTokens for NodeChild {
 ///
 /// If the child is a `Value::Lit`, this lit must be a string.
 /// Parsing will abort if the lit is not a string.
-#[derive(Debug)]
 pub enum Child {
     Node(NodeChild),
     Slot(kw::slot, Element),
@@ -65,7 +63,6 @@ impl Parse for Child {
 ///
 /// There are two ways of passing children, so no `ToTokens` implementation
 /// is provided. Use `to_child_methods` or `to_fragment` instead.
-#[derive(Debug)]
 pub struct Children(Vec<Child>);
 derive_multi_ast_for! {
     struct Children(Vec<Child>);

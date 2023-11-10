@@ -30,7 +30,6 @@ use crate::{ast::KebabIdent, error_ext::ResultExt};
 /// [`ParseStream`] will not be advanced. However, if a [`Tag::Component`] is
 /// found and there are generics, parsing will **abort** if parsing the generics
 /// fails.
-#[derive(Debug)]
 pub enum Tag {
     Html(syn::Ident),
     /// The generic will contain a leading `::`.

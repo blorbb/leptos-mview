@@ -28,7 +28,7 @@ use crate::{
 ///
 /// If an identifier and equal sign is found but no value after,
 /// the macro will abort.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct KvAttr {
     key: KebabIdent,
     value: Value,

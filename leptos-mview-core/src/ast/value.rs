@@ -23,7 +23,7 @@ use crate::parse;
 /// # Parsing
 /// This AST is considered 'basic', so if parsing fails, an [`Err`] will be
 /// returned and it will not advance the [`ParseStream`].
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum Value {
     Lit(syn::Lit),
     // take a raw `TokenStream` instead of ExprBlock/etc for better r-a support

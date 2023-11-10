@@ -11,7 +11,7 @@ use self::{directive::DirectiveAttr, kv::KvAttr, spread_attrs::SpreadAttr};
 use super::derive_multi_ast_for;
 use crate::error_ext::ResultExt;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum Attr {
     Kv(KvAttr),
     Directive(DirectiveAttr),
@@ -50,7 +50,7 @@ impl Parse for Attr {
 }
 
 /// A space-separated series of attributes.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Attrs(Vec<Attr>);
 
 derive_multi_ast_for! {

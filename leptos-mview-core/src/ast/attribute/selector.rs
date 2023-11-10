@@ -19,7 +19,7 @@ use crate::{ast::KebabIdent, error_ext::ResultExt, span};
 /// ```ignore
 /// div #important .more-classes #another-id .claaass
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum SelectorShorthand {
     Id {
         pound_symbol: Token![#],
@@ -72,7 +72,7 @@ impl Parse for SelectorShorthand {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct SelectorShorthands(Vec<SelectorShorthand>);
 
 derive_multi_ast_for! {

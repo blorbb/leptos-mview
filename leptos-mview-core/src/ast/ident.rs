@@ -38,7 +38,7 @@ use crate::span;
 /// The [`repr`](Self::repr) and [`spans`](Self::spans) fields are not empty. To
 /// construct a new [`KebabIdent`], use the [`From<proc_macro2::Ident>`]
 /// implementation or parse one with the [`Parse`] implementation.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct KebabIdent {
     repr: String,
     spans: Vec<Span>,

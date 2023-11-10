@@ -10,7 +10,7 @@ readme = "README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-syn = { version = "2", features = ["extra-traits", "full"] }
+syn = { version = "2", features = [] }
 quote = "1"
 proc-macro2 = "1"
 proc-macro-error = { version = "1", default-features = false }

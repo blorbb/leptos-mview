@@ -5,7 +5,7 @@ use syn::{
     Token,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct SpreadAttr {
     ident: syn::Ident,
     span: Span,

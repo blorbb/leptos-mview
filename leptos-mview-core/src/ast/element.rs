@@ -53,7 +53,6 @@ use crate::{
 /// Parsing will return an [`Err`] if parsing the [`Tag`] fails (i.e. the next
 /// token is not an ident; however, will abort if a component is found +
 /// generics fail). If anything else fails, parsing will **abort**.
-#[derive(Debug)]
 pub struct Element {
     tag: Tag,
     selectors: SelectorShorthands,
