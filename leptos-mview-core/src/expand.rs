@@ -384,7 +384,7 @@ fn component_children_tokens<'a>(
         .map_or_else(Span::call_site, |child| (*child).span());
 
     let children_fragment =
-        children_fragment_tokens(children, args.map_or(child_span, |tokens| tokens.span()));
+        children_fragment_tokens(children, args.map_or(child_span, Spanned::span));
 
     // children with arguments take a `Fn(T) -> impl IntoView`
     // normal children (`Children`, `ChildrenFn`, ...) take

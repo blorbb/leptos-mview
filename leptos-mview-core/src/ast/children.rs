@@ -29,8 +29,8 @@ impl ToTokens for NodeChild {
 impl NodeChild {
     pub fn span(&self) -> Span {
         match self {
-            NodeChild::Value(v) => v.span(),
-            NodeChild::Element(e) => e.tag().span(),
+            Self::Value(v) => v.span(),
+            Self::Element(e) => e.tag().span(),
         }
     }
 }

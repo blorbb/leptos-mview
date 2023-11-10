@@ -7,6 +7,7 @@ use syn::{
 
 use crate::{ast::KebabIdent, error_ext::ResultExt};
 
+#[allow(clippy::doc_markdown)]
 /// The name of the element, like `div`, `path`, `For`, `leptos-island`, etc.
 ///
 /// All tags except web-components are parsed as a [`syn::Ident`].
