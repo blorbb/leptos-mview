@@ -10,17 +10,14 @@ use proc_macro_error::abort;
 use quote::{quote, quote_spanned, ToTokens};
 use syn::spanned::Spanned;
 
-use crate::{
-    ast::{
-        attribute::{
-            directive::{self, DirectiveAttr},
-            kv::KvAttr,
-            selector::{SelectorShorthand, SelectorShorthands},
-            spread_attrs::SpreadAttr,
-        },
-        Attr, Element, KebabIdent, NodeChild, Tag, TagKind,
+use crate::ast::{
+    attribute::{
+        directive::{self, DirectiveAttr},
+        kv::KvAttr,
+        selector::{SelectorShorthand, SelectorShorthands},
+        spread_attrs::SpreadAttr,
     },
-    span,
+    Attr, Element, KebabIdent, NodeChild, Tag, TagKind,
 };
 
 /// Converts an xml (like html, svg or math) element to tokens.
@@ -225,15 +222,7 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
         return None;
     };
 
-    // selectors not supported on components (for now)
-    if !element.selectors().is_empty() {
-        let first_prefix = element.selectors()[0].prefix();
-        let last_ident = element.selectors().last().unwrap().ident();
-        abort!(
-            span::join(first_prefix.span(), last_ident.span()),
-            "class/id selector shorthand is not supported on components"
-        );
-    };
+    // collect a bunch of info about the element attributes //
 
     // attribute methods to add when building
     let mut attrs = TokenStream::new();
@@ -243,6 +232,23 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
     // in the form `let name = name.clone();`
     let mut clones = TokenStream::new();
     let mut event_listeners = TokenStream::new();
+    // components can take `.some-class` or `class:this={signal}` by passing it into
+    // the `class` prop
+    // .0 is the class string, .1 is the 'signal' (or just "move || true" if using
+    // selectors)
+    let mut dyn_classes: Vec<(syn::LitStr, TokenStream)> = Vec::new();
+    // ids are not reactive (no `id:this={signal}`), will just be from selectors
+    let mut selector_ids: Vec<syn::LitStr> = Vec::new();
+
+    for sel in element.selectors().iter() {
+        match sel {
+            SelectorShorthand::Id { id, .. } => selector_ids.push(id.to_lit_str()),
+            SelectorShorthand::Class { dot_symbol, class } => dyn_classes.push((
+                class.to_lit_str(),
+                quote_spanned!(dot_symbol.span=> move || true),
+            )),
+        };
+    }
 
     for a in element.attrs().iter() {
         match a {
@@ -258,11 +264,9 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
                 DirectiveAttr::Attr(a) => dyn_attrs.push(a),
                 DirectiveAttr::Clone(c) => clones.extend(component_clone_tokens(c)),
                 DirectiveAttr::Use(u) => use_directives.push(u),
-                DirectiveAttr::Class(c) => abort_not_supported(
-                    &element.tag().kind(),
-                    c.full_span(),
-                    directive::Class::dir_name(),
-                ),
+                DirectiveAttr::Class(c) => {
+                    dyn_classes.push((c.key().clone(), c.value().to_token_stream()));
+                }
                 DirectiveAttr::Style(s) => abort_not_supported(
                     &element.tag().kind(),
                     s.full_span(),
@@ -276,6 +280,8 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
             },
         }
     }
+
+    // convert the collected info into tokens //
 
     let children = element.children().map(|children| {
         let mut it = children.element_children().peekable();
@@ -292,6 +298,8 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
 
     let dyn_attrs = dyn_attrs_to_methods(&dyn_attrs);
     let use_directives = use_directives.into_iter().map(use_directive_to_method);
+    let dyn_classes = component_classes_to_method(dyn_classes);
+    let selector_ids = component_ids_to_method(selector_ids);
 
     // if attributes are missing, an error is made in `.build()` by the component
     // builder.
@@ -305,6 +313,8 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
             &#ident,
             #component_props_builder(&#ident #generics)
                 #attrs
+                #dyn_classes
+                #selector_ids
                 #children
                 #slot_children
                 #build
@@ -424,6 +434,54 @@ fn dyn_attrs_to_methods(dyn_attrs: &[&directive::Attr]) -> Option<TokenStream> {
             ]
         )
     })
+}
+
+fn component_classes_to_method(classes: Vec<(syn::LitStr, TokenStream)>) -> Option<TokenStream> {
+    if classes.is_empty() {
+        return None;
+    };
+
+    let first_span = classes[0].0.span();
+
+    // TODO: is there a way to accept both `bool` and `Fn() -> bool`?
+    // maybe `leptos::Class`?
+    let classes_array = classes.into_iter().map(|(class, signal)| {
+        // add extra bracket to make sure the closure is called
+        let signal_called = quote_spanned! { signal.span()=> (#signal)() };
+        quote_spanned! { signal_called.span()=>
+            #signal_called.then_some(#class)
+        }
+    });
+    let classes_array = quote_spanned!(first_span=> [#(#classes_array),*]);
+    let contents = quote_spanned! { first_span=>
+        #classes_array
+            .iter()
+            .flatten() // remove None
+            .cloned() // turn &&str to 7str
+            .collect::<Vec<&str>>()
+            .join(" ")
+    };
+
+    // span to the first item
+    Some(quote_spanned! { first_span=>
+        .class(move || #contents)
+    })
+}
+
+fn component_ids_to_method(ids: Vec<syn::LitStr>) -> Option<TokenStream> {
+    if ids.is_empty() {
+        return None;
+    };
+
+    let first_span = ids[0].span();
+    // ids are not reactive, so just give one big string
+    let ids = ids
+        .into_iter()
+        .map(|id| id.value())
+        .collect::<Vec<_>>()
+        .join(" ");
+
+    Some(quote_spanned!(first_span=> .id(#ids)))
 }
 
 /// Converts a `use:directive={value}` to a method.

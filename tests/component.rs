@@ -75,4 +75,53 @@ fn let_patterns() {
     }
 }
 
-fn main() {}
+#[component]
+fn TakesClass(#[prop(into)] class: TextProp) -> impl IntoView {
+    mview! {
+        div class=f["takes-class {}", class.get()] {
+            "I take more classes!"
+        }
+    }
+}
+
+#[component]
+fn TakesIds(id: &'static str) -> impl IntoView {
+    mview! {
+        div {id} class="i-take-ids";
+    }
+}
+
+#[test]
+fn selectors() {
+    let r = mview! {
+        TakesClass.test1.test-2;
+    };
+
+    check_str(r, r#"<div class="takes-class test1 test-2"#)
+}
+
+// untracked signal warning... should be fine.
+#[test]
+fn class_dir() {
+    let runtime = create_runtime();
+    let yes = RwSignal::new(true);
+    let no = move || !yes();
+    let r = mview! {
+        TakesClass.test1.test-2 class:not-this={no} class:this={yes} class:"complicated"=[yes()];
+    };
+    check_str(
+        r,
+        r#"div class="takes-class test1 test-2 this complicated""#,
+    );
+
+    runtime.dispose();
+}
+
+#[test]
+fn ids() {
+    let r = mview! {
+        TakesIds #id-1 #id-number-two;
+    };
+
+    check_str(r, r#"<div id="id-1 id-number-two" class="i-take-ids""#)
+}
