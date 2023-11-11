@@ -4,38 +4,26 @@ error: directive `style` is not supported on components
 6 |         Component style:color="white";
   |                   ^^^^^^^^^^^
 
-error: directive `class` is not supported on components
+error: directive `prop` is not supported on components
   --> tests/ui/errors/unsupported_attrs.rs:12:19
    |
-12 |         Component class:red={true};
-   |                   ^^^^^^^^^
-
-error: directive `prop` is not supported on components
-  --> tests/ui/errors/unsupported_attrs.rs:18:19
-   |
-18 |         Component prop:value="1";
+12 |         Component prop:value="1";
    |                   ^^^^^^^^^^
 
 error: spread attributes not supported on components
-  --> tests/ui/errors/unsupported_attrs.rs:30:19
+  --> tests/ui/errors/unsupported_attrs.rs:24:19
    |
-30 |         Component {..attrs};
+24 |         Component {..attrs};
    |                   ^^^^^^^^^
 
 error: directive `attr` is not supported on html elements
-  --> tests/ui/errors/unsupported_attrs.rs:36:15
+  --> tests/ui/errors/unsupported_attrs.rs:30:15
    |
-36 |         input attr:class="no" type="text";
+30 |         input attr:class="no" type="text";
    |               ^^^^^^^^^^
 
 error: directive `attr` is not supported on html elements
-  --> tests/ui/errors/unsupported_attrs.rs:44:18
+  --> tests/ui/errors/unsupported_attrs.rs:38:18
    |
-44 |             span clone:notcopy {
+38 |             span clone:notcopy {
    |                  ^^^^^^^^^^^^^
-
-error: class/id selector shorthand is not supported on components
-  --> tests/ui/errors/unsupported_attrs.rs:53:18
-   |
-53 |         Component.not-working #some-id;
-   |                  ^^^^^^^^^^^^^^^^^^^^^
