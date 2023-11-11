@@ -443,29 +443,44 @@ fn component_classes_to_method(classes: Vec<(syn::LitStr, TokenStream)>) -> Opti
 
     let first_span = classes[0].0.span();
 
-    // TODO: is there a way to accept both `bool` and `Fn() -> bool`?
-    // maybe `leptos::Class`?
-    let classes_array = classes.into_iter().map(|(class, signal)| {
-        // add extra bracket to make sure the closure is called
-        let signal_called = quote_spanned! { signal.span()=> (#signal)() };
-        quote_spanned! { signal_called.span()=>
-            #signal_called.then_some(#class)
-        }
-    });
-    let classes_array = quote_spanned!(first_span=> [#(#classes_array),*]);
-    let contents = quote_spanned! { first_span=>
-        #classes_array
-            .iter()
-            .flatten() // remove None
-            .cloned() // turn &&str to 7str
-            .collect::<Vec<&str>>()
-            .join(" ")
-    };
+    // if there are no reactive classes, just create the string now
+    if classes
+        .iter()
+        .all(|(_, signal)| signal.to_string().ends_with("true"))
+    {
+        let string = classes
+            .into_iter()
+            .map(|(class, _)| class.value())
+            .collect::<Vec<_>>()
+            .join(" ");
+        Some(quote_spanned!(first_span=> .class(#string)))
+    } else {
+        // there are reactive classes: need to construct it at runtime
 
-    // span to the first item
-    Some(quote_spanned! { first_span=>
-        .class(move || #contents)
-    })
+        // TODO: is there a way to accept both `bool` and `Fn() -> bool`?
+        // maybe `leptos::Class`?
+        let classes_array = classes.into_iter().map(|(class, signal)| {
+            // add extra bracket to make sure the closure is called
+            let signal_called = quote_spanned! { signal.span()=> (#signal)() };
+            quote_spanned! { signal_called.span()=>
+                #signal_called.then_some(#class)
+            }
+        });
+        let classes_array = quote_spanned!(first_span=> [#(#classes_array),*]);
+        let contents = quote_spanned! { first_span=>
+            #classes_array
+                .iter()
+                .flatten() // remove None
+                .cloned() // turn &&str to 7str
+                .collect::<Vec<&str>>()
+                .join(" ")
+        };
+
+        // span to the first item
+        Some(quote_spanned! { first_span=>
+            .class(move || #contents)
+        })
+    }
 }
 
 fn component_ids_to_method(ids: Vec<syn::LitStr>) -> Option<TokenStream> {
