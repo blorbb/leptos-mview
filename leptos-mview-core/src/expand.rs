@@ -444,9 +444,10 @@ fn component_classes_to_method(classes: Vec<(syn::LitStr, TokenStream)>) -> Opti
     let first_span = classes[0].0.span();
 
     // if there are no reactive classes, just create the string now
+    // add `||` to reject `class:thing={true}`
     if classes
         .iter()
-        .all(|(_, signal)| signal.to_string().ends_with("true"))
+        .all(|(_, signal)| signal.to_string().ends_with("|| true"))
     {
         let string = classes
             .into_iter()
@@ -459,11 +460,14 @@ fn component_classes_to_method(classes: Vec<(syn::LitStr, TokenStream)>) -> Opti
 
         // TODO: is there a way to accept both `bool` and `Fn() -> bool`?
         // maybe `leptos::Class`?
+
         let classes_array = classes.into_iter().map(|(class, signal)| {
             // add extra bracket to make sure the closure is called
             let signal_called = quote_spanned! { signal.span()=> (#signal)() };
+            // use fully qualified path so that error says 'incorrect type' instead of
+            // 'method `then_some` not found'
             quote_spanned! { signal_called.span()=>
-                #signal_called.then_some(#class)
+                ::std::primitive::bool::then_some(#signal_called, #class)
             }
         });
         let classes_array = quote_spanned!(first_span=> [#(#classes_array),*]);
