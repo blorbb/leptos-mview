@@ -475,7 +475,7 @@ fn component_classes_to_method(classes: Vec<(syn::LitStr, TokenStream)>) -> Opti
             #classes_array
                 .iter()
                 .flatten() // remove None
-                .cloned() // turn &&str to 7str
+                .cloned() // turn &&str to &str
                 .collect::<Vec<&str>>()
                 .join(" ")
         };
