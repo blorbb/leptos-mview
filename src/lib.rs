@@ -180,6 +180,8 @@ mview! {
 
 [Slots](https://docs.rs/leptos/latest/leptos/attr.slot.html) ([another example](https://github.com/leptos-rs/leptos/blob/main/examples/slots/src/lib.rs)) are supported by prefixing the struct with `slot:` inside the parent's children.
 
+The name of the parameter in the component function must be the same as the slot's name, in snake case.
+
 Using the slots defined by the [`SlotIf` example linked](https://github.com/leptos-rs/leptos/blob/main/examples/slots/src/lib.rs):
 ```
 use leptos::*;
@@ -392,6 +394,62 @@ mview! {
 }
 # ;
 ```
+
+### Special Attributes
+
+There are a few special attributes you can put on your component to emulate some features only available on HTML elements.
+
+If a component has a `class` attribute, the classes using the selector syntax `.some-class` and dynamic classes `class:thing={signal}` can be passed in!
+
+```
+# use leptos::*; use leptos_mview::mview;
+#[component]
+// the `class` parameter should have these attributes and type to work properly
+fn TakesClasses(#[prop(into, default="".into())] class: TextProp) -> impl IntoView {
+    mview! {
+        // use the f[] value feature to have an existing class + any extras passed in
+        div class=f["my-component {}", class.get()] { "..." }
+    }
+}
+
+// <div class="my-component extra-class">
+mview! {
+    TakesClasses.extra-class;
+};
+```
+
+It is suggested to only pass in static classes (i.e. with selectors or just a plain `class="..."`), as using dynamic classes needs to construct a new string every time any of the signals change; dynamic classes are supported if you want them though.
+
+```ignore
+let signal = RwSignal::new(true);
+// <div class="my-component always-has-this special">
+mview! {
+    TakesClasses.always-has-this class:special={signal};
+}
+signal.set(false);
+// becomes <div class="my-component always-has-this">
+```
+
+There is one small difference from the `class:` syntax on HTML elements: the value  passed in must be an `Fn() -> bool`, it cannot just be a `bool`.
+
+This is also supported with an `id` attribute to forward `#my-id`, though not reactively.
+```
+# use leptos::*; use leptos_mview::mview;
+#[component]
+// the `id` parameter should have these attributes and type to work properly
+fn TakesIds(#[prop(optional)] id: &'static str) -> impl IntoView {
+    mview! {
+        div {id} { "..." }
+    }
+}
+
+// <div id="my-unique-id">
+mview! {
+    TakesIds #my-unique-id;
+}
+```
+
+This is also supported on slots by having a `class` and `id` field with the same attributes and types as the components above.
 
 ## Children
 
