@@ -316,16 +316,18 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
     let build = quote_spanned!(ident.span()=> .build());
 
     if IS_SLOT {
-        // `unreachable_code` warning is generated at .into
-        let into = quote_spanned!(ident.span()=> .into());
+        // `unreachable_code` warning is generated at Into
+        // Into is for turning a single slot into a vec![slot] if needed
+        let into = quote_spanned!(ident.span()=> ::std::convert::Into::into);
         Some(quote! {
-            #ident #generics::builder()
-                #attrs
-                #dyn_classes
-                #selector_ids
-                #children
-                #build
-                #into
+            #into(
+                #ident #generics::builder()
+                    #attrs
+                    #dyn_classes
+                    #selector_ids
+                    #children
+                    #build
+            )
         })
     } else {
         // `unreachable_code` warning is generated in both of these
@@ -429,8 +431,11 @@ fn component_children_tokens<'a>(
         // `args` includes the pipes
         quote_spanned!(args.span()=> move #args #children_fragment)
     } else {
+        // this span is required for slots that take `Callback<T, View>` but have been
+        // given a regular `ChildrenFn` instead.
+        let closure = quote_spanned!(child_span=> move || #children_fragment);
         quote! {
-            ::leptos::ToChildren::to_children(move || #children_fragment)
+            ::leptos::ToChildren::to_children(#closure)
         }
     };
 

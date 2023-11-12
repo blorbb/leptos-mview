@@ -150,7 +150,7 @@ error[E0283]: type annotations needed
 49 |         Await future=[async { 3 }] { "no args" }
    |         ^^^^^ cannot infer type of the type parameter `VF` declared on the function `Await`
    |
-   = note: multiple `impl`s satisfying `_: ToChildren<{closure@$DIR/tests/ui/errors/com_builder_spans.rs:48:9: 50:6}>` found in the `leptos` crate:
+   = note: multiple `impl`s satisfying `_: ToChildren<{closure@$DIR/tests/ui/errors/com_builder_spans.rs:49:38: 49:47}>` found in the `leptos` crate:
            - impl<F> ToChildren<F> for Box<(dyn FnMut() -> Fragment + 'static)>
              where <F as FnOnce<()>>::Output == Fragment, F: FnMut<()>, F: 'static;
            - impl<F> ToChildren<F> for Box<(dyn FnOnce() -> Fragment + 'static)>
