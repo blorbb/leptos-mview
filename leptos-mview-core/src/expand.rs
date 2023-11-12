@@ -251,7 +251,7 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
         Attr::Spread(spread) => {
             abort!(
                 spread.span(),
-                "spread attributes not supported on components"
+                "spread attributes not supported on components/slots"
             );
         }
         Attr::Directive(dir) => match dir {
