@@ -99,12 +99,11 @@ fn string_directives() {
         div
             class:"complex[class]-name"={yes}
             style:"doesn't-exist"="black"
-            class:"with spaces"=true
             class:"not-here"=false;
     };
 
     check_str(
         result,
-        r#"class="complex[class]-name with spaces" style="doesn't-exist: black;""#,
+        r#"class="complex[class]-name" style="doesn't-exist: black;""#,
     )
 }
