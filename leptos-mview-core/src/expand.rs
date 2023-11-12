@@ -256,28 +256,19 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
         }
         Attr::Directive(dir) => match dir {
             DirectiveAttr::On(o) => {
-                if IS_SLOT {
-                    abort!(o.full_span(), "`on:` not supported on slots");
-                } else {
-                    event_listeners.extend(component_event_listener_tokens(o));
-                }
+                IS_SLOT.then(|| abort!(o.full_span(), "`on:` not supported on slots"));
+                event_listeners.extend(component_event_listener_tokens(o));
             }
             // TODO: seems like attr: could be supported on slots, but #[prop(attrs)] isn't
             // supported. allow them if they are updated in the future.
             DirectiveAttr::Attr(a) => {
-                if IS_SLOT {
-                    abort!(a.full_span(), "`attr:` not supported on slots");
-                } else {
-                    dyn_attrs.push(a);
-                }
+                IS_SLOT.then(|| abort!(a.full_span(), "`attr:` not supported on slots"));
+                dyn_attrs.push(a);
             }
             DirectiveAttr::Clone(c) => clones.extend(component_clone_tokens(c)),
             DirectiveAttr::Use(u) => {
-                if IS_SLOT {
-                    abort!(u.full_span(), "`use:` not supported on slots");
-                } else {
-                    use_directives.push(u);
-                }
+                IS_SLOT.then(|| abort!(u.full_span(), "`use:` not supported on slots"));
+                use_directives.push(u);
             }
             DirectiveAttr::Class(c) => {
                 dyn_classes.push((c.key().clone(), c.value().to_token_stream()));
