@@ -331,13 +331,12 @@ mview! {
 }
 ```
 
-The `class` and `style` directives also support using string literals, for more complicated names or multiple classes at once.
+The `class` and `style` directives also support using string literals, for more complicated names. Make sure the string for `class:` doesn't have spaces, or it will panic!
 ```rust
 let yes = move || true;
 mview! {
     div class:"complex-[class]-name"={yes}
-        style:"doesn't-exist"="white"
-        class:"class-one class-two"={yes};
+        style:"doesn't-exist"="white";
 }
 ```
 
@@ -390,7 +389,7 @@ fn TakesIds(#[prop(optional)] id: &'static str) -> impl IntoView {
 // <div id="my-unique-id">
 mview! {
     TakesIds #my-unique-id;
-}
+};
 ```
 
 This is also supported on slots by having a `class` and `id` field with the same attributes and types as the components above.
@@ -413,6 +412,8 @@ mview! {
 Note that you will usually need to add a `*` before the data you are using. If you forget that, rust-analyser will tell you to dereference here: `*{monkeys}`. This is obviously invalid - put it inside the braces. (If anyone knows how to fix this, feel free to contribute!)
 
 Summary from the previous section on values in case you missed it: children can be literal strings (not bools or numbers!), blocks with Rust code inside (`{*monkeys}`), or the closure shorthand `[number() + 1]`.
+
+Children with closures are also supported on slots, add a field `children: Callback<T, View>` to use it (`T` is whatever type you want).
 
 ## Extra details
 
