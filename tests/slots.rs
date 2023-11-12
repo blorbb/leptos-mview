@@ -5,23 +5,23 @@ mod utils;
 
 // same example as the one given in the #[slot] proc macro documentation.
 
-#[slot]
-struct HelloSlot {
-    #[prop(optional)]
-    children: Option<Children>,
-}
-
-#[component]
-fn HelloComponent(hello_slot: HelloSlot) -> impl IntoView {
-    if let Some(children) = hello_slot.children {
-        (children)().into_view()
-    } else {
-        ().into_view()
-    }
-}
-
 #[test]
 fn test_example() {
+    #[slot]
+    struct HelloSlot {
+        #[prop(optional)]
+        children: Option<Children>,
+    }
+
+    #[component]
+    fn HelloComponent(hello_slot: HelloSlot) -> impl IntoView {
+        if let Some(children) = hello_slot.children {
+            (children)().into_view()
+        } else {
+            ().into_view()
+        }
+    }
+
     let r = mview! {
         HelloComponent {
             slot:HelloSlot {
@@ -236,4 +236,51 @@ fn clone_in_slot() {
             }
         }
     };
+}
+
+#[test]
+fn extra_slot_attrs() {
+    #[slot]
+    struct Tab {
+        #[prop(into, default="".into())]
+        class: TextProp,
+        #[prop(optional)]
+        id: &'static str,
+        // actual tab component would just have `Children`, this is just for
+        // testing the feature
+        #[prop(into)]
+        children: Callback<usize, View>,
+    }
+
+    #[component]
+    fn Tabs(tab: Vec<Tab>) -> impl IntoView {
+        tab.into_iter()
+            .enumerate()
+            .map(|(i, tab)| {
+                mview! {
+                    div class=f["com-tabs {}", tab.class.get()] id={tab.id} {
+                        {(tab.children)(i)}
+                    }
+                }
+            })
+            .collect_view()
+    }
+
+    let r = mview! {
+        Tabs {
+            slot:Tab.tab0.another-class #an-id #two-ids |i| { "tab number " {i} }
+            slot:Tab |i| { "1 == " {i} }
+        }
+    };
+
+    check_str(
+        r,
+        [
+            r#"<div class="com-tabs tab0 another-class" id="an-id two-ids""#,
+            "tab number 0",
+            r#"<div class="com-tabs " id "#, // should have no id (space after id, not =)
+            "1 == 1",
+        ]
+        .as_slice(),
+    );
 }
