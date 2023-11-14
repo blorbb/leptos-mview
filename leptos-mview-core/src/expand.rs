@@ -102,13 +102,18 @@ fn xml_selectors_tokens(selectors: &SelectorShorthands) -> TokenStream {
     let classes_method = if classes.is_empty() {
         None
     } else {
-        let method = syn::Ident::new("classes", classes[0].prefix().span());
-        let classes_str = classes
-            .iter()
-            .map(|class| class.ident().repr())
-            .collect::<Vec<_>>()
-            .join(" ");
-        Some(quote! { .#method(#classes_str) })
+        // make each segment of the ident span a variable to give it the variable color
+        let class_methods = classes.iter().map(|class| {
+            let method = quote_spanned!(class.prefix().span()=> class);
+            let dummy_spans = class.ident().spans().iter().map(|span| {
+                let ident = syn::Ident::new("_", span.clone());
+                quote! { let #ident = (); }
+            });
+            let class_name = class.ident().repr();
+            quote! { .#method({#(#dummy_spans)* #class_name}, true) }
+        });
+
+        Some(quote! { #(#class_methods)* })
     };
 
     let id_methods = ids.iter().map(|id| {

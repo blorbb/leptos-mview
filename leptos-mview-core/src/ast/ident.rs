@@ -60,6 +60,10 @@ impl KebabIdent {
         )
     }
 
+    pub fn spans(&self) -> &[Span] {
+        &self.spans
+    }
+
     /// Converts this ident to a `syn::LitStr` of the ident's repr with the
     /// appropriate span.
     pub fn to_lit_str(&self) -> syn::LitStr { syn::LitStr::new(self.repr(), self.span()) }
