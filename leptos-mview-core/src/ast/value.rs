@@ -89,7 +89,8 @@ impl ToTokens for Value {
                 if let Some(prefixes) = prefixes {
                     // only f[] is supported for now
                     if prefixes == "f" {
-                        quote_spanned!(brackets.span.join()=> move || ::std::format!(#tokens))
+                        let format = quote_spanned!(prefixes.span()=> format!);
+                        quote_spanned!(brackets.span.join()=> move || ::std::#format(#tokens))
                     } else {
                         abort!(
                             prefixes.span(),
