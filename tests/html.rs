@@ -107,3 +107,13 @@ fn string_directives() {
         r#"class="complex[class]-name" style="doesn't-exist: black;""#,
     )
 }
+
+#[test]
+fn mixed_class_creation() {
+    let class: TextProp = "some-class another-class".into();
+    let r = mview! {
+        div.always-here class=[class.get()];
+    };
+
+    check_str(r, r#"class="some-class another-class always-here""#);
+}

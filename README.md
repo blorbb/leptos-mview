@@ -173,6 +173,8 @@ mview! {
 }
 ```
 
+Classes/ids created with the selector syntax can be mixed with the attribute `class="..."` and directive `class:a-class={signal}` as well.
+
 ### Slots
 
 [Slots](https://docs.rs/leptos/latest/leptos/attr.slot.html) ([another example](https://github.com/leptos-rs/leptos/blob/main/examples/slots/src/lib.rs)) are supported by prefixing the struct with `slot:` inside the parent's children.
@@ -351,8 +353,8 @@ If a component has a `class` attribute, the classes using the selector syntax `.
 // the `class` parameter should have these attributes and type to work properly
 fn TakesClasses(#[prop(into, default="".into())] class: TextProp) -> impl IntoView {
     mview! {
-        // use the f[] value feature to have an existing class + any extras passed in
-        div class=f["my-component {}", class.get()] { "..." }
+        // "my-component" will always be present, extra classes passed in will also be added
+        div.my-component class=[class.get()] { "..." }
     }
 }
 
@@ -374,7 +376,7 @@ signal.set(false);
 // becomes <div class="my-component always-has-this">
 ```
 
-There is one small difference from the `class:` syntax on HTML elements: the value  passed in must be an `Fn() -> bool`, it cannot just be a `bool`.
+There is one small difference from the `class:` syntax on HTML elements: the value passed in must be an `Fn() -> bool`, it cannot just be a `bool`.
 
 This is also supported with an `id` attribute to forward `#my-id`, though not reactively.
 ```rust
