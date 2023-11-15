@@ -99,30 +99,19 @@ fn xml_selectors_tokens(selectors: &SelectorShorthands) -> TokenStream {
         .iter()
         .partition(|sel| matches!(sel, SelectorShorthand::Class { .. }));
 
-    let classes_method = if classes.is_empty() {
-        None
-    } else {
-        // make each segment of the ident span a variable to give it the variable color
-        let class_methods = classes.iter().map(|class| {
-            let method = quote_spanned!(class.prefix().span()=> class);
-            let dummy_spans = class.ident().spans().iter().map(|span| {
-                let ident = syn::Ident::new("_", span.clone());
-                quote! { let #ident = (); }
-            });
-            let class_name = class.ident().repr();
-            quote! { .#method({#(#dummy_spans)* #class_name}, true) }
-        });
-
-        Some(quote! { #(#class_methods)* })
-    };
-
-    let id_methods = ids.iter().map(|id| {
-        let method = proc_macro2::Ident::new("id", id.prefix().span());
-        let ident = id.ident();
-        quote!(.#method(#ident))
+    let class_methods = classes.iter().map(|class| {
+        let method = syn::Ident::new("class", class.prefix().span());
+        let class_name = class.ident().to_str_colored();
+        quote! { .#method(#class_name, true) }
     });
 
-    quote! { #classes_method #(#id_methods)* }
+    let id_methods = ids.iter().map(|id| {
+        let method = syn::Ident::new("id", id.prefix().span());
+        let id_name = id.ident().to_str_colored();
+        quote! { .#method(#id_name) }
+    });
+
+    quote! { #(#class_methods)* #(#id_methods)* }
 }
 
 fn xml_kv_attribute_tokens(attr: &KvAttr) -> TokenStream {
