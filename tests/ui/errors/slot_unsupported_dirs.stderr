@@ -1,0 +1,29 @@
+error: spread attributes not supported on components/slots
+  --> tests/ui/errors/slot_unsupported_dirs.rs:14:26
+   |
+14 |             slot:Nothing {..attrs};
+   |                          ^^^^^^^^^
+
+error: `on:` not supported on slots
+  --> tests/ui/errors/slot_unsupported_dirs.rs:20:26
+   |
+20 |             slot:Nothing on:click={|_| ()};
+   |                          ^^^^^^^^
+
+error: `attr:` not supported on slots
+  --> tests/ui/errors/slot_unsupported_dirs.rs:26:26
+   |
+26 |             slot:Nothing attr:something="something";
+   |                          ^^^^^^^^^^^^^^
+
+error: `use:` not supported on slots
+  --> tests/ui/errors/slot_unsupported_dirs.rs:33:26
+   |
+33 |             slot:Nothing use:a_directive;
+   |                          ^^^^^^^^^^^^^^^
+
+error: `prop:` not supported on components/slots
+  --> tests/ui/errors/slot_unsupported_dirs.rs:39:26
+   |
+39 |             slot:Nothing prop:value="1";
+   |                          ^^^^^^^^^^

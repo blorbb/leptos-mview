@@ -1,7 +1,7 @@
 use std::hash::Hash;
 
-use proc_macro2::Span;
-use quote::{quote_spanned, ToTokens};
+use proc_macro2::{Span, TokenStream};
+use quote::{quote, quote_spanned, ToTokens};
 use syn::{
     ext::IdentExt,
     parse::{Parse, ParseStream},
@@ -60,9 +60,32 @@ impl KebabIdent {
         )
     }
 
+    /// Returns an iterator of every span in this [`KebabIdent`].
+    ///
+    /// Spans usually need to be owned, so an iterator that produces owned spans
+    /// is returned.
+    pub fn spans(&self) -> impl ExactSizeIterator<Item = Span> + '_ { self.spans.iter().copied() }
+
     /// Converts this ident to a `syn::LitStr` of the ident's repr with the
     /// appropriate span.
     pub fn to_lit_str(&self) -> syn::LitStr { syn::LitStr::new(self.repr(), self.span()) }
+
+    /// Expands this ident to its string literal, along with dummy items to make
+    /// each segment the same color as a variable.
+    ///
+    /// **NOTE:** The string itself won't be spanned to this [`KebabIdent`].
+    /// Make sure that where this is used will always take a string and never
+    /// errors.
+    ///
+    /// The [`TokenStream`] returned is a block expression, so make sure that
+    /// blocks can be used in the context where this is expanded.
+    pub fn to_str_colored(&self) -> TokenStream {
+        let dummy_items = span::color_all(self.spans());
+        let string = self.repr();
+        quote! {
+            {#(#dummy_items)* #string}
+        }
+    }
 
     /// Converts this ident to a `syn::Ident` with the appropriate span, by
     /// replacing all `-`s with `_`.

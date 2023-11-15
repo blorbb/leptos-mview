@@ -7,12 +7,6 @@ fn style_on_component() {
     };
 }
 
-fn class_on_component() {
-    mview! {
-        Component class:red={true};
-    };
-}
-
 fn prop_on_component() {
     mview! {
         Component prop:value="1";
@@ -45,12 +39,6 @@ fn clone_on_element() {
                 {notcopy.clone()}
             }
         }
-    };
-}
-
-fn sel_shorthand_on_components() {
-    mview! {
-        Component.not-working #some-id;
     };
 }
 

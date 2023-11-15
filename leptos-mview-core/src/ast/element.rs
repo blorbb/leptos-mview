@@ -118,11 +118,9 @@ impl Parse for Element {
 
 impl ToTokens for Element {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        tokens.extend(
-            xml_to_tokens(self).unwrap_or_else(|| {
-                component_to_tokens(self).expect("element should be a component")
-            }),
-        );
+        tokens.extend(xml_to_tokens(self).unwrap_or_else(|| {
+            component_to_tokens::<false>(self).expect("element should be a component")
+        }));
     }
 }
 

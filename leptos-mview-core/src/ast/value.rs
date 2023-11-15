@@ -1,6 +1,10 @@
 use proc_macro2::{Span, TokenStream};
+use proc_macro_error::abort;
 use quote::{quote_spanned, ToTokens};
-use syn::parse::{Parse, ParseStream};
+use syn::{
+    ext::IdentExt,
+    parse::{Parse, ParseStream},
+};
 
 use crate::parse;
 
@@ -28,8 +32,15 @@ pub enum Value {
     Lit(syn::Lit),
     // take a raw `TokenStream` instead of ExprBlock/etc for better r-a support
     // as invalid expressions aren't completely rejected
-    Block(TokenStream, syn::token::Brace),
-    Bracket(TokenStream, syn::token::Bracket),
+    Block {
+        tokens: TokenStream,
+        braces: syn::token::Brace,
+    },
+    Bracket {
+        tokens: TokenStream,
+        brackets: syn::token::Bracket,
+        prefixes: Option<syn::Ident>,
+    },
 }
 
 impl Parse for Value {
@@ -37,11 +48,26 @@ impl Parse for Value {
         if input.peek(syn::token::Bracket) {
             let stream;
             let brackets = syn::bracketed!(stream in input);
-            let stream = stream.parse::<TokenStream>().unwrap();
-            Ok(Self::Bracket(stream, brackets))
+            let tokens = stream.parse::<TokenStream>().unwrap();
+            Ok(Self::Bracket {
+                tokens,
+                brackets,
+                prefixes: None,
+            })
+        // with prefixes like `f["{}", something]`
+        } else if input.peek(syn::Ident::peek_any) && input.peek2(syn::token::Bracket) {
+            let prefixes = input.call(syn::Ident::parse_any).unwrap();
+            let stream;
+            let brackets = syn::bracketed!(stream in input);
+            let tokens = stream.parse::<TokenStream>().unwrap();
+            Ok(Self::Bracket {
+                tokens,
+                brackets,
+                prefixes: Some(prefixes),
+            })
         } else if input.peek(syn::token::Brace) {
-            let (stream, braces) = parse::parse_braced::<TokenStream>(input).unwrap();
-            Ok(Self::Block(stream, braces))
+            let (tokens, braces) = parse::parse_braced::<TokenStream>(input).unwrap();
+            Ok(Self::Block { tokens, braces })
         } else if let Ok(lit) = input.parse::<syn::Lit>() {
             Ok(Self::Lit(lit))
         } else {
@@ -54,8 +80,27 @@ impl ToTokens for Value {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         tokens.extend(match self {
             Self::Lit(lit) => lit.into_token_stream(),
-            Self::Block(stream, braces) => quote_spanned!(braces.span.join()=> {#stream}),
-            Self::Bracket(expr, brackets) => quote_spanned! {brackets.span.join()=> move || #expr},
+            Self::Block { tokens, braces } => quote_spanned!(braces.span.join()=> {#tokens}),
+            Self::Bracket {
+                tokens,
+                prefixes,
+                brackets,
+            } => {
+                if let Some(prefixes) = prefixes {
+                    // only f[] is supported for now
+                    if prefixes == "f" {
+                        let format = quote_spanned!(prefixes.span()=> format!);
+                        quote_spanned!(brackets.span.join()=> move || ::std::#format(#tokens))
+                    } else {
+                        abort!(
+                            prefixes.span(),
+                            "unsupported prefix: only `f` is supported."
+                        )
+                    }
+                } else {
+                    quote_spanned!(brackets.span.join()=> move || #tokens)
+                }
+            }
         });
     }
 }
@@ -67,8 +112,8 @@ impl Value {
     pub fn span(&self) -> Span {
         match self {
             Self::Lit(lit) => lit.span(),
-            Self::Block(_, braces) => braces.span.join(),
-            Self::Bracket(_, brackets) => brackets.span.join(),
+            Self::Block { braces, .. } => braces.span.join(),
+            Self::Bracket { brackets, .. } => brackets.span.join(),
         }
     }
 }
@@ -90,9 +135,9 @@ mod tests {
     impl Value {
         pub fn is_lit(&self) -> bool { matches!(self, Self::Lit(_)) }
 
-        pub fn is_block(&self) -> bool { matches!(self, Self::Block(..)) }
+        pub fn is_block(&self) -> bool { matches!(self, Self::Block { .. }) }
 
-        pub fn is_bracketed(&self) -> bool { matches!(self, Self::Bracket(..)) }
+        pub fn is_bracketed(&self) -> bool { matches!(self, Self::Bracket { .. }) }
     }
 
     impl ValueKind {

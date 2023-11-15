@@ -38,7 +38,7 @@ fn MyComponent() -> impl IntoView {
                 blocking
             |db_info| {
                 p { "Things found: " strong { {*db_info} } "!" }
-                p { "Is bad: " [red_input().to_string()] }
+                p { "Is bad: " f["{}", red_input()] }
             }
         }
     }
@@ -89,8 +89,9 @@ fn MyComponent() -> impl IntoView {
             |db_info| {
                 p { "Things found: " strong { {*db_info} } "!" }
                 // bracketed expansion works in children too!
-                //             {move || red_input().to_string()}
-                p { "Is bad: " [red_input().to_string()] }
+                // this one also has a special prefix to add `format!` into the expansion!
+                //    {move || format!("{}", red_input()}
+                p { "Is bad: " f["{}", red_input()] }
             }
         }
     }
@@ -175,9 +176,13 @@ mview! {
 # ;
 ```
 
+Classes/ids created with the selector syntax can be mixed with the attribute `class="..."` and directive `class:a-class={signal}` as well.
+
 ## Slots
 
 [Slots](https://docs.rs/leptos/latest/leptos/attr.slot.html) ([another example](https://github.com/leptos-rs/leptos/blob/main/examples/slots/src/lib.rs)) are supported by prefixing the struct with `slot:` inside the parent's children.
+
+The name of the parameter in the component function must be the same as the slot's name, in snake case.
 
 Using the slots defined by the [`SlotIf` example linked](https://github.com/leptos-rs/leptos/blob/main/examples/slots/src/lib.rs):
 ```
@@ -296,6 +301,9 @@ There are (currently) 3 main types of values you can pass in:
         # ;
         ```
 
+The bracketed values can also have some special prefixes for even more common shortcuts!
+- Currently, the only one is `f` - e.g. `f["{:.2}", stuff()]`. Adding an `f` will add `format!` into the closure. This is equivalent to `[format!("{:.2}", stuff())]` or `{move || format!("{:.2}", stuff())}`.
+
 ## Attributes
 
 ### Key-value attributes
@@ -377,17 +385,72 @@ mview! {
 # ;
 ```
 
-The `class` and `style` directives also support using string literals, for more complicated names or multiple classes at once.
+The `class` and `style` directives also support using string literals, for more complicated names. Make sure the string for `class:` doesn't have spaces, or it will panic!
 ```
 # use leptos::*; use leptos_mview::mview;
 let yes = move || true;
 mview! {
     div class:"complex-[class]-name"={yes}
-        style:"doesn't-exist"="white"
-        class:"class-one class-two"={yes};
+        style:"doesn't-exist"="white";
 }
 # ;
 ```
+
+### Special Attributes
+
+There are a few special attributes you can put on your component to emulate some features only available on HTML elements.
+
+If a component has a `class` attribute, the classes using the selector syntax `.some-class` and dynamic classes `class:thing={signal}` can be passed in!
+
+```
+# use leptos::*; use leptos_mview::mview;
+#[component]
+// the `class` parameter should have these attributes and type to work properly
+fn TakesClasses(#[prop(into, default="".into())] class: TextProp) -> impl IntoView {
+    mview! {
+        // "my-component" will always be present, extra classes passed in will also be added
+        div.my-component class=[class.get()] { "..." }
+    }
+}
+
+// <div class="my-component extra-class">
+mview! {
+    TakesClasses.extra-class;
+};
+```
+
+It is suggested to only pass in static classes (i.e. with selectors or just a plain `class="..."`), as using dynamic classes needs to construct a new string every time any of the signals change; dynamic classes are supported if you want them though.
+
+```ignore
+let signal = RwSignal::new(true);
+// <div class="my-component always-has-this special">
+mview! {
+    TakesClasses.always-has-this class:special={signal};
+}
+signal.set(false);
+// becomes <div class="my-component always-has-this">
+```
+
+There is one small difference from the `class:` syntax on HTML elements: the value passed in must be an `Fn() -> bool`, it cannot just be a `bool`.
+
+This is also supported with an `id` attribute to forward `#my-id`, though not reactively.
+```
+# use leptos::*; use leptos_mview::mview;
+#[component]
+// the `id` parameter should have these attributes and type to work properly
+fn TakesIds(#[prop(optional)] id: &'static str) -> impl IntoView {
+    mview! {
+        div {id} { "..." }
+    }
+}
+
+// <div id="my-unique-id">
+mview! {
+    TakesIds #my-unique-id;
+};
+```
+
+This is also supported on slots by having a `class` and `id` field with the same attributes and types as the components above.
 
 ## Children
 
@@ -409,6 +472,8 @@ mview! {
 Note that you will usually need to add a `*` before the data you are using. If you forget that, rust-analyser will tell you to dereference here: `*{monkeys}`. This is obviously invalid - put it inside the braces. (If anyone knows how to fix this, feel free to contribute!)
 
 Summary from the previous section on values in case you missed it: children can be literal strings (not bools or numbers!), blocks with Rust code inside (`{*monkeys}`), or the closure shorthand `[number() + 1]`.
+
+Children with closures are also supported on slots, add a field `children: Callback<T, View>` to use it (`T` is whatever type you want).
 
 # Extra details
 
@@ -468,7 +533,7 @@ Please feel free to make a PR/issue if you have feature ideas/bugs to report/fee
 
 ## Extra feature ideas
 
-- [ ] [Extending `class` attribute support](https://github.com/leptos-rs/leptos/issues/1492)
+- [x] [Extending `class` attribute support](https://github.com/leptos-rs/leptos/issues/1492)
 - [ ] [SSR optimisation](https://github.com/leptos-rs/leptos/issues/1492#issuecomment-1664675672) (potential `delegate` feature that transforms this macro into a `leptos::view!` macro call as well?)
 - [x] Support slots
  */

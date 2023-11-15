@@ -71,17 +71,6 @@ impl Tag {
             Self::WebComponent(ident) => ident.span(),
         }
     }
-
-    /// Returns the [`TagKind`] of this [`Tag`].
-    pub const fn kind(&self) -> TagKind {
-        match self {
-            Self::Html(_) => TagKind::Html,
-            Self::Component(..) => TagKind::Component,
-            Self::Svg(_) => TagKind::Svg,
-            Self::Math(_) => TagKind::Math,
-            Self::WebComponent(_) => TagKind::WebComponent,
-        }
-    }
 }
 
 impl Parse for Tag {

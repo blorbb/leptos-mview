@@ -10,17 +10,14 @@ use proc_macro_error::abort;
 use quote::{quote, quote_spanned, ToTokens};
 use syn::spanned::Spanned;
 
-use crate::{
-    ast::{
-        attribute::{
-            directive::{self, DirectiveAttr},
-            kv::KvAttr,
-            selector::{SelectorShorthand, SelectorShorthands},
-            spread_attrs::SpreadAttr,
-        },
-        Attr, Element, KebabIdent, NodeChild, Tag, TagKind,
+use crate::ast::{
+    attribute::{
+        directive::{self, DirectiveAttr},
+        kv::KvAttr,
+        selector::{SelectorShorthand, SelectorShorthands},
+        spread_attrs::SpreadAttr,
     },
-    span,
+    Attr, Element, KebabIdent, NodeChild, Tag,
 };
 
 /// Converts an xml (like html, svg or math) element to tokens.
@@ -76,7 +73,7 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
     for a in element.attrs().iter() {
         match a {
             Attr::Kv(attr) => attrs.extend(xml_kv_attribute_tokens(attr)),
-            Attr::Directive(dir) => directives.extend(xml_directive_tokens(element, dir)),
+            Attr::Directive(dir) => directives.extend(xml_directive_tokens(dir)),
             Attr::Spread(spread) => spread_attrs.extend(xml_spread_tokens(spread)),
         }
     }
@@ -102,25 +99,19 @@ fn xml_selectors_tokens(selectors: &SelectorShorthands) -> TokenStream {
         .iter()
         .partition(|sel| matches!(sel, SelectorShorthand::Class { .. }));
 
-    let classes_method = if classes.is_empty() {
-        None
-    } else {
-        let method = syn::Ident::new("classes", classes[0].prefix().span());
-        let classes_str = classes
-            .iter()
-            .map(|class| class.ident().repr())
-            .collect::<Vec<_>>()
-            .join(" ");
-        Some(quote! { .#method(#classes_str) })
-    };
-
-    let id_methods = ids.iter().map(|id| {
-        let method = proc_macro2::Ident::new("id", id.prefix().span());
-        let ident = id.ident();
-        quote!(.#method(#ident))
+    let class_methods = classes.iter().map(|class| {
+        let method = syn::Ident::new("class", class.prefix().span());
+        let class_name = class.ident().to_str_colored();
+        quote! { .#method(#class_name, true) }
     });
 
-    quote! { #classes_method #(#id_methods)* }
+    let id_methods = ids.iter().map(|id| {
+        let method = syn::Ident::new("id", id.prefix().span());
+        let id_name = id.ident().to_str_colored();
+        quote! { .#method(#id_name) }
+    });
+
+    quote! { #(#class_methods)* #(#id_methods)* }
 }
 
 fn xml_kv_attribute_tokens(attr: &KvAttr) -> TokenStream {
@@ -135,7 +126,7 @@ fn xml_kv_attribute_tokens(attr: &KvAttr) -> TokenStream {
     }
 }
 
-fn xml_directive_tokens(element: &Element, directive: &DirectiveAttr) -> TokenStream {
+fn xml_directive_tokens(directive: &DirectiveAttr) -> TokenStream {
     match directive {
         DirectiveAttr::Class(c) => {
             let (dir, name, value) = c.explode();
@@ -156,16 +147,8 @@ fn xml_directive_tokens(element: &Element, directive: &DirectiveAttr) -> TokenSt
             quote! { .#dir(::leptos::ev::#ev, #value) }
         }
         DirectiveAttr::Use(u) => use_directive_to_method(u),
-        DirectiveAttr::Attr(a) => abort_not_supported(
-            &element.tag().kind(),
-            a.full_span(),
-            directive::Attr::dir_name(),
-        ),
-        DirectiveAttr::Clone(c) => abort_not_supported(
-            &element.tag().kind(),
-            c.full_span(),
-            directive::Attr::dir_name(),
-        ),
+        DirectiveAttr::Attr(a) => abort!(a.full_span(), "`attr:` not supported on elements"),
+        DirectiveAttr::Clone(c) => abort!(c.full_span(), "`clone:` not supported on elements"),
     }
 }
 
@@ -197,6 +180,9 @@ pub fn child_methods_tokens<'a>(children: impl Iterator<Item = &'a NodeChild>) -
 ///
 /// Returns `None` if `self.tag` is not a `Component`.
 ///
+/// The const generic switches between parsing a slot and regular leptos
+/// component, as the two implementations are very similar.
+///
 /// Example builder expansion of a component:
 /// ```ignore
 /// leptos::component_view(
@@ -220,20 +206,13 @@ pub fn child_methods_tokens<'a>(children: impl Iterator<Item = &'a NodeChild>) -
 /// #[component]
 /// pub fn Com(num: u32, text: String, children: Children) -> impl IntoView { ... }
 /// ```
-pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
+#[allow(clippy::too_many_lines)]
+pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<TokenStream> {
     let Tag::Component(ident, generics) = element.tag() else {
         return None;
     };
 
-    // selectors not supported on components (for now)
-    if !element.selectors().is_empty() {
-        let first_prefix = element.selectors()[0].prefix();
-        let last_ident = element.selectors().last().unwrap().ident();
-        abort!(
-            span::join(first_prefix.span(), last_ident.span()),
-            "class/id selector shorthand is not supported on components"
-        );
-    };
+    // collect a bunch of info about the element attributes //
 
     // attribute methods to add when building
     let mut attrs = TokenStream::new();
@@ -243,39 +222,61 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
     // in the form `let name = name.clone();`
     let mut clones = TokenStream::new();
     let mut event_listeners = TokenStream::new();
+    // components can take `.some-class` or `class:this={signal}` by passing it into
+    // the `class` prop
+    // .0 is the class string, .1 is the 'signal' (or just "move || true" if using
+    // selectors)
+    let mut dyn_classes: Vec<(syn::LitStr, TokenStream)> = Vec::new();
+    // ids are not reactive (no `id:this={signal}`), will just be from selectors
+    let mut selector_ids: Vec<syn::LitStr> = Vec::new();
 
-    for a in element.attrs().iter() {
-        match a {
-            Attr::Kv(attr) => attrs.extend(component_kv_attribute_tokens(attr)),
-            Attr::Spread(spread) => {
-                abort!(
-                    spread.span(),
-                    "spread attributes not supported on components"
-                );
-            }
-            Attr::Directive(dir) => match dir {
-                DirectiveAttr::On(o) => event_listeners.extend(component_event_listener_tokens(o)),
-                DirectiveAttr::Attr(a) => dyn_attrs.push(a),
-                DirectiveAttr::Clone(c) => clones.extend(component_clone_tokens(c)),
-                DirectiveAttr::Use(u) => use_directives.push(u),
-                DirectiveAttr::Class(c) => abort_not_supported(
-                    &element.tag().kind(),
-                    c.full_span(),
-                    directive::Class::dir_name(),
-                ),
-                DirectiveAttr::Style(s) => abort_not_supported(
-                    &element.tag().kind(),
-                    s.full_span(),
-                    directive::Style::dir_name(),
-                ),
-                DirectiveAttr::Prop(p) => abort_not_supported(
-                    &element.tag().kind(),
-                    p.full_span(),
-                    directive::Prop::dir_name(),
-                ),
-            },
-        }
+    for sel in element.selectors().iter() {
+        match sel {
+            SelectorShorthand::Id { id, .. } => selector_ids.push(id.to_lit_str()),
+            SelectorShorthand::Class { dot_symbol, class } => dyn_classes.push((
+                class.to_lit_str(),
+                quote_spanned!(dot_symbol.span=> move || true),
+            )),
+        };
     }
+
+    element.attrs().iter().for_each(|a| match a {
+        Attr::Kv(attr) => attrs.extend(component_kv_attribute_tokens(attr)),
+        Attr::Spread(spread) => {
+            abort!(
+                spread.span(),
+                "spread attributes not supported on components/slots"
+            );
+        }
+        Attr::Directive(dir) => match dir {
+            DirectiveAttr::On(o) => {
+                IS_SLOT.then(|| abort!(o.full_span(), "`on:` not supported on slots"));
+                event_listeners.extend(component_event_listener_tokens(o));
+            }
+            // TODO: seems like attr: could be supported on slots, but #[prop(attrs)] isn't
+            // supported. allow them if they are updated in the future.
+            DirectiveAttr::Attr(a) => {
+                IS_SLOT.then(|| abort!(a.full_span(), "`attr:` not supported on slots"));
+                dyn_attrs.push(a);
+            }
+            DirectiveAttr::Clone(c) => clones.extend(component_clone_tokens(c)),
+            DirectiveAttr::Use(u) => {
+                IS_SLOT.then(|| abort!(u.full_span(), "`use:` not supported on slots"));
+                use_directives.push(u);
+            }
+            DirectiveAttr::Class(c) => {
+                dyn_classes.push((c.key().clone(), c.value().to_token_stream()));
+            }
+            DirectiveAttr::Style(s) => {
+                abort!(s.full_span(), "`style:` not supported on components/slots");
+            }
+            DirectiveAttr::Prop(p) => {
+                abort!(p.full_span(), "`prop:` not supported on components/slots");
+            }
+        },
+    });
+
+    // convert the collected info into tokens //
 
     let children = element.children().map(|children| {
         let mut it = children.element_children().peekable();
@@ -292,28 +293,50 @@ pub fn component_to_tokens(element: &Element) -> Option<TokenStream> {
 
     let dyn_attrs = dyn_attrs_to_methods(&dyn_attrs);
     let use_directives = use_directives.into_iter().map(use_directive_to_method);
+    let dyn_classes = component_classes_to_method(dyn_classes);
+    let selector_ids = component_ids_to_method(selector_ids);
 
     // if attributes are missing, an error is made in `.build()` by the component
     // builder.
     let build = quote_spanned!(ident.span()=> .build());
-    // `unreachable_code` warning is generated in both of these
-    let component_view = quote_spanned!(ident.span()=> ::leptos::component_view);
-    let component_props_builder = quote_spanned!(ident.span()=> ::leptos::component_props_builder);
 
-    Some(quote! {
-        #component_view(
-            &#ident,
-            #component_props_builder(&#ident #generics)
-                #attrs
-                #children
-                #slot_children
-                #build
-                #dyn_attrs
+    if IS_SLOT {
+        // `unreachable_code` warning is generated at Into
+        // Into is for turning a single slot into a vec![slot] if needed
+        let into = quote_spanned!(ident.span()=> ::std::convert::Into::into);
+        Some(quote! {
+            #into(
+                #ident #generics::builder()
+                    #attrs
+                    #dyn_classes
+                    #selector_ids
+                    #children
+                    #build
             )
-        .into_view()
-        #(#use_directives)*
-        #event_listeners
-    })
+        })
+    } else {
+        // `unreachable_code` warning is generated in both of these
+        let component_view = quote_spanned!(ident.span()=> ::leptos::component_view);
+        let component_props_builder =
+            quote_spanned!(ident.span()=> ::leptos::component_props_builder);
+
+        Some(quote! {
+            #component_view(
+                &#ident,
+                #component_props_builder(&#ident #generics)
+                    #attrs
+                    #dyn_classes
+                    #selector_ids
+                    #children
+                    #slot_children
+                    #build
+                    #dyn_attrs
+                )
+            .into_view()
+            #(#use_directives)*
+            #event_listeners
+        })
+    }
 }
 
 fn component_kv_attribute_tokens(attr: &KvAttr) -> TokenStream {
@@ -393,8 +416,11 @@ fn component_children_tokens<'a>(
         // `args` includes the pipes
         quote_spanned!(args.span()=> move #args #children_fragment)
     } else {
+        // this span is required for slots that take `Callback<T, View>` but have been
+        // given a regular `ChildrenFn` instead.
+        let closure = quote_spanned!(child_span=> move || #children_fragment);
         quote! {
-            ::leptos::ToChildren::to_children(move || #children_fragment)
+            ::leptos::ToChildren::to_children(#closure)
         }
     };
 
@@ -424,6 +450,99 @@ fn dyn_attrs_to_methods(dyn_attrs: &[&directive::Attr]) -> Option<TokenStream> {
             ]
         )
     })
+}
+
+// special attributes on components that add to a special set of props //
+
+/// Adds potentially reactive classes to the `class` attribute of a component.
+///
+/// If no classes are reactive, a static string will be passed in. Otherwise,
+/// the string is constructed and updated at runtime, which may have performance
+/// drawbacks as the entire prop is updated if one signal changes.
+///
+/// The intended use is as follows:
+/// ```ignore
+/// // TODO: use prop(optional) when Default added to TextProp
+/// #[component]
+/// fn TakesClasses(#[prop(into, default="".into())] class: TextProp) -> impl IntoView {}
+///
+/// let signal = RwSignal::new(true);
+///
+/// mview! {
+///     TakesClasses.class-1.another-class class:reactive={signal};
+/// }
+/// ```
+///
+/// For now, what is passed in to `{signal}` must be something that impls `Fn()
+/// -> bool`, it cannot just be a `bool`.
+fn component_classes_to_method(classes: Vec<(syn::LitStr, TokenStream)>) -> Option<TokenStream> {
+    if classes.is_empty() {
+        return None;
+    };
+
+    let first_span = classes[0].0.span();
+
+    // if there are no reactive classes, just create the string now
+    // add `||` to reject `class:thing={true}`
+    if classes
+        .iter()
+        .all(|(_, signal)| signal.to_string().ends_with("|| true"))
+    {
+        let string = classes
+            .into_iter()
+            .map(|(class, _)| class.value())
+            .collect::<Vec<_>>()
+            .join(" ");
+        Some(quote_spanned!(first_span=> .class(#string)))
+    } else {
+        // there are reactive classes: need to construct it at runtime
+
+        // TODO: is there a way to accept both `bool` and `Fn() -> bool`?
+        // maybe `leptos::Class`?
+
+        let classes_array = classes.into_iter().map(|(class, signal)| {
+            // add extra bracket to make sure the closure is called
+            let signal_called = quote_spanned! { signal.span()=> (#signal)() };
+            // use fully qualified path so that error says 'incorrect type' instead of
+            // 'method `then_some` not found'
+            quote_spanned! { signal_called.span()=>
+                ::std::primitive::bool::then_some(#signal_called, #class)
+            }
+        });
+        let classes_array = quote_spanned!(first_span=> [#(#classes_array),*]);
+        let contents = quote_spanned! { first_span=>
+            #classes_array
+                .iter()
+                .flatten() // remove None
+                .cloned() // turn &&str to &str
+                .collect::<Vec<&str>>()
+                .join(" ")
+        };
+
+        // span to the first item
+        Some(quote_spanned! { first_span=>
+            .class(move || #contents)
+        })
+    }
+}
+
+/// Adds a list of strings to the `id` prop of a component.
+///
+/// IDs should not be changed reactively, so it is not supported.
+fn component_ids_to_method(ids: Vec<syn::LitStr>) -> Option<TokenStream> {
+    if ids.is_empty() {
+        return None;
+    };
+
+    let first_span = ids[0].span();
+    // ids are not reactive, so just give one big string
+    let ids = ids
+        .into_iter()
+        .map(|id| id.value())
+        .collect::<Vec<_>>()
+        .join(" ");
+
+    Some(quote_spanned!(first_span=> .id(#ids)))
 }
 
 /// Converts a `use:directive={value}` to a method.
@@ -476,91 +595,10 @@ pub fn children_fragment_tokens<'a>(
     }
 }
 
-/// Aborts with an appropriate message when a directive is not supported.
-fn abort_not_supported(tag: &TagKind, span: Span, dir_name: &str) -> ! {
-    let suffix = match tag {
-        TagKind::Html => "html elements",
-        TagKind::Component => "components",
-        TagKind::Svg => "svgs",
-        TagKind::Math => "math elements",
-        TagKind::WebComponent => "web components",
-    };
-    abort!(
-        span,
-        "directive {} is not supported on {}",
-        dir_name,
-        suffix
-    )
-}
-
-/// Expands a slot.
-///
-/// Roughly, `slot:Tab label="aaa" { "child" }` expands to:
-///
-/// ```ignore
-/// Tab::builder()
-///     .label("aaa")
-///     // same as component_children_tokens
-///     .children(ToChildren::to_children(move || {
-///         Fragment::lazy(|| {
-///            vec![{ "child" }.into_view()]
-///         })
-///      })
-///     .build()
-///     .into()
-/// ```
-///
-/// # Aborts
-/// Aborts if `element` is not a component.
-pub fn slot_to_tokens(element: &Element) -> TokenStream {
-    if !element.selectors().is_empty() {
-        abort!(
-            element.selectors()[0].span(),
-            "selectors are not supported on slots"
-        );
-    };
-
-    let Tag::Component(ident, generics) = element.tag() else {
-        abort!(element.tag().span(), "slots must be components")
-    };
-    let mut attrs = TokenStream::new();
-    let mut clones = TokenStream::new();
-
-    for a in element.attrs().iter() {
-        match a {
-            Attr::Kv(kv) => attrs.extend(component_kv_attribute_tokens(kv)),
-            Attr::Directive(d) => match d {
-                DirectiveAttr::Clone(c) => {
-                    clones.extend(component_clone_tokens(c));
-                }
-                _ => abort!(
-                    d.span(),
-                    "only `clone:` directives are not supported on slots"
-                ),
-            },
-            Attr::Spread(s) => abort!(s.span(), "spread attrs are not supported on slots"),
-        };
-    }
-
-    // TODO: how does slots in slots work
-    let children = element.children().map(|children| {
-        component_children_tokens(
-            children.element_children(),
-            element.children_args(),
-            &clones,
-        )
-    });
-
-    quote! {
-        #ident #generics::builder()
-            #attrs
-            #children
-            .build()
-            .into()
-    }
-}
-
 #[allow(clippy::doc_markdown)]
+/// Converts a list of slots to a bunch of methods to be called on the parent
+/// component.
+///
 /// The iterator must have only elements that are slots.
 ///
 /// Slots are expanded from:
@@ -590,7 +628,8 @@ fn slots_to_tokens<'a>(children: impl Iterator<Item = &'a Element>) -> TokenStre
     for el in children {
         let component_name = el.tag().ident();
 
-        let slot_component = slot_to_tokens(el);
+        let slot_component =
+            component_to_tokens::<true>(el).expect("all children should be slot components");
         slot_children
             .entry(component_name)
             .or_default()
