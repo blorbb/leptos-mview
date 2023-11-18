@@ -93,6 +93,8 @@ macro_rules! derive_multi_ast_for {
 
                 if !input.is_empty() {
                     ::proc_macro_error::emit_error!(input.span(), $err);
+                    // skip the rest of the tokens
+                    input.parse::<::proc_macro2::TokenStream>().unwrap();
                 };
                 Ok(Self(vec))
             }
