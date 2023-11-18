@@ -92,7 +92,7 @@ macro_rules! derive_multi_ast_for {
                 }
 
                 if !input.is_empty() {
-                    ::proc_macro_error::abort!(input.span(), $err);
+                    ::proc_macro_error::emit_error!(input.span(), $err);
                 };
                 Ok(Self(vec))
             }

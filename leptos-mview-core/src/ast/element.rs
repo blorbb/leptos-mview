@@ -1,5 +1,5 @@
 use proc_macro2::{TokenStream, TokenTree};
-use proc_macro_error::{abort, emit_error, emit_warning};
+use proc_macro_error::{abort, emit_error};
 use quote::{ToTokens, TokenStreamExt};
 use syn::{
     parse::{Parse, ParseStream},
@@ -81,11 +81,9 @@ impl Parse for Element {
                 selectors.last().map_or(tag.span(), SelectorShorthand::span),
                 Attr::span,
             );
-            emit_warning!(
+            emit_error!(
                 span::join(tag.span(), last_span), "unterminated element";
-                note = "elements without a `;` or children block is only \
-                allowed for better rust-analyzer support. do not leave \
-                elements unterminated to avoid ambiguities"
+                help = "add a `;` to terminate the element with no children"
             );
             Ok(Self::new(tag, selectors, attrs, None, None))
         } else if input.peek(syn::token::Brace) {
@@ -93,25 +91,28 @@ impl Parse for Element {
             let (children, _) = parse::parse_braced::<Children>(input).unwrap_or_abort();
             Ok(Self::new(tag, selectors, attrs, None, Some(children)))
         } else if input.peek(Token![|]) {
-            // maybe extra args for the children
+            // extra args for the children
             let args = parse_closure_args(input).unwrap_or_abort();
-            // must have children block after
-            if !input.peek(syn::token::Brace) {
-                abort!(
+            let children = if !input.peek(syn::token::Brace) {
+                // continue trying to parse as if there are no children
+                emit_error!(
                     input.span(),
                     "expected children block after closure arguments"
-                )
-            }
-            let (children, _) = parse::parse_braced::<Children>(input).unwrap_or_abort();
-            Ok(Self::new(tag, selectors, attrs, Some(args), Some(children)))
+                );
+                None
+            } else {
+                Some(parse::parse_braced::<Children>(input).unwrap_or_abort().0)
+            };
+            Ok(Self::new(tag, selectors, attrs, Some(args), children))
         } else {
             // add error at the unknown token
+            // continue trying to parse as if there are no children
             emit_error!(input.span(), "unknown attribute");
-            abort!(
+            emit_error!(
                 span::join(tag.span(), input.span()), "child elements not found";
-                note = "if you don't want any child elements, end the element with \
-                a semi-colon `;` or empty braces `{}`."
-            )
+                help = "add a `;` at the end to terminate the element"
+            );
+            Ok(Self::new(tag, selectors, attrs, None, None))
         }
     }
 }
