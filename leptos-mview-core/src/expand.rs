@@ -6,7 +6,7 @@
 use std::collections::HashMap;
 
 use proc_macro2::{Span, TokenStream};
-use proc_macro_error::abort;
+use proc_macro_error::emit_error;
 use quote::{quote, quote_spanned, ToTokens};
 use syn::spanned::Spanned;
 
@@ -147,8 +147,14 @@ fn xml_directive_tokens(directive: &DirectiveAttr) -> TokenStream {
             quote! { .#dir(::leptos::ev::#ev, #value) }
         }
         DirectiveAttr::Use(u) => use_directive_to_method(u),
-        DirectiveAttr::Attr(a) => abort!(a.full_span(), "`attr:` not supported on elements"),
-        DirectiveAttr::Clone(c) => abort!(c.full_span(), "`clone:` not supported on elements"),
+        DirectiveAttr::Attr(a) => {
+            emit_error!(a.full_span(), "`attr:` not supported on elements");
+            quote! {}
+        }
+        DirectiveAttr::Clone(c) => {
+            emit_error!(c.full_span(), "`clone:` not supported on elements");
+            quote! {}
+        }
     }
 }
 
@@ -243,35 +249,44 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
     element.attrs().iter().for_each(|a| match a {
         Attr::Kv(attr) => attrs.extend(component_kv_attribute_tokens(attr)),
         Attr::Spread(spread) => {
-            abort!(
+            emit_error!(
                 spread.span(),
                 "spread attributes not supported on components/slots"
             );
         }
         Attr::Directive(dir) => match dir {
             DirectiveAttr::On(o) => {
-                IS_SLOT.then(|| abort!(o.full_span(), "`on:` not supported on slots"));
-                event_listeners.extend(component_event_listener_tokens(o));
+                if IS_SLOT {
+                    emit_error!(o.full_span(), "`on:` not supported on slots");
+                } else {
+                    event_listeners.extend(component_event_listener_tokens(o));
+                }
             }
             // TODO: seems like attr: could be supported on slots, but #[prop(attrs)] isn't
             // supported. allow them if they are updated in the future.
             DirectiveAttr::Attr(a) => {
-                IS_SLOT.then(|| abort!(a.full_span(), "`attr:` not supported on slots"));
-                dyn_attrs.push(a);
+                if IS_SLOT {
+                    emit_error!(a.full_span(), "`attr:` not supported on slots");
+                } else {
+                    dyn_attrs.push(a);
+                }
             }
             DirectiveAttr::Clone(c) => clones.extend(component_clone_tokens(c)),
             DirectiveAttr::Use(u) => {
-                IS_SLOT.then(|| abort!(u.full_span(), "`use:` not supported on slots"));
-                use_directives.push(u);
+                if IS_SLOT {
+                    emit_error!(u.full_span(), "`use:` not supported on slots");
+                } else {
+                    use_directives.push(u);
+                }
             }
             DirectiveAttr::Class(c) => {
                 dyn_classes.push((c.key().clone(), c.value().to_token_stream()));
             }
             DirectiveAttr::Style(s) => {
-                abort!(s.full_span(), "`style:` not supported on components/slots");
+                emit_error!(s.full_span(), "`style:` not supported on components/slots");
             }
             DirectiveAttr::Prop(p) => {
-                abort!(p.full_span(), "`prop:` not supported on components/slots");
+                emit_error!(p.full_span(), "`prop:` not supported on components/slots");
             }
         },
     });
