@@ -1,6 +1,6 @@
 use proc_macro2::{Span, TokenStream};
-use proc_macro_error::abort;
-use quote::{quote_spanned, ToTokens};
+use proc_macro_error::emit_error;
+use quote::{quote, quote_spanned, ToTokens};
 use syn::{
     ext::IdentExt,
     parse::{Parse, ParseStream},
@@ -92,10 +92,11 @@ impl ToTokens for Value {
                         let format = quote_spanned!(prefixes.span()=> format!);
                         quote_spanned!(brackets.span.join()=> move || ::std::#format(#tokens))
                     } else {
-                        abort!(
+                        emit_error!(
                             prefixes.span(),
                             "unsupported prefix: only `f` is supported."
-                        )
+                        );
+                        quote! {}
                     }
                 } else {
                     quote_spanned!(brackets.span.join()=> move || #tokens)

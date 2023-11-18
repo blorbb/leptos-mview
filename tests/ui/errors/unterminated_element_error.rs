@@ -7,5 +7,4 @@ fn main() {
             input.input type="text"
         }
     };
-    compile_error!("test warnings");
 }

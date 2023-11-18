@@ -1,3 +1,4 @@
+use leptos::*;
 use leptos_mview::mview;
 
 fn main() {
