@@ -93,15 +93,15 @@ impl Parse for Element {
         } else if input.peek(Token![|]) {
             // extra args for the children
             let args = parse_closure_args(input).unwrap_or_abort();
-            let children = if !input.peek(syn::token::Brace) {
+            let children = if input.peek(syn::token::Brace) {
+                Some(parse::parse_braced::<Children>(input).unwrap_or_abort().0)
+            } else {
                 // continue trying to parse as if there are no children
                 emit_error!(
                     input.span(),
                     "expected children block after closure arguments"
                 );
                 None
-            } else {
-                Some(parse::parse_braced::<Children>(input).unwrap_or_abort().0)
             };
             Ok(Self::new(tag, selectors, attrs, Some(args), children))
         } else {
