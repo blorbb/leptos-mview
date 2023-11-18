@@ -11,4 +11,4 @@ error: child elements not found
 6 | |         "hi"
   | |____________^
   |
-  = note: if you don't want any child elements, end the element with a semi-colon `;` or empty braces `{}`.
+  = help: add a `;` at the end to terminate the element

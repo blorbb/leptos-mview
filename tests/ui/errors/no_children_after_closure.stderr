@@ -1,5 +1,41 @@
 error: expected children block after closure arguments
- --> tests/ui/errors/no_children_after_closure.rs:7:16
+ --> tests/ui/errors/no_children_after_closure.rs:8:16
   |
-7 |         |data| "no"
+8 |         |data| "no"
   |                ^^^^
+
+warning: use of deprecated method `leptos::AwaitPropsBuilder::<T, Fut, FF, VF, V, ((FF,), __blocking, __local, ())>::build`: Missing required field children
+ --> tests/ui/errors/no_children_after_closure.rs:6:9
+  |
+6 |         Await
+  |         ^^^^^
+  |
+  = note: `#[warn(deprecated)]` on by default
+
+error[E0061]: this method takes 1 argument but 0 arguments were supplied
+ --> tests/ui/errors/no_children_after_closure.rs:6:9
+  |
+6 |         Await
+  |         ^^^^^ an argument of type `AwaitPropsBuilder_Error_Missing_required_field_children` is missing
+  |
+note: method defined here
+ --> $CARGO/leptos-0.5.2/src/await_.rs
+  |
+  | #[component]
+  | ^^^^^^^^^^^^
+  = note: this error originates in the derive macro `::leptos::typed_builder_macro::TypedBuilder` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: provide the argument
+  |
+6 |         Await(/* AwaitPropsBuilder_Error_Missing_required_field_children */)
+  |              +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+warning: unreachable call
+ --> tests/ui/errors/no_children_after_closure.rs:6:9
+  |
+6 |         Await
+  |         ^^^^^
+  |         |
+  |         unreachable call
+  |         any code following this expression is unreachable
+  |
+  = note: `#[warn(unreachable_code)]` on by default
