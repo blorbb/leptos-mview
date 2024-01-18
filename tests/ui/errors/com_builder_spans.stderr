@@ -23,17 +23,6 @@ help: provide the argument
 10 |         For(/* ForPropsBuilder_Error_Missing_required_field_key */) each=[[1, 2, 3]] |i| { {i} }
    |            ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-warning: unreachable call
-  --> tests/ui/errors/com_builder_spans.rs:10:9
-   |
-10 |         For each=[[1, 2, 3]] |i| { {i} }
-   |         ^^^
-   |         |
-   |         unreachable call
-   |         any code following this expression is unreachable
-   |
-   = note: `#[warn(unreachable_code)]` on by default
-
 error[E0277]: expected a `Fn()` closure, found `str`
   --> tests/ui/errors/com_builder_spans.rs:17:14
    |

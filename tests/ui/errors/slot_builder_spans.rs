@@ -1,7 +1,8 @@
 //! Testing that there are no errors that cause the entire macro to error (i.e.
 //! call-site error).
-//! 
-//! This file is for testing on the slot itself, see `com_builder_spans` for testing on components.
+//!
+//! This file is for testing on the slot itself, see `com_builder_spans` for
+//! testing on components.
 
 use leptos::*;
 use leptos_mview::mview;
@@ -60,8 +61,12 @@ struct SClosureChildren {
 }
 
 #[component]
-fn TakesSClosureChildren(s_closure_children: SClosureChildren) -> impl IntoView { let _ = s_closure_children; }
+fn TakesSClosureChildren(s_closure_children: SClosureChildren) -> impl IntoView {
+    let _ = s_closure_children;
+}
 
+// FIXME: these spans aren't ideal, but difficult to change without cluttering
+// the hover tooltips
 fn missing_closure_to_children() {
     _ = mview! {
         TakesSClosureChildren {
@@ -69,6 +74,5 @@ fn missing_closure_to_children() {
         }
     };
 }
-
 
 fn main() {}

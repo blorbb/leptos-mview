@@ -28,14 +28,3 @@ help: provide the argument
   |
 6 |         Await(/* AwaitPropsBuilder_Error_Missing_required_field_children */)
   |              +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-warning: unreachable call
- --> tests/ui/errors/no_children_after_closure.rs:6:9
-  |
-6 |         Await
-  |         ^^^^^
-  |         |
-  |         unreachable call
-  |         any code following this expression is unreachable
-  |
-  = note: `#[warn(unreachable_code)]` on by default

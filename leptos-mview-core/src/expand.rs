@@ -316,11 +316,9 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
     let build = quote_spanned!(ident.span()=> .build());
 
     if IS_SLOT {
-        // `unreachable_code` warning is generated at Into
         // Into is for turning a single slot into a vec![slot] if needed
-        let into = quote_spanned!(ident.span()=> ::std::convert::Into::into);
         Some(quote! {
-            #into(
+            ::std::convert::Into::into(
                 #ident #generics::builder()
                     #attrs
                     #dyn_classes
@@ -330,15 +328,13 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
             )
         })
     } else {
-        // `unreachable_code` warning is generated in both of these
-        let component_view = quote_spanned!(ident.span()=> ::leptos::component_view);
-        let component_props_builder =
-            quote_spanned!(ident.span()=> ::leptos::component_props_builder);
-
         Some(quote! {
-            #component_view(
+            // the .build() returns `!` if not all props are present.
+            // this causes unreachable code warning in ::leptos::component_view
+            #[allow(unreachable_code)]
+            ::leptos::component_view(
                 &#ident,
-                #component_props_builder(&#ident #generics)
+                ::leptos::component_props_builder(&#ident #generics)
                     #attrs
                     #dyn_classes
                     #selector_ids
@@ -346,7 +342,7 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
                     #slot_children
                     #build
                     #dyn_attrs
-                )
+            )
             .into_view()
             #(#use_directives)*
             #event_listeners
@@ -356,7 +352,7 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
 
 fn component_kv_attribute_tokens(attr: &KvAttr) -> TokenStream {
     let (key, value) = (attr.key().to_snake_ident(), attr.value());
-    quote_spanned! {attr.span()=> .#key(#value) }
+    quote_spanned! { attr.span()=> .#key(#value) }
 }
 
 fn component_event_listener_tokens(dir: &directive::On) -> TokenStream {
@@ -421,8 +417,10 @@ fn component_children_tokens<'a>(
         // not sure why `child.span()` is calling `syn::spanned::Spanned` instead
         .map_or_else(Span::call_site, |child| (*child).span());
 
+    // span call site if there are no args so that the children don't get all the
+    // `std` `vec!` etc docs.
     let children_fragment =
-        children_fragment_tokens(children, args.map_or(child_span, Spanned::span));
+        children_fragment_tokens(children, args.map_or(Span::call_site(), Spanned::span));
 
     // children with arguments take a `Fn(T) -> impl IntoView`
     // normal children (`Children`, `ChildrenFn`, ...) take

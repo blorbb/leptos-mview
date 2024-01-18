@@ -1,93 +1,79 @@
 warning: use of deprecated method `SChildrenBuilder::<((), __children)>::build`: Missing required field an_attr
-  --> tests/ui/errors/slot_builder_spans.rs:21:18
+  --> tests/ui/errors/slot_builder_spans.rs:22:18
    |
-21 |             slot:SChildren { "hi" }
+22 |             slot:SChildren { "hi" }
    |                  ^^^^^^^^^
    |
    = note: `#[warn(deprecated)]` on by default
 
 error[E0061]: this method takes 1 argument but 0 arguments were supplied
-  --> tests/ui/errors/slot_builder_spans.rs:21:18
+  --> tests/ui/errors/slot_builder_spans.rs:22:18
    |
-21 |             slot:SChildren { "hi" }
+22 |             slot:SChildren { "hi" }
    |                  ^^^^^^^^^ an argument of type `SChildrenBuilder_Error_Missing_required_field_an_attr` is missing
    |
 note: method defined here
-  --> tests/ui/errors/slot_builder_spans.rs:9:1
+  --> tests/ui/errors/slot_builder_spans.rs:10:1
    |
-9  | #[slot]
+10 | #[slot]
    | ^^^^^^^
    = note: this error originates in the derive macro `::leptos::typed_builder_macro::TypedBuilder` (in Nightly builds, run with -Z macro-backtrace for more info)
 help: provide the argument
    |
-21 |             slot:SChildren(/* SChildrenBuilder_Error_Missing_required_field_an_attr */) { "hi" }
+22 |             slot:SChildren(/* SChildrenBuilder_Error_Missing_required_field_an_attr */) { "hi" }
    |                           +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-warning: unreachable call
-  --> tests/ui/errors/slot_builder_spans.rs:21:18
-   |
-19 |       _ = mview! {
-   |  _________-
-20 | |         TakesSChildren {
-21 | |             slot:SChildren { "hi" }
-   | |                  ^^^^^^^^^ unreachable call
-22 | |         }
-23 | |     };
-   | |_____- any code following this expression is unreachable
-   |
-   = note: `#[warn(unreachable_code)]` on by default
-
 error[E0308]: mismatched types
-  --> tests/ui/errors/slot_builder_spans.rs:28:49
+  --> tests/ui/errors/slot_builder_spans.rs:29:49
    |
-28 |         TakesSChildren { slot:SChildren an_attr="no" { "what" } }
+29 |         TakesSChildren { slot:SChildren an_attr="no" { "what" } }
    |                                         ------- ^^^^ expected `i32`, found `&str`
    |                                         |
    |                                         arguments to this method are incorrect
    |
 note: method defined here
-  --> tests/ui/errors/slot_builder_spans.rs:11:5
+  --> tests/ui/errors/slot_builder_spans.rs:12:5
    |
-11 |     an_attr: i32,
+12 |     an_attr: i32,
    |     ^^^^^^^-----
 
 error[E0308]: mismatched types
-  --> tests/ui/errors/slot_builder_spans.rs:36:38
+  --> tests/ui/errors/slot_builder_spans.rs:37:38
    |
-36 |             slot:SChildren an_attr=1 |s| { "this is " {s} }
+37 |             slot:SChildren an_attr=1 |s| { "this is " {s} }
    |                                      ^^^ expected `Rc<dyn Fn() -> Fragment>`, found closure
    |
    = note: expected struct `Rc<(dyn std::ops::Fn() -> Fragment + 'static)>`
-             found closure `{closure@$DIR/tests/ui/errors/slot_builder_spans.rs:36:38: 36:41}`
+             found closure `{closure@$DIR/tests/ui/errors/slot_builder_spans.rs:37:38: 37:41}`
 
 error[E0599]: no method named `children` found for struct `SNoChildrenBuilder` in the current scope
-  --> tests/ui/errors/slot_builder_spans.rs:52:42
+  --> tests/ui/errors/slot_builder_spans.rs:53:42
    |
-41 |   #[slot]
+42 |   #[slot]
    |   ------- method `children` not found for this struct
 ...
-50 |       _ = mview! {
+51 |       _ = mview! {
    |  _________-
-51 | |         TakesSNoChildren {
-52 | |             slot:SNoChildren an_attr=5 { "hey!" }
+52 | |         TakesSNoChildren {
+53 | |             slot:SNoChildren an_attr=5 { "hey!" }
    | |                                         -^^^^^^ method not found in `SNoChildrenBuilder<((i32,),)>`
    | |_________________________________________|
    |
 
-error[E0277]: the trait bound `leptos::Callback<i32, leptos::View>: ToChildren<{closure@$DIR/tests/ui/errors/slot_builder_spans.rs:68:37: 68:43}>` is not satisfied
-  --> tests/ui/errors/slot_builder_spans.rs:68:37
+error[E0277]: the trait bound `leptos::Callback<i32, leptos::View>: ToChildren<{closure@$DIR/tests/ui/errors/slot_builder_spans.rs:73:37: 73:43}>` is not satisfied
+  --> tests/ui/errors/slot_builder_spans.rs:71:9
    |
-66 |       _ = mview! {
-   |  _________-
-67 | |         TakesSClosureChildren {
-68 | |             slot:SClosureChildren { "hey!" }
-   | |                                     ^^^^^^ the trait `ToChildren<{closure@$DIR/tests/ui/errors/slot_builder_spans.rs:68:37: 68:43}>` is not implemented for `leptos::Callback<i32, leptos::View>`
-69 | |         }
-70 | |     };
-   | |_____- required by a bound introduced by this call
+71 |       _ = mview! {
+   |  _________^
+72 | |         TakesSClosureChildren {
+73 | |             slot:SClosureChildren { "hey!" }
+74 | |         }
+75 | |     };
+   | |_____^ the trait `ToChildren<{closure@$DIR/tests/ui/errors/slot_builder_spans.rs:73:37: 73:43}>` is not implemented for `leptos::Callback<i32, leptos::View>`
    |
    = help: the following other types implement trait `ToChildren<F>`:
              Box<(dyn std::ops::Fn() -> Fragment + 'static)>
              Box<(dyn FnMut() -> Fragment + 'static)>
              Box<(dyn FnOnce() -> Fragment + 'static)>
              Rc<(dyn std::ops::Fn() -> Fragment + 'static)>
+   = note: this error originates in the macro `mview` (in Nightly builds, run with -Z macro-backtrace for more info)

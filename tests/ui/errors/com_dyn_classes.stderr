@@ -20,19 +20,31 @@ note: method defined here
    |            ^^^^^^^^^
 
 error[E0599]: no method named `class` found for struct `EmptyPropsBuilder` in the current scope
-  --> tests/ui/errors/com_dyn_classes.rs:31:23
+  --> tests/ui/errors/com_dyn_classes.rs:34:23
    |
-31 |         Nothing class:red=[true];
-   |                       ^^^ method not found in `EmptyPropsBuilder`
+33 |       _ = mview! {
+   |  _________-
+34 | |         Nothing class:red=[true];
+   | |                      -^^^ method not found in `EmptyPropsBuilder`
+   | |______________________|
+   |
 
 error[E0599]: no method named `class` found for struct `EmptyPropsBuilder` in the current scope
-  --> tests/ui/errors/com_dyn_classes.rs:37:17
+  --> tests/ui/errors/com_dyn_classes.rs:40:17
    |
-37 |         Nothing.red;
-   |                 ^^^ method not found in `EmptyPropsBuilder`
+39 |       _ = mview! {
+   |  _________-
+40 | |         Nothing.red;
+   | |                -^^^ method not found in `EmptyPropsBuilder`
+   | |________________|
+   |
 
 error[E0599]: no method named `id` found for struct `EmptyPropsBuilder` in the current scope
-  --> tests/ui/errors/com_dyn_classes.rs:43:18
+  --> tests/ui/errors/com_dyn_classes.rs:46:18
    |
-43 |         Nothing #unique;
-   |                  ^^^^^^ method not found in `EmptyPropsBuilder`
+45 |       _ = mview! {
+   |  _________-
+46 | |         Nothing #unique;
+   | |                 -^^^^^^ method not found in `EmptyPropsBuilder`
+   | |_________________|
+   |

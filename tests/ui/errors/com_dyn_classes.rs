@@ -26,6 +26,9 @@ fn incorrect_type() {
 #[component]
 fn Nothing() -> impl IntoView {}
 
+// these spans are actually fine, there's a blank info message at `mview!` for
+// some reason.
+
 fn no_attribute_reactive() {
     _ = mview! {
         Nothing class:red=[true];
