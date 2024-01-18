@@ -1,8 +1,6 @@
 /*!
 An alternative `view!` macro for [Leptos](https://github.com/leptos-rs/leptos/tree/main) inspired by [maud](https://maud.lambda.xyz/).
 
-This crate is still very new and probably has loads of bugs as my first attempt at proc macros - please open an issue if you find any!
-
 # Example
 
 A little preview of the syntax:
@@ -118,7 +116,7 @@ This macro will be compatible with the latest stable release of Leptos.
 | `leptos_mview` version | Compatible `leptos` version |
 | ---------------------- | --------------------------- |
 | `0.1.0`                | `0.5.0`-`0.5.1`             |
-| `0.2.0`                | `0.5.2`                     |
+| `0.2.0`                | `0.5.2`+                     |
 
 # Syntax details
 
@@ -516,14 +514,15 @@ view! { <input type="checkbox" checked=true data-smth=true not-here=false /> }
 ```
 Becomes `<input type="checkbox" checked data-smth />`, NOT `checked="true"` or `data-smth="true"` or `not-here="false"`.
 
-To have the attribute have a value of the string "true" or "false", use `.to_string()` on the bool.
-
-Especially using the closure shorthand `[...]`, this can be pretty simple when working with signals:
+To have the attribute have a value of the string "true" or "false", use `.to_string()` on the bool. Make sure that it's in a closure if you're working with signals too.
 ```
-use leptos::*;
-use leptos_mview::mview;
-let boolean_signal = create_rw_signal(true);
+# use leptos::*;
+# use leptos_mview::mview;
+let boolean_signal = RwSignal::new(true);
 mview! { input type="checkbox" checked=[boolean_signal().to_string()]; }
+# ;
+// or, if you prefer
+mview! { input type="checkbox" checked=f["{}", boolean_signal()] }
 # ;
 ```
 
