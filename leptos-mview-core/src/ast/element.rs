@@ -86,15 +86,27 @@ impl Parse for Element {
                 help = "add a `;` to terminate the element with no children"
             );
             Ok(Self::new(tag, selectors, attrs, None, None))
-        } else if input.peek(syn::token::Brace) {
-            // has children in brace.
-            let (children, _) = parse::parse_braced::<Children>(input).unwrap_or_abort();
+        } else if input.peek(syn::token::Brace) || input.peek(syn::token::Paren) {
+            let children = if input.peek(syn::token::Brace) {
+                parse::parse_braced::<Children>(input).unwrap_or_abort().0
+            } else {
+                parse::parse_parenthesized::<Children>(input)
+                    .unwrap_or_abort()
+                    .0
+            };
+
             Ok(Self::new(tag, selectors, attrs, None, Some(children)))
         } else if input.peek(Token![|]) {
             // extra args for the children
             let args = parse_closure_args(input).unwrap_or_abort();
             let children = if input.peek(syn::token::Brace) {
                 Some(parse::parse_braced::<Children>(input).unwrap_or_abort().0)
+            } else if input.peek(syn::token::Paren) {
+                Some(
+                    parse::parse_parenthesized::<Children>(input)
+                        .unwrap_or_abort()
+                        .0,
+                )
             } else {
                 // continue trying to parse as if there are no children
                 emit_error!(
