@@ -7,7 +7,7 @@ error[E0308]: mismatched types
    |             arguments to this method are incorrect
    |
 note: method defined here
-  --> $CARGO/leptos_dom-0.5.2/src/html.rs
+  --> $CARGO/leptos_dom-0.6.3/src/html.rs
    |
    |     pub fn directive<T: ?Sized, P: Clone + 'static>(
    |            ^^^^^^^^^
@@ -21,7 +21,7 @@ error[E0308]: mismatched types
    |              arguments to this method are incorrect
    |
 note: method defined here
-  --> $CARGO/leptos_dom-0.5.2/src/html.rs
+  --> $CARGO/leptos_dom-0.6.3/src/html.rs
    |
    |     pub fn directive<T: ?Sized, P: Clone + 'static>(
    |            ^^^^^^^^^
