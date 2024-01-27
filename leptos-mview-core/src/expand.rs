@@ -475,9 +475,8 @@ fn dyn_attrs_to_methods(dyn_attrs: &[&directive::Attr]) -> Option<TokenStream> {
 ///
 /// The intended use is as follows:
 /// ```ignore
-/// // TODO: use prop(optional) when Default added to TextProp
 /// #[component]
-/// fn TakesClasses(#[prop(into, default="".into())] class: TextProp) -> impl IntoView {}
+/// fn TakesClasses(#[prop(optional, into)] class: TextProp) -> impl IntoView {}
 ///
 /// let signal = RwSignal::new(true);
 ///

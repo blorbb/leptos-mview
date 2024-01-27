@@ -112,7 +112,7 @@ The `view!` macros in Leptos is often the largest part of a component, and can g
 
 ## Performance note
 
-Currently, the macro expands to the [builder syntax](https://github.com/leptos-rs/leptos/blob/main/docs/book/src/view/builder.md) (ish), but it has some [performance downsides](https://github.com/leptos-rs/leptos/issues/1492#issuecomment-1664675672) in SSR mode. I may write up an alternative expansion that uses this SSR optimization, but it doesn't exist for now (feel free to contribute to this feature if you would like!).
+Currently, the macro expands to the [builder syntax](https://github.com/leptos-rs/leptos/blob/main/docs/book/src/view/builder.md) (ish), but it has some [performance downsides](https://github.com/leptos-rs/leptos/issues/1492#issuecomment-1664675672) in SSR mode. This is expected to be fixed with the new renderer in leptos `0.7`, so I'm not going to make this implementation.
 
 ## Compatibility
 
@@ -120,8 +120,8 @@ This macro will be compatible with the latest stable release of Leptos.
 
 | `leptos_mview` version | Compatible `leptos` version |
 | ---------------------- | --------------------------- |
-| `0.1.0`                | `0.5.0`-`0.5.1`             |
-| `0.2.0`                | `0.5.2`+                     |
+| `0.1`                  | `0.5.0`-`0.5.1`             |
+| `0.2`                  | `0.5.2`+, `0.6`             |
 
 ## Syntax details
 
@@ -133,8 +133,7 @@ Elements have the following structure:
 2. Any generics where applicable.
 3. Any classes or ids prefixed with a dot `.` or hash `#` respectively.
 4. A space-separated list of attributes and directives (`class="primary"`, `on:click={...}`).
-5. Either children in braces (`{ "hi!" }`) or a semi-colon for no children (`;`).
-    - If the element is last in the block, no semi-colon is needed. This is mainly to make it easier to write, as an invalid macro removes syntax highlighting/autocomplete. It is advised to always add a semi-colon to the end if no children are required.
+5. Either children in braces/parens (`{ "hi!" }` or `("hi")`) or a semi-colon for no children (`;`).
 
 Example:
 ```rust
@@ -162,8 +161,7 @@ pub fn App() -> impl IntoView {
 }
 ```
 
-Note that due to [Reserving syntax](https://doc.rust-lang.org/edition-guide/rust-2021/reserving-syntax.html),
-the `#` for ids must have a space before it.
+Note that due to [Reserving syntax](https://doc.rust-lang.org/edition-guide/rust-2021/reserving-syntax.html), the `#` for ids must have a space before it.
 ```rust
 mview! {
     nav #primary { "..." }
@@ -411,6 +409,15 @@ mview! {
 
 Note that you will usually need to add a `*` before the data you are using. If you forget that, rust-analyser will tell you to dereference here: `*{monkeys}`. This is obviously invalid - put it inside the braces. (If anyone knows how to fix this, feel free to contribute!)
 
+Children can be wrapped in either braces or parentheses, whichever you prefer.
+```rust
+mview! {
+    p {
+        "my " strong("bold") " and " em("fancy") " text."
+    }
+}
+```
+
 Summary from the previous section on values in case you missed it: children can be literal strings (not bools or numbers!), blocks with Rust code inside (`{*monkeys}`), or the closure shorthand `[number() + 1]`.
 
 Children with closures are also supported on slots, add a field `children: Callback<T, View>` to use it (`T` is whatever type you want).
@@ -452,18 +459,13 @@ To have the attribute have a value of the string "true" or "false", use `.to_str
 let boolean_signal = RwSignal::new(true);
 mview! { input type="checkbox" checked=[boolean_signal().to_string()]; }
 // or, if you prefer
-mview! { input type="checkbox" checked=f["{}", boolean_signal()] }
+mview! { input type="checkbox" checked=f["{}", boolean_signal()]; }
 ```
 
 ## Contributing
 
 Please feel free to make a PR/issue if you have feature ideas/bugs to report/feedback :)
 
-### Extra feature ideas
-
-- [x] [Extending `class` attribute support](https://github.com/leptos-rs/leptos/issues/1492)
-- [ ] [SSR optimisation](https://github.com/leptos-rs/leptos/issues/1492#issuecomment-1664675672) (potential `delegate` feature that transforms this macro into a `leptos::view!` macro call as well?)
-- [x] Support slots
  
 
 <!-- cargo-rdme end -->
