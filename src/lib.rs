@@ -547,3 +547,21 @@ Please feel free to make a PR/issue if you have feature ideas/bugs to report/fee
 // `ignore`, missing `rust` annotations and remove `#` lines.
 
 pub use leptos_mview_macro::mview;
+
+#[doc(hidden)]
+pub struct MissingValueAfterEq;
+
+// #[cfg(test)]
+// mod tests {
+//     use leptos_mview_macro::mview;
+
+//     use crate::MissingValueAfterEq;
+
+//     #[test]
+//     fn a() {
+//         let _ = {
+//             #[allow(unused_braces)]
+//             ::leptos::html::div().attr("x", MissingValueAfterEq)
+//         };
+//     }
+// }

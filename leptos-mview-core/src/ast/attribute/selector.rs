@@ -1,8 +1,10 @@
 use proc_macro2::Span;
-use syn::{parse::Parse, Token};
+use syn::{
+    parse::{Parse, ParseStream},
+    Token,
+};
 
-use super::derive_multi_ast_for;
-use crate::{ast::KebabIdent, error_ext::ResultExt, span};
+use crate::{ast::KebabIdent, recover::rollback_err, span};
 
 /// A shorthand for adding class or ids to an element.
 ///
@@ -54,14 +56,14 @@ impl SelectorShorthand {
 
 impl Parse for SelectorShorthand {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        if let Ok(dot) = input.parse::<Token![.]>() {
-            let class = input.parse::<KebabIdent>().unwrap_or_abort();
+        if let Some(dot) = rollback_err(input, <Token![.]>::parse) {
+            let class = input.parse::<KebabIdent>()?;
             Ok(Self::Class {
                 dot_symbol: dot,
                 class,
             })
-        } else if let Ok(pound) = input.parse::<Token![#]>() {
-            let id = input.parse::<KebabIdent>().unwrap_or_abort();
+        } else if let Some(pound) = rollback_err(input, <Token![#]>::parse) {
+            let id = input.parse::<KebabIdent>()?;
             Ok(Self::Id {
                 pound_symbol: pound,
                 id,
@@ -72,12 +74,22 @@ impl Parse for SelectorShorthand {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct SelectorShorthands(Vec<SelectorShorthand>);
 
-derive_multi_ast_for! {
-    struct SelectorShorthands(Vec<SelectorShorthand>);
-    impl Parse(allow_non_empty);
+impl std::ops::Deref for SelectorShorthands {
+    type Target = [SelectorShorthand];
+    fn deref(&self) -> &Self::Target { &self.0 }
+}
+impl Parse for SelectorShorthands {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let mut vec = Vec::new();
+        while let Some(inner) = rollback_err(input, SelectorShorthand::parse) {
+            vec.push(inner);
+        }
+
+        Ok(Self(vec))
+    }
 }
 
 #[cfg(test)]

@@ -61,20 +61,20 @@ impl DirectiveAttr {
 
 impl Parse for DirectiveAttr {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        if let Ok(class) = input.parse::<Class>() {
-            Ok(Self::Class(class))
-        } else if let Ok(style) = input.parse::<Style>() {
-            Ok(Self::Style(style))
-        } else if let Ok(attr) = input.parse::<Attr>() {
-            Ok(Self::Attr(attr))
-        } else if let Ok(on) = input.parse::<On>() {
-            Ok(Self::On(on))
-        } else if let Ok(prop) = input.parse::<Prop>() {
-            Ok(Self::Prop(prop))
-        } else if let Ok(clone) = input.parse::<Clone>() {
-            Ok(Self::Clone(clone))
-        } else if let Ok(u) = input.parse::<Use>() {
-            Ok(Self::Use(u))
+        if input.peek(kw::class) {
+            Ok(Self::Class(Class::parse(input)?))
+        } else if input.peek(kw::style) {
+            Ok(Self::Style(Style::parse(input)?))
+        } else if input.peek(kw::attr) {
+            Ok(Self::Attr(Attr::parse(input)?))
+        } else if input.peek(kw::on) {
+            Ok(Self::On(On::parse(input)?))
+        } else if input.peek(kw::prop) {
+            Ok(Self::Prop(Prop::parse(input)?))
+        } else if input.peek(kw::clone) {
+            Ok(Self::Clone(Clone::parse(input)?))
+        } else if input.peek(Token![use]) {
+            Ok(Self::Use(Use::parse(input)?))
         } else {
             Err(input.error("unknown directive"))
         }

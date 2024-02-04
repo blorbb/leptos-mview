@@ -22,12 +22,6 @@ use crate::{
 /// input on:input={handle_input} type="text";
 ///       ^^^not included^^^^^^^^ ^included^^
 /// ```
-///
-/// # Parsing
-/// If parsing fails, the input `ParseStream` will not be advanced.
-///
-/// If an identifier and equal sign is found but no value after,
-/// the macro will abort.
 #[derive(Clone)]
 pub struct KvAttr {
     key: KebabIdent,

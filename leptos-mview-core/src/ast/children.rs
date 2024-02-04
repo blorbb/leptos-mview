@@ -1,13 +1,14 @@
 use proc_macro2::Span;
-use proc_macro_error::abort;
+use proc_macro_error::emit_error;
 use quote::ToTokens;
 use syn::{
+    ext::IdentExt,
     parse::{Parse, ParseStream},
-    Token,
+    parse_quote, Token,
 };
 
-use super::{derive_multi_ast_for, Element};
-use crate::{ast::Value, error_ext::ResultExt, kw};
+use super::Element;
+use crate::{ast::Value, error_ext::ResultExt, kw, recover::rollback_err};
 
 /// A child that is an actual HTML value (i.e. not a slot).
 ///
@@ -53,28 +54,28 @@ pub enum Child {
 
 impl Parse for Child {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        if let Ok(value) = input.parse::<Value>() {
+        if let Some(value) = rollback_err(input, Value::parse) {
             // only allow literals if they are a string.
             if let Value::Lit(ref lit) = value {
                 if let syn::Lit::Str(_) = lit {
                     Ok(Self::Node(NodeChild::Value(value)))
                 } else {
-                    abort!(lit.span(), "only string literals are allowed in children");
+                    emit_error!(lit.span(), "only string literals are allowed in children");
+                    Ok(Self::Node(NodeChild::Value(Value::Lit(parse_quote!("")))))
                 }
             } else {
                 Ok(Self::Node(NodeChild::Value(value)))
             }
-        } else if input.peek(kw::slot) && input.peek2(Token![:]) {
-            let slot = input.parse::<kw::slot>().unwrap();
-            input.parse::<Token![:]>().unwrap();
-            let elem = input
-                .parse::<Element>()
-                .expect_or_abort("expected struct after `slot:`");
+        } else if let Some((slot, _)) = rollback_err(input, |input| {
+            Ok((kw::slot::parse(input)?, <Token![:]>::parse(input)?))
+        }) {
+            let elem = input.parse::<Element>()?;
             Ok(Self::Slot(slot, elem))
-        } else if let Ok(elem) = input.parse::<Element>() {
+        } else if input.peek(syn::Ident::peek_any) {
+            let elem = Element::parse(input).unwrap_or_abort();
             Ok(Self::Node(NodeChild::Element(elem)))
         } else {
-            Err(input.error("no children remaining"))
+            Err(input.error("no child found"))
         }
     }
 }
@@ -87,9 +88,31 @@ impl Parse for Child {
 /// There are two ways of passing children, so no `ToTokens` implementation
 /// is provided. Use `to_child_methods` or `to_fragment` instead.
 pub struct Children(Vec<Child>);
-derive_multi_ast_for! {
-    struct Children(Vec<Child>);
-    impl Parse(non_empty_error = "invalid child: expected literal, block, bracket or element");
+
+impl std::ops::Deref for Children {
+    type Target = [Child];
+    fn deref(&self) -> &Self::Target { &self.0 }
+}
+
+impl Parse for Children {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let mut vec = Vec::new();
+
+        while let Some(inner) = rollback_err(input, Child::parse) {
+            // proc_macro_error::emit_error!(input.span(), "{:#?}", inner);
+            vec.push(inner);
+        }
+
+        if !input.is_empty() {
+            emit_error!(
+                input.span(),
+                "invalid child: expected literal, block, bracket or element"
+            );
+            input.parse::<proc_macro2::TokenStream>().unwrap();
+        };
+
+        Ok(Self(vec))
+    }
 }
 
 impl Children {

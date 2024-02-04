@@ -6,7 +6,7 @@ use syn::{
     parse::{Parse, ParseStream},
 };
 
-use crate::parse;
+use crate::{parse, recover::rollback_err};
 
 /// Interpolated Rust expressions within the macro.
 ///
@@ -46,9 +46,7 @@ pub enum Value {
 impl Parse for Value {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         if input.peek(syn::token::Bracket) {
-            let stream;
-            let brackets = syn::bracketed!(stream in input);
-            let tokens = stream.parse::<TokenStream>().unwrap();
+            let (brackets, tokens) = parse::bracketed_tokens(input).unwrap();
             Ok(Self::Bracket {
                 tokens,
                 brackets,
@@ -57,18 +55,17 @@ impl Parse for Value {
         // with prefixes like `f["{}", something]`
         } else if input.peek(syn::Ident::peek_any) && input.peek2(syn::token::Bracket) {
             let prefixes = input.call(syn::Ident::parse_any).unwrap();
-            let stream;
-            let brackets = syn::bracketed!(stream in input);
-            let tokens = stream.parse::<TokenStream>().unwrap();
+            let (brackets, tokens) = parse::bracketed_tokens(input).unwrap();
             Ok(Self::Bracket {
                 tokens,
                 brackets,
                 prefixes: Some(prefixes),
             })
         } else if input.peek(syn::token::Brace) {
-            let (tokens, braces) = parse::parse_braced::<TokenStream>(input).unwrap();
+            let (braces, tokens) = parse::braced_tokens(input).unwrap();
             Ok(Self::Block { tokens, braces })
-        } else if let Ok(lit) = input.parse::<syn::Lit>() {
+        } else if input.peek(syn::Lit) {
+            let lit = syn::Lit::parse(input).unwrap();
             Ok(Self::Lit(lit))
         } else {
             Err(input.error("invalid value: expected bracket, block or literal"))
@@ -115,6 +112,21 @@ impl Value {
             Self::Lit(lit) => lit.span(),
             Self::Block { braces, .. } => braces.span.join(),
             Self::Bracket { brackets, .. } => brackets.span.join(),
+        }
+    }
+
+    /// Either parses a valid [`Value`], or inserts a `MissingValueAfterEq`
+    /// never-type enum.
+    pub fn parse_or_never(input: ParseStream) -> Self {
+        if let Some(value) = rollback_err(input, Self::parse) {
+            value
+        } else {
+            // incomplete typing; place a MissingValueAfterEq and continue
+            emit_error!(input.span(), "expected value after =");
+            Self::Block {
+                tokens: quote_spanned!(input.span() => ::leptos_mview::MissingValueAfterEq),
+                braces: syn::token::Brace(input.span()),
+            }
         }
     }
 }

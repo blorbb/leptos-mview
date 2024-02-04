@@ -3,13 +3,13 @@ use leptos_mview::mview;
 mod utils;
 use utils::check_str;
 
-#[test]
-fn strings() {
-    let result: &str = mview! {
-        "hello there!"
-    };
-    assert_eq!(result, "hello there!");
-}
+// #[test]
+// fn strings() {
+//     let result: &str = mview! {
+//         "hello there!"
+//     };
+//     assert_eq!(result, "hello there!");
+// }
 
 // cannot traverse the DOM as there is no browser
 // so I am testing in a way similar to

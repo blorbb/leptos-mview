@@ -5,11 +5,14 @@ pub mod selector;
 pub mod spread_attrs;
 
 use proc_macro2::Span;
-use syn::{ext::IdentExt, parse::Parse, Token};
+use syn::{
+    ext::IdentExt,
+    parse::{Parse, ParseStream},
+    Token,
+};
 
 use self::{directive::DirectiveAttr, kv::KvAttr, spread_attrs::SpreadAttr};
-use super::derive_multi_ast_for;
-use crate::error_ext::ResultExt;
+use crate::recover::rollback_err;
 
 #[derive(Clone)]
 pub enum Attr {
@@ -29,19 +32,21 @@ impl Attr {
 }
 
 impl Parse for Attr {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
         // ident then colon must be directive
         // just ident must be regular kv attribute
         // otherwise, try kv or spread
         if input.peek(syn::Ident::peek_any) && input.peek2(Token![:]) {
-            let dir = input.parse::<DirectiveAttr>().unwrap_or_abort();
+            let dir = input.parse::<DirectiveAttr>()?;
             Ok(Self::Directive(dir))
         } else if input.peek(syn::Ident) {
-            let kv = input.parse::<KvAttr>().unwrap_or_abort();
+            // definitely a k-v attribute
+            let kv = input.parse::<KvAttr>()?;
             Ok(Self::Kv(kv))
-        } else if let Ok(kv) = input.parse::<KvAttr>() {
+        } else if let Some(kv) = rollback_err(input, KvAttr::parse) {
+            // k-v attributes don't necessarily start with ident, try the rest
             Ok(Self::Kv(kv))
-        } else if let Ok(spread) = input.parse::<SpreadAttr>() {
+        } else if let Some(spread) = rollback_err(input, SpreadAttr::parse) {
             Ok(Self::Spread(spread))
         } else {
             Err(input.error("no attribute found"))
@@ -53,9 +58,19 @@ impl Parse for Attr {
 #[derive(Clone)]
 pub struct Attrs(Vec<Attr>);
 
-derive_multi_ast_for! {
-    struct Attrs(Vec<Attr>);
-    impl Parse(allow_non_empty);
+impl std::ops::Deref for Attrs {
+    type Target = [Attr];
+    fn deref(&self) -> &Self::Target { &self.0 }
+}
+
+impl Parse for Attrs {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let mut vec = Vec::new();
+        while let Some(inner) = rollback_err(input, Attr::parse) {
+            vec.push(inner);
+        }
+        Ok(Self(vec))
+    }
 }
 
 #[cfg(test)]

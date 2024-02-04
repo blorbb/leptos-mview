@@ -1,5 +1,37 @@
-error: invalid value: expected bracket, block or literal
+error: expected value after =
  --> tests/ui/errors/return_expression.rs:6:19
   |
 6 |         div class=;
   |                   ^
+
+error[E0277]: expected a `Fn()` closure, found `MissingValueAfterEq`
+ --> tests/ui/errors/return_expression.rs:6:19
+  |
+5 |       let expr = mview! {
+  |  ________________-
+6 | |         div class=;
+  | |                   ^ expected an `Fn()` closure, found `MissingValueAfterEq`
+7 | |     };
+  | |_____- required by a bound introduced by this call
+  |
+  = help: the trait `std::ops::Fn<()>` is not implemented for `MissingValueAfterEq`
+  = note: wrap the `MissingValueAfterEq` in a closure with no arguments: `|| { /* code */ }`
+  = help: the following other types implement trait `IntoAttribute`:
+            bool
+            char
+            isize
+            i8
+            i16
+            i32
+            i64
+            i128
+          and $N others
+  = note: required for `MissingValueAfterEq` to implement `IntoAttribute`
+note: required by a bound in `leptos::HtmlElement::<El>::attr`
+ --> $CARGO/leptos_dom-0.6.3/src/html.rs
+  |
+  |     pub fn attr(
+  |            ---- required by a bound in this associated function
+...
+  |         attr: impl IntoAttribute,
+  |                    ^^^^^^^^^^^^^ required by this bound in `HtmlElement::<El>::attr`

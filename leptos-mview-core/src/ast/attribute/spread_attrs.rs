@@ -1,9 +1,10 @@
 use proc_macro2::{Span, TokenStream};
 use syn::{
-    braced,
-    parse::{discouraged::Speculative, Parse, ParseStream},
+    parse::{Parse, ParseStream},
     Token,
 };
+
+use crate::{parse::extract_braced, recover::rollback_err};
 
 /// A spread attribute like `{..attrs}`.
 ///
@@ -18,13 +19,10 @@ pub struct SpreadAttr {
 impl Parse for SpreadAttr {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         // try parse spread attributes `{..attrs}`
-        let fork = input.fork();
-        let stream;
-        let braces = braced!(stream in fork);
-        if stream.peek(Token![..]) {
-            let dotdot = stream.parse::<Token![..]>().expect("peeked");
+        let (braces, stream) = extract_braced(input)?;
+
+        if let Some(dotdot) = rollback_err(&stream, <Token![..]>::parse) {
             let rest = stream.parse::<TokenStream>().unwrap();
-            input.advance_to(&fork);
 
             Ok(Self {
                 braces,
