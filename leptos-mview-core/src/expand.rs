@@ -562,15 +562,15 @@ fn component_ids_to_method(ids: Vec<syn::LitStr>) -> Option<TokenStream> {
 /// The expansion for components and xml elements are the same.
 ///
 /// ```text
-/// use:d => .directive(d, ())
-/// use:d={some_value} => .directive(d, some_value)
+/// use:d => .directive(d, ().into())
+/// use:d={some_value} => .directive(d, some_value.into())
 /// ```
 fn use_directive_to_method(u: &directive::Use) -> TokenStream {
     let (use_token, func, value) = u.explode();
     let directive = syn::Ident::new("directive", use_token.span);
     let value = value.as_ref().map_or(
-        quote_spanned! {func.span()=> () },
-        ToTokens::to_token_stream,
+        quote_spanned! {func.span()=> ().into() },
+        |val| quote! { ::std::convert::Into::into(#val) },
     );
     quote! { .#directive(#func, #value) }
 }
