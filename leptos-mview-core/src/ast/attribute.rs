@@ -11,7 +11,7 @@ use syn::{
 };
 
 use self::{directive::DirectiveAttr, kv::KvAttr, spread_attrs::SpreadAttr};
-use crate::recover::rollback_err;
+use crate::{error_ext::ResultExt, recover::rollback_err};
 
 #[derive(Clone)]
 pub enum Attr {
@@ -36,7 +36,8 @@ impl Parse for Attr {
         // just ident must be regular kv attribute
         // otherwise, try kv or spread
         if input.peek(syn::Ident::peek_any) && input.peek2(Token![:]) {
-            let dir = input.parse::<DirectiveAttr>()?;
+            // cannot be anything else, abort if fails
+            let dir = input.parse::<DirectiveAttr>().unwrap_or_abort();
             Ok(Self::Directive(dir))
         } else if input.peek(syn::Ident) {
             // definitely a k-v attribute
