@@ -1,10 +1,9 @@
-use proc_macro2::Span;
 use syn::{
     parse::{Parse, ParseStream},
     Token,
 };
 
-use crate::{ast::KebabIdent, recover::rollback_err, span};
+use crate::{ast::KebabIdent, recover::rollback_err};
 
 /// A shorthand for adding class or ids to an element.
 ///
@@ -51,7 +50,8 @@ impl SelectorShorthand {
         punct
     }
 
-    pub fn span(&self) -> Span { span::join(self.prefix().span(), self.ident().span()) }
+    // pub fn span(&self) -> Span { span::join(self.prefix().span(),
+    // self.ident().span()) }
 }
 
 impl Parse for SelectorShorthand {

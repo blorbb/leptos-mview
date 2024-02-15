@@ -1,4 +1,4 @@
-use proc_macro2::Span;
+use proc_macro2::{Span, TokenStream};
 use proc_macro_error::emit_error;
 use quote::ToTokens;
 use syn::{
@@ -8,7 +8,7 @@ use syn::{
 };
 
 use super::Element;
-use crate::{ast::Value, error_ext::ResultExt, kw, recover::rollback_err};
+use crate::{ast::Value, error_ext::SynErrorExt, kw, recover::rollback_err};
 
 /// A child that is an actual HTML value (i.e. not a slot).
 ///
@@ -69,10 +69,10 @@ impl Parse for Child {
         } else if let Some((slot, _)) = rollback_err(input, |input| {
             Ok((kw::slot::parse(input)?, <Token![:]>::parse(input)?))
         }) {
-            let elem = input.parse::<Element>()?;
+            let elem = Element::parse(input)?;
             Ok(Self::Slot(slot, elem))
         } else if input.peek(syn::Ident::peek_any) {
-            let elem = Element::parse(input).unwrap_or_abort();
+            let elem = Element::parse(input)?;
             Ok(Self::Node(NodeChild::Element(elem)))
         } else {
             Err(input.error("no child found"))
@@ -98,18 +98,20 @@ impl Parse for Children {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let mut vec = Vec::new();
 
-        while let Some(inner) = rollback_err(input, Child::parse) {
-            // proc_macro_error::emit_error!(input.span(), "{:#?}", inner);
-            vec.push(inner);
+        loop {
+            if input.is_empty() {
+                break;
+            }
+            match Child::parse(input) {
+                Ok(child) => vec.push(child),
+                Err(e) => {
+                    e.emit_as_error();
+                    // skip the rest of the tokens
+                    // need to consume all tokens otherwise an error is made on drop
+                    input.parse::<TokenStream>().unwrap();
+                }
+            };
         }
-
-        if !input.is_empty() {
-            emit_error!(
-                input.span(),
-                "invalid child: expected literal, block, bracket or element"
-            );
-            input.parse::<proc_macro2::TokenStream>().unwrap();
-        };
 
         Ok(Self(vec))
     }

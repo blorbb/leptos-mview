@@ -45,19 +45,19 @@ pub enum DirectiveAttr {
     Use(Use),
 }
 
-impl DirectiveAttr {
-    pub fn span(&self) -> Span {
-        match self {
-            Self::Class(a) => a.full_span(),
-            Self::Style(a) => a.full_span(),
-            Self::Attr(a) => a.full_span(),
-            Self::On(a) => a.full_span(),
-            Self::Prop(a) => a.full_span(),
-            Self::Clone(a) => a.full_span(),
-            Self::Use(a) => a.full_span(),
-        }
-    }
-}
+// impl DirectiveAttr {
+//     pub fn span(&self) -> Span {
+//         match self {
+//             Self::Class(a) => a.full_span(),
+//             Self::Style(a) => a.full_span(),
+//             Self::Attr(a) => a.full_span(),
+//             Self::On(a) => a.full_span(),
+//             Self::Prop(a) => a.full_span(),
+//             Self::Clone(a) => a.full_span(),
+//             Self::Use(a) => a.full_span(),
+//         }
+//     }
+// }
 
 impl Parse for DirectiveAttr {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {

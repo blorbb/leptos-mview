@@ -31,7 +31,7 @@ pub fn parse_kebab_or_braced_or_bool(input: ParseStream) -> syn::Result<(KebabId
     } else {
         let ident = KebabIdent::parse(input)?;
         if rollback_err(input, <Token![=]>::parse).is_some() {
-            let value = Value::parse_or_never(input);
+            let value = Value::parse_or_emit_err(input);
             Ok((ident, value))
         } else {
             let value = Value::Lit(parse_quote!(true));
@@ -56,7 +56,7 @@ pub fn parse_kebab_or_braced_or_str(input: ParseStream) -> syn::Result<(syn::Lit
     } else {
         let class = KebabIdentOrStr::parse(input)?.into_lit_str();
         <Token![=]>::parse(input)?;
-        let value = Value::parse_or_never(input);
+        let value = Value::parse_or_emit_err(input);
         Ok((class, value))
     }
 }
@@ -72,7 +72,7 @@ pub fn parse_ident_or_braced(input: ParseStream) -> syn::Result<(syn::Ident, Val
     } else {
         let ident = input.parse::<syn::Ident>()?;
         input.parse::<Token![=]>()?;
-        let value = Value::parse_or_never(input);
+        let value = Value::parse_or_emit_err(input);
         Ok((ident, value))
     }
 }
@@ -90,7 +90,7 @@ pub fn parse_ident_optional_value(input: ParseStream) -> syn::Result<(syn::Ident
         let ident = syn::Ident::parse(input)?;
         if rollback_err(input, <Token![=]>::parse).is_some() {
             // add a value
-            let value = Value::parse_or_never(input);
+            let value = Value::parse_or_emit_err(input);
             Ok((ident, Some(value)))
         } else {
             // no value

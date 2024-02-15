@@ -1,5 +1,5 @@
 use proc_macro2::{Span, TokenStream};
-use proc_macro_error::emit_error;
+use proc_macro_error::{emit_error, Diagnostic};
 use quote::{quote, quote_spanned, ToTokens};
 use syn::{
     ext::IdentExt,
@@ -117,12 +117,25 @@ impl Value {
 
     /// Either parses a valid [`Value`], or inserts a `MissingValueAfterEq`
     /// never-type enum.
-    pub fn parse_or_never(input: ParseStream) -> Self {
+    pub fn parse_or_emit_err(input: ParseStream) -> Self {
         if let Some(value) = rollback_err(input, Self::parse) {
             value
         } else {
             // incomplete typing; place a MissingValueAfterEq and continue
-            emit_error!(input.span(), "expected value after =");
+            let error = Diagnostic::spanned(
+                input.span(),
+                proc_macro_error::Level::Error,
+                "expected value after =".to_string(),
+            );
+            // if the token after the `=` is an ident, perhaps the user forgot to wrap in
+            // braces.
+            let error = if input.peek(syn::Ident) {
+                error.help("you may have meant to wrap this in braces".to_string())
+            } else {
+                error
+            };
+
+            error.emit();
             Self::Block {
                 tokens: quote_spanned!(input.span() => ::leptos_mview::MissingValueAfterEq),
                 braces: syn::token::Brace(input.span()),

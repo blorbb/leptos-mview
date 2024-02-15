@@ -3,7 +3,7 @@
 //!
 //! A simplified version of the extension traits have been added here.
 
-use proc_macro_error::{abort, abort_call_site};
+use proc_macro_error::{abort, abort_call_site, emit_error};
 
 pub trait ResultExt {
     type Ok;
@@ -73,4 +73,12 @@ impl<T> OptionExt for Option<T> {
             None => abort_call_site!(message),
         }
     }
+}
+
+pub trait SynErrorExt {
+    fn emit_as_error(self);
+}
+
+impl SynErrorExt for syn::Error {
+    fn emit_as_error(self) { emit_error!(self.span(), "{}", self.to_string()) }
 }
