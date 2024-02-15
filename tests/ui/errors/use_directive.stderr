@@ -1,27 +1,36 @@
-error[E0308]: mismatched types
+error[E0277]: the trait bound `i32: From<()>` is not satisfied
   --> tests/ui/errors/use_directive.rs:10:17
    |
 10 |         div use:arg_dir;
-   |             --- ^^^^^^^ expected `i32`, found `()`
-   |             |
-   |             arguments to this method are incorrect
+   |                 ^^^^^^^ the trait `From<()>` is not implemented for `i32`
    |
-note: method defined here
-  --> $CARGO/leptos_dom-0.6.3/src/html.rs
-   |
-   |     pub fn directive<T: ?Sized, P: Clone + 'static>(
-   |            ^^^^^^^^^
+   = help: the following other types implement trait `From<T>`:
+             <i32 as From<bool>>
+             <i32 as From<i8>>
+             <i32 as From<i16>>
+             <i32 as From<u8>>
+             <i32 as From<u16>>
+             <i32 as From<NonZeroI32>>
+   = note: required for `()` to implement `Into<i32>`
 
-error[E0308]: mismatched types
+error[E0277]: the trait bound `(): From<{integer}>` is not satisfied
   --> tests/ui/errors/use_directive.rs:16:29
    |
-16 |         span use:no_arg_dir=2;
-   |              ---            ^ expected `()`, found integer
-   |              |
-   |              arguments to this method are incorrect
+15 |       _ = mview! {
+   |  _________-
+16 | |         span use:no_arg_dir=2;
+   | |                             ^ the trait `From<{integer}>` is not implemented for `()`
+17 | |     };
+   | |_____- required by a bound introduced by this call
    |
-note: method defined here
-  --> $CARGO/leptos_dom-0.6.3/src/html.rs
-   |
-   |     pub fn directive<T: ?Sized, P: Clone + 'static>(
-   |            ^^^^^^^^^
+   = help: the following other types implement trait `From<T>`:
+             <(usize, usize) as From<toml::tokens::Span>>
+             <(T,) as From<[T; 1]>>
+             <(T, T) as From<[T; 2]>>
+             <(T, T, T) as From<[T; 3]>>
+             <(T, T, T, T) as From<[T; 4]>>
+             <(T, T, T, T, T) as From<[T; 5]>>
+             <(T, T, T, T, T, T) as From<[T; 6]>>
+             <(T, T, T, T, T, T, T) as From<[T; 7]>>
+           and $N others
+   = note: required for `{integer}` to implement `Into<()>`

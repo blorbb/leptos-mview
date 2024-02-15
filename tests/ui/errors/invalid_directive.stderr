@@ -16,8 +16,8 @@ error: expected a kebab-cased ident
 17 |         div style:[1, 2]="black" {}
    |                   ^
 
-error: expected `=`
-  --> tests/ui/errors/invalid_directive.rs:23:25
+error[E0425]: cannot find value `clicky_click` in module `leptos::ev`
+  --> tests/ui/errors/invalid_directive.rs:23:19
    |
 23 |         button on:clicky-click={move |_| ()};
-   |                         ^
+   |                   ^^^^^^^^^^^^ not found in `leptos::ev`
