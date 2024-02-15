@@ -190,6 +190,10 @@ pub(super) fn component_kv_attribute_tokens(attr: &KvAttr) -> TokenStream {
 pub(super) fn component_clone_tokens(dir: &Directive) -> TokenStream {
     let to_clone = dir.key.to_ident_or_emit();
     emit_error_if_modifier(dir.modifier.as_ref());
+    if let Some(value) = &dir.value {
+        emit_error!(value.span(), "`clone:` does not take any values");
+    };
+
     quote! { let #to_clone = #to_clone.clone(); }
 }
 
