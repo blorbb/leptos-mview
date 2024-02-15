@@ -75,7 +75,7 @@ impl Parse for Child {
             let elem = Element::parse(input)?;
             Ok(Self::Node(NodeChild::Element(elem)))
         } else {
-            Err(input.error("no child found"))
+            Err(input.error("invalid child: expected literal, block, bracket or element"))
         }
     }
 }

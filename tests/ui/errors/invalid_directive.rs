@@ -1,8 +1,5 @@
 use leptos_mview::mview;
 
-// FIXME: error messages aren't good for these if we avoid aborts, but it's hard
-// to recover from and probably unrealistic to stumble into.
-
 fn not_directive() {
     mview! {
         div something:yes="b" {}

@@ -1,164 +1,23 @@
-error: unknown attribute
- --> tests/ui/errors/invalid_directive.rs:8:13
+error: unknown directive
+ --> tests/ui/errors/invalid_directive.rs:5:13
   |
-8 |         div something:yes="b" {}
+5 |         div something:yes="b" {}
   |             ^^^^^^^^^
 
-error: child elements not found
- --> tests/ui/errors/invalid_directive.rs:8:9
-  |
-8 |         div something:yes="b" {}
-  |         ^^^^^^^^^^^^^
-  |
-  = help: add a `;` at the end to terminate the element
+error: expected a kebab-cased ident
+  --> tests/ui/errors/invalid_directive.rs:11:19
+   |
+11 |         div class:("abcd") = true {}
+   |                   ^
 
-error: unknown attribute
- --> tests/ui/errors/invalid_directive.rs:8:22
-  |
-8 |         div something:yes="b" {}
-  |                      ^
+error: expected a kebab-cased ident
+  --> tests/ui/errors/invalid_directive.rs:17:19
+   |
+17 |         div style:[1, 2]="black" {}
+   |                   ^
 
-error: child elements not found
- --> tests/ui/errors/invalid_directive.rs:8:13
-  |
-8 |         div something:yes="b" {}
-  |             ^^^^^^^^^^
-  |
-  = help: add a `;` at the end to terminate the element
-
-error: invalid child: expected literal, block, bracket or element
- --> tests/ui/errors/invalid_directive.rs:8:22
-  |
-8 |         div something:yes="b" {}
-  |                      ^
-
-error: unknown attribute
-  --> tests/ui/errors/invalid_directive.rs:14:13
+error: expected `=`
+  --> tests/ui/errors/invalid_directive.rs:23:25
    |
-14 |         div class:("abcd") = true {}
-   |             ^^^^^
-
-error: child elements not found
-  --> tests/ui/errors/invalid_directive.rs:14:9
-   |
-14 |         div class:("abcd") = true {}
-   |         ^^^^^^^^^
-   |
-   = help: add a `;` at the end to terminate the element
-
-error: unknown attribute
-  --> tests/ui/errors/invalid_directive.rs:14:18
-   |
-14 |         div class:("abcd") = true {}
-   |                  ^
-
-error: child elements not found
-  --> tests/ui/errors/invalid_directive.rs:14:13
-   |
-14 |         div class:("abcd") = true {}
-   |             ^^^^^^
-   |
-   = help: add a `;` at the end to terminate the element
-
-error: invalid child: expected literal, block, bracket or element
-  --> tests/ui/errors/invalid_directive.rs:14:18
-   |
-14 |         div class:("abcd") = true {}
-   |                  ^
-
-error: unknown attribute
-  --> tests/ui/errors/invalid_directive.rs:20:13
-   |
-20 |         div style:[1, 2]="black" {}
-   |             ^^^^^
-
-error: child elements not found
-  --> tests/ui/errors/invalid_directive.rs:20:9
-   |
-20 |         div style:[1, 2]="black" {}
-   |         ^^^^^^^^^
-   |
-   = help: add a `;` at the end to terminate the element
-
-error: unknown attribute
-  --> tests/ui/errors/invalid_directive.rs:20:18
-   |
-20 |         div style:[1, 2]="black" {}
-   |                  ^
-
-error: child elements not found
-  --> tests/ui/errors/invalid_directive.rs:20:13
-   |
-20 |         div style:[1, 2]="black" {}
-   |             ^^^^^^
-   |
-   = help: add a `;` at the end to terminate the element
-
-error: invalid child: expected literal, block, bracket or element
-  --> tests/ui/errors/invalid_directive.rs:20:18
-   |
-20 |         div style:[1, 2]="black" {}
-   |                  ^
-
-error: unknown attribute
-  --> tests/ui/errors/invalid_directive.rs:26:16
-   |
-26 |         button on:clicky-click={move |_| ()};
-   |                ^^
-
-error: child elements not found
-  --> tests/ui/errors/invalid_directive.rs:26:9
-   |
-26 |         button on:clicky-click={move |_| ()};
-   |         ^^^^^^^^^
-   |
-   = help: add a `;` at the end to terminate the element
-
-error: unknown attribute
-  --> tests/ui/errors/invalid_directive.rs:26:18
-   |
-26 |         button on:clicky-click={move |_| ()};
-   |                  ^
-
-error: child elements not found
-  --> tests/ui/errors/invalid_directive.rs:26:16
-   |
-26 |         button on:clicky-click={move |_| ()};
-   |                ^^^
-   |
-   = help: add a `;` at the end to terminate the element
-
-error: invalid child: expected literal, block, bracket or element
-  --> tests/ui/errors/invalid_directive.rs:26:18
-   |
-26 |         button on:clicky-click={move |_| ()};
-   |                  ^
-
-error[E0425]: cannot find function `something` in module `leptos::html`
- --> tests/ui/errors/invalid_directive.rs:8:13
-  |
-8 |         div something:yes="b" {}
-  |             ^^^^^^^^^ not found in `leptos::html`
-
-error[E0425]: cannot find function `class` in module `leptos::html`
-  --> tests/ui/errors/invalid_directive.rs:14:13
-   |
-14 |         div class:("abcd") = true {}
-   |             ^^^^^ not found in `leptos::html`
-
-error[E0425]: cannot find function `on` in module `leptos::html`
-  --> tests/ui/errors/invalid_directive.rs:26:16
-   |
-26 |           button on:clicky-click={move |_| ()};
-   |                  ^^ help: a function with a similar name exists: `ol`
-   |
-  ::: $CARGO/leptos_dom-0.6.3/src/html.rs
-   |
-   | / generate_html_tags![
-   | |   // ==========================
-   | |   //        Main root
-   | |   // ==========================
-...  |
-   | |   template HtmlTemplateElement,
-   | | ];
-   | |_- similarly named function `ol` defined here
+23 |         button on:clicky-click={move |_| ()};
+   |                         ^

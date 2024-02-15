@@ -1,19 +1,35 @@
 error: expected value after =
- --> tests/ui/errors/invalid_value.rs:5:15
+ --> tests/ui/errors/misc_partial.rs:6:24
   |
-5 |         div a=a {}
-  |               ^
+6 |             span class=test
+  |                        ^^^^
   |
   = help: you may have meant to wrap this in braces
 
+error: unterminated element
+ --> tests/ui/errors/misc_partial.rs:6:13
+  |
+6 |             span class=test
+  |             ^^^^
+  |
+  = help: add a `;` to terminate the element with no children
+
+error: unexpected end of input, expected a kebab-cased ident
+  --> tests/ui/errors/misc_partial.rs:15:9
+   |
+15 |         }
+   |         ^
+
 error[E0277]: expected a `Fn()` closure, found `MissingValueAfterEq`
- --> tests/ui/errors/invalid_value.rs:5:15
+ --> tests/ui/errors/misc_partial.rs:6:24
   |
 4 |       _ = mview! {
   |  _________-
-5 | |         div a=a {}
-  | |               ^ expected an `Fn()` closure, found `MissingValueAfterEq`
-6 | |     };
+5 | |         div class:x={true} {
+6 | |             span class=test
+  | |                        ^^^^ expected an `Fn()` closure, found `MissingValueAfterEq`
+7 | |         }
+8 | |     }
   | |_____- required by a bound introduced by this call
   |
   = help: the trait `std::ops::Fn<()>` is not implemented for `MissingValueAfterEq`
@@ -37,21 +53,3 @@ note: required by a bound in `leptos::HtmlElement::<El>::attr`
 ...
   |         attr: impl IntoAttribute,
   |                    ^^^^^^^^^^^^^ required by this bound in `HtmlElement::<El>::attr`
-
-error[E0061]: this method takes 1 argument but 0 arguments were supplied
-  --> tests/ui/errors/invalid_value.rs:11:14
-   |
-11 |           div {..};
-   |  ______________^^-
-12 | |     };
-   | |_____- an argument is missing
-   |
-note: method defined here
-  --> $CARGO/leptos_dom-0.6.3/src/html.rs
-   |
-   |     pub fn attrs(
-   |            ^^^^^
-help: provide the argument
-   |
-10 |     _ = ..(/* attrs */);
-   |         ~~~~~~~~~~~~~~~
