@@ -22,7 +22,7 @@ pub fn emit_error_if_modifier(m: Option<&syn::Ident>) {
     if let Some(modifier) = m {
         emit_error!(
             modifier.span(),
-            "modifiers are only supported on `on:` directives"
+            "unknown modifier: modifiers are only supported on `on:` directives"
         );
     }
 }

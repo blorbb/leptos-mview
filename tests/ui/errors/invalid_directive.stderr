@@ -1,23 +1,79 @@
 error: unknown directive
- --> tests/ui/errors/invalid_directive.rs:5:13
+ --> tests/ui/errors/invalid_directive.rs:6:13
   |
-5 |         div something:yes="b" {}
+6 |         div something:yes="b" {}
   |             ^^^^^^^^^
 
 error: expected a kebab-cased ident
-  --> tests/ui/errors/invalid_directive.rs:11:19
+  --> tests/ui/errors/invalid_directive.rs:12:19
    |
-11 |         div class:("abcd") = true {}
+12 |         div class:("abcd") = true {}
    |                   ^
 
 error: expected a kebab-cased ident
-  --> tests/ui/errors/invalid_directive.rs:17:19
+  --> tests/ui/errors/invalid_directive.rs:18:19
    |
-17 |         div style:[1, 2]="black" {}
+18 |         div style:[1, 2]="black" {}
    |                   ^
 
-error[E0425]: cannot find value `clicky_click` in module `leptos::ev`
-  --> tests/ui/errors/invalid_directive.rs:23:19
+error: unknown modifier
+  --> tests/ui/errors/invalid_directive.rs:30:25
    |
-23 |         button on:clicky-click={move |_| ()};
+30 |         button on:click:delegated={|_| ()};
+   |                         ^^^^^^^^^
+   |
+   = help: :undelegated is the only known modifier
+
+error: unknown modifier: modifiers are only supported on `on:` directives
+  --> tests/ui/errors/invalid_directive.rs:41:24
+   |
+41 |         div class:this:undelegated=true;
+   |                        ^^^^^^^^^^^
+
+error: unknown modifier: modifiers are only supported on `on:` directives
+  --> tests/ui/errors/invalid_directive.rs:44:28
+   |
+44 |         div style:position:undelegated="absolute";
+   |                            ^^^^^^^^^^^
+
+error: unknown modifier: modifiers are only supported on `on:` directives
+  --> tests/ui/errors/invalid_directive.rs:47:26
+   |
+47 |         input prop:value:something="input something";
+   |                          ^^^^^^^^^
+
+error: unknown modifier: modifiers are only supported on `on:` directives
+  --> tests/ui/errors/invalid_directive.rs:50:30
+   |
+50 |         button use:directive:another;
+   |                              ^^^^^^^
+
+error: `attr:` is not supported on elements
+  --> tests/ui/errors/invalid_directive.rs:53:16
+   |
+53 |         button attr:type="submit";
+   |                ^^^^
+
+error: unknown modifier: modifiers are only supported on `on:` directives
+  --> tests/ui/errors/invalid_directive.rs:58:28
+   |
+58 |         Com clone:to_clone:undelegated;
+   |                            ^^^^^^^^^^^
+
+error: `clone:` does not take any values
+  --> tests/ui/errors/invalid_directive.rs:61:19
+   |
+61 |         Com clone:{to_clone};
+   |                   ^^^^^^^^^^
+
+error: unknown modifier: modifiers are only supported on `on:` directives
+  --> tests/ui/errors/invalid_directive.rs:64:23
+   |
+64 |         Com class:aaa:undelegated=[false];
+   |                       ^^^^^^^^^^^
+
+error[E0425]: cannot find value `clicky_click` in module `leptos::ev`
+  --> tests/ui/errors/invalid_directive.rs:24:19
+   |
+24 |         button on:clicky-click={move |_| ()};
    |                   ^^^^^^^^^^^^ not found in `leptos::ev`
