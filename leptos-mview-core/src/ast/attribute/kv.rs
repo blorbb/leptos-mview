@@ -1,9 +1,9 @@
 use proc_macro2::Span;
-use syn::parse::Parse;
+use syn::{parse::Parse, parse_quote, Token};
 
-use super::parsing::parse_kebab_or_braced_or_bool;
 use crate::{
-    ast::{KebabIdent, Value},
+    ast::{BracedKebabIdent, KebabIdent, Value},
+    recover::rollback_err,
     span,
 };
 
@@ -40,7 +40,23 @@ impl KvAttr {
 
 impl Parse for KvAttr {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let (key, value) = parse_kebab_or_braced_or_bool(input)?;
-        Ok(Self::new(key, value))
+        let (ident, value) = if input.peek(syn::token::Brace) {
+            let braced_ident = input.parse::<BracedKebabIdent>()?;
+            (
+                braced_ident.ident().clone(),
+                braced_ident.into_block_value(),
+            )
+        } else {
+            let ident = KebabIdent::parse(input)?;
+            if rollback_err(input, <Token![=]>::parse).is_some() {
+                let value = Value::parse_or_emit_err(input);
+                (ident, value)
+            } else {
+                let value = Value::Lit(parse_quote!(true));
+                (ident, value)
+            }
+        };
+
+        Ok(Self::new(ident, value))
     }
 }

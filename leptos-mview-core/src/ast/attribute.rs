@@ -1,6 +1,5 @@
 pub mod directive;
 pub mod kv;
-pub mod parsing;
 pub mod selector;
 pub mod spread_attrs;
 

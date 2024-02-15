@@ -10,8 +10,8 @@ use proc_macro_error::emit_error;
 use quote::{quote, quote_spanned, ToTokens};
 
 use crate::ast::{
-    attribute::{directive::Directive, parsing::KebabIdentOrStr, selector::SelectorShorthand},
-    Attr, Element, KebabIdent, NodeChild, Tag,
+    attribute::{directive::Directive, selector::SelectorShorthand},
+    Attr, Element, KebabIdent, KebabIdentOrStr, NodeChild, Tag,
 };
 
 /// Functions for specific parts of an element's expansion.

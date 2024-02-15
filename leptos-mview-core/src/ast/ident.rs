@@ -1,14 +1,17 @@
 use std::hash::Hash;
 
 use proc_macro2::{Span, TokenStream};
+use proc_macro_error::emit_error;
 use quote::{quote, quote_spanned, ToTokens};
 use syn::{
     ext::IdentExt,
     parse::{Parse, ParseStream},
+    token::Brace,
     Token,
 };
 
-use crate::span;
+use super::Value;
+use crate::{parse, span};
 
 /// A kebab-cased identifier.
 ///
@@ -184,6 +187,83 @@ impl Eq for KebabIdent {}
 
 impl Hash for KebabIdent {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.repr.hash(state); }
+}
+
+// Parse either a kebab-case ident or a str literal.
+#[derive(Clone)]
+pub enum KebabIdentOrStr {
+    KebabIdent(KebabIdent),
+    Str(syn::LitStr),
+}
+
+impl KebabIdentOrStr {
+    pub fn to_lit_str(&self) -> syn::LitStr {
+        match self {
+            Self::KebabIdent(ident) => ident.to_lit_str(),
+            Self::Str(s) => s.clone(),
+        }
+    }
+
+    pub fn to_ident_or_emit(&self) -> syn::Ident {
+        match self {
+            KebabIdentOrStr::KebabIdent(i) => i.to_snake_ident(),
+            KebabIdentOrStr::Str(s) => {
+                emit_error!(s.span(), "expected identifier");
+                syn::Ident::new("__invalid_identifier_found_str", s.span())
+            }
+        }
+    }
+
+    pub fn span(&self) -> Span {
+        match self {
+            KebabIdentOrStr::KebabIdent(k) => k.span(),
+            KebabIdentOrStr::Str(s) => s.span(),
+        }
+    }
+}
+
+impl Parse for KebabIdentOrStr {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        if let Ok(str) = input.parse::<syn::LitStr>() {
+            Ok(Self::Str(str))
+        } else {
+            Ok(Self::KebabIdent(input.parse()?))
+        }
+    }
+}
+
+/// Parses a braced kebab-cased ident like `{abc-123}`
+///
+/// Equivalent to `parse::braced::<KebabIdent>(input)`, but provides a few
+/// methods to help with conversions.
+pub struct BracedKebabIdent {
+    brace_token: Brace,
+    ident: KebabIdent,
+}
+
+impl BracedKebabIdent {
+    pub const fn new(brace: Brace, ident: KebabIdent) -> Self {
+        Self {
+            brace_token: brace,
+            ident,
+        }
+    }
+
+    pub const fn ident(&self) -> &KebabIdent { &self.ident }
+
+    pub fn into_block_value(self) -> Value {
+        Value::Block {
+            tokens: self.ident.to_snake_ident().into_token_stream(),
+            braces: self.brace_token,
+        }
+    }
+}
+
+impl Parse for BracedKebabIdent {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let (brace, ident) = parse::braced::<KebabIdent>(input)?;
+        Ok(Self::new(brace, ident))
+    }
 }
 
 #[cfg(test)]

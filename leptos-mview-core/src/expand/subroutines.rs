@@ -8,11 +8,10 @@ use crate::{
         attribute::{
             directive::Directive,
             kv::KvAttr,
-            parsing::KebabIdentOrStr,
             selector::{SelectorShorthand, SelectorShorthands},
             spread_attrs::SpreadAttr,
         },
-        NodeChild,
+        KebabIdentOrStr, NodeChild,
     },
     expand::{children_fragment_tokens, emit_error_if_modifier},
 };

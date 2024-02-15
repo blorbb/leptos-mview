@@ -4,8 +4,10 @@ use syn::{
     Token,
 };
 
-use super::parsing::{BracedKebabIdent, KebabIdentOrStr};
-use crate::{ast::Value, recover::rollback_err};
+use crate::{
+    ast::{BracedKebabIdent, KebabIdentOrStr, Value},
+    recover::rollback_err,
+};
 
 /// A special attribute like `on:click={...}`.
 ///
