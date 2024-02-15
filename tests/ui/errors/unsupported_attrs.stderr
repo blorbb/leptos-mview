@@ -1,14 +1,14 @@
-error: `style:` not supported on components/slots
+error: `style:` is not supported on components/slots
  --> tests/ui/errors/unsupported_attrs.rs:6:19
   |
 6 |         Component style:color="white";
-  |                   ^^^^^^^^^^^
+  |                   ^^^^^
 
-error: `prop:` not supported on components/slots
+error: `prop:` is not supported on components/slots
   --> tests/ui/errors/unsupported_attrs.rs:12:19
    |
 12 |         Component prop:value="1";
-   |                   ^^^^^^^^^^
+   |                   ^^^^
 
 error: spread attributes not supported on components/slots
   --> tests/ui/errors/unsupported_attrs.rs:24:19
@@ -16,14 +16,14 @@ error: spread attributes not supported on components/slots
 24 |         Component {..attrs};
    |                   ^^^^^^^^^
 
-error: `attr:` not supported on elements
+error: `attr:` is not supported on elements
   --> tests/ui/errors/unsupported_attrs.rs:30:15
    |
 30 |         input attr:class="no" type="text";
-   |               ^^^^^^^^^^
+   |               ^^^^
 
-error: `clone:` not supported on elements
+error: `clone:` is not supported on elements
   --> tests/ui/errors/unsupported_attrs.rs:38:18
    |
 38 |             span clone:notcopy {
-   |                  ^^^^^^^^^^^^^
+   |                  ^^^^^

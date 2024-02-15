@@ -1,6 +1,5 @@
 pub mod directive;
 pub mod kv;
-mod parsing;
 pub mod selector;
 pub mod spread_attrs;
 
@@ -10,13 +9,13 @@ use syn::{
     Token,
 };
 
-use self::{directive::DirectiveAttr, kv::KvAttr, spread_attrs::SpreadAttr};
+use self::{directive::Directive, kv::KvAttr, spread_attrs::SpreadAttr};
 use crate::{error_ext::ResultExt, recover::rollback_err};
 
 #[derive(Clone)]
 pub enum Attr {
     Kv(KvAttr),
-    Directive(DirectiveAttr),
+    Directive(Directive),
     Spread(SpreadAttr),
 }
 
@@ -37,7 +36,7 @@ impl Parse for Attr {
         // otherwise, try kv or spread
         if input.peek(syn::Ident::peek_any) && input.peek2(Token![:]) {
             // cannot be anything else, abort if fails
-            let dir = input.parse::<DirectiveAttr>().unwrap_or_abort();
+            let dir = Directive::parse(input).unwrap_or_abort();
             Ok(Self::Directive(dir))
         } else if input.peek(syn::Ident) {
             // definitely a k-v attribute
