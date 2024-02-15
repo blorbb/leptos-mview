@@ -16,9 +16,11 @@ use crate::ast::{
 
 /// Functions for specific parts of an element's expansion.
 mod subroutines;
+#[allow(clippy::wildcard_imports)]
 use subroutines::*;
 /// Small helper functions for converting types or emitting errors.
 mod utils;
+#[allow(clippy::wildcard_imports)]
 use utils::*;
 
 /// Converts the children into a `leptos::Fragment::lazy()` token stream.
@@ -42,7 +44,7 @@ use utils::*;
 /// ```
 
 // used in the root or for component children
-pub(crate) fn children_fragment_tokens<'a>(
+pub fn children_fragment_tokens<'a>(
     children: impl Iterator<Item = &'a NodeChild>,
     span: Span,
 ) -> TokenStream {
@@ -184,7 +186,7 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
         match sel {
             SelectorShorthand::Id { id, .. } => selector_ids.push(id.to_lit_str()),
             SelectorShorthand::Class { class, .. } => {
-                dyn_classes.push((KebabIdentOrStr::KebabIdent(class.clone()), None))
+                dyn_classes.push((KebabIdentOrStr::KebabIdent(class.clone()), None));
             }
         };
     }
@@ -202,7 +204,7 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
                 if IS_SLOT {
                     emit_error!(dir.dir.span(), "`on:` is not supported on slots");
                 } else {
-                    event_listeners.extend(event_listener_tokens(dir))
+                    event_listeners.extend(event_listener_tokens(dir));
                 }
             }
             "attr" => {
@@ -210,7 +212,7 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
                     emit_error!(dir.dir.span(), "`attr:` is not supported on slots");
                 } else {
                     emit_error_if_modifier(dir.modifier.as_ref());
-                    dyn_attrs.push(dir)
+                    dyn_attrs.push(dir);
                 }
             }
             "use" => {
@@ -218,26 +220,26 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
                     emit_error!(dir.dir.span(), "`use:` is not supported on slots");
                 } else {
                     emit_error_if_modifier(dir.modifier.as_ref());
-                    use_directives.push(dir)
+                    use_directives.push(dir);
                 }
             }
             "clone" => {
                 emit_error_if_modifier(dir.modifier.as_ref());
-                clones.extend(component_clone_tokens(dir))
+                clones.extend(component_clone_tokens(dir));
             }
             "class" => {
                 emit_error_if_modifier(dir.modifier.as_ref());
-                dyn_classes.push((dir.key.clone(), Some(dir.value.to_token_stream())))
+                dyn_classes.push((dir.key.clone(), Some(dir.value.to_token_stream())));
             }
             "style" | "prop" => {
                 emit_error!(
                     dir.dir.span(),
                     "`{}:` is not supported on components/slots",
                     dir.dir
-                )
+                );
             }
             _ => {
-                emit_error!(dir.dir.span(), "unknown directive")
+                emit_error!(dir.dir.span(), "unknown directive");
             }
         },
     });

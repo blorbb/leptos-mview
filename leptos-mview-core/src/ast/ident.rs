@@ -206,8 +206,8 @@ impl KebabIdentOrStr {
 
     pub fn to_ident_or_emit(&self) -> syn::Ident {
         match self {
-            KebabIdentOrStr::KebabIdent(i) => i.to_snake_ident(),
-            KebabIdentOrStr::Str(s) => {
+            Self::KebabIdent(i) => i.to_snake_ident(),
+            Self::Str(s) => {
                 emit_error!(s.span(), "expected identifier");
                 syn::Ident::new("__invalid_identifier_found_str", s.span())
             }
@@ -216,8 +216,8 @@ impl KebabIdentOrStr {
 
     pub fn span(&self) -> Span {
         match self {
-            KebabIdentOrStr::KebabIdent(k) => k.span(),
-            KebabIdentOrStr::Str(s) => s.span(),
+            Self::KebabIdent(k) => k.span(),
+            Self::Str(s) => s.span(),
         }
     }
 }

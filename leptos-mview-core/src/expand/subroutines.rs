@@ -37,9 +37,7 @@ pub(super) fn use_directive_to_method(u: &Directive) -> TokenStream {
         modifier,
         value,
     } = u;
-    if use_token != "use" {
-        panic!("directive should be `use:`")
-    };
+    assert_eq!(use_token, "use", "directive should be `use:`");
     let directive_fn = key.to_ident_or_emit();
     emit_error_if_modifier(modifier.as_ref());
 
@@ -58,9 +56,7 @@ pub(super) fn event_listener_tokens(dir: &Directive) -> TokenStream {
         modifier,
         value,
     } = dir;
-    if dir != "on" {
-        panic!("directive should be `on:`");
-    };
+    assert_eq!(dir, "on", "directive should be `on:`");
 
     let ev_name = match key {
         KebabIdentOrStr::KebabIdent(ident) => ident.to_snake_ident(),
@@ -71,7 +67,7 @@ pub(super) fn event_listener_tokens(dir: &Directive) -> TokenStream {
     };
 
     let event = if let Some(modifier) = modifier {
-        if modifier.to_string() == "undelegated" {
+        if modifier == "undelegated" {
             quote! { ::leptos::ev::#modifier(::leptos::ev::#ev_name) }
         } else {
             emit_error!(
@@ -282,7 +278,7 @@ pub(super) fn component_dyn_attrs_to_methods(dyn_attrs: &[&Directive]) -> Option
     let dyn_attrs_method = syn::Ident::new("dyn_attrs", dyn_attrs[0].dir.span());
 
     let (keys, values): (Vec<_>, Vec<_>) = dyn_attrs
-        .into_iter()
+        .iter()
         .map(|a| (a.key.to_lit_str(), &a.value))
         .unzip();
 
