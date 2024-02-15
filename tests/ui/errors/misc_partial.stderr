@@ -1,17 +1,35 @@
 error: expected value after =
- --> tests/ui/errors/return_expression.rs:6:19
+ --> tests/ui/errors/misc_partial.rs:6:24
   |
-6 |         div class=;
-  |                   ^
+6 |             span class=test
+  |                        ^^^^
+  |
+  = help: you may have meant to wrap this in braces
+
+error: unterminated element
+ --> tests/ui/errors/misc_partial.rs:6:13
+  |
+6 |             span class=test
+  |             ^^^^
+  |
+  = help: add a `;` to terminate the element with no children
+
+error: unexpected end of input, expected a kebab-cased ident
+  --> tests/ui/errors/misc_partial.rs:15:9
+   |
+15 |         }
+   |         ^
 
 error[E0277]: expected a `Fn()` closure, found `MissingValueAfterEq`
- --> tests/ui/errors/return_expression.rs:6:19
+ --> tests/ui/errors/misc_partial.rs:6:24
   |
-5 |       let expr = mview! {
-  |  ________________-
-6 | |         div class=;
-  | |                   ^ expected an `Fn()` closure, found `MissingValueAfterEq`
-7 | |     };
+4 |       _ = mview! {
+  |  _________-
+5 | |         div class:x={true} {
+6 | |             span class=test
+  | |                        ^^^^ expected an `Fn()` closure, found `MissingValueAfterEq`
+7 | |         }
+8 | |     }
   | |_____- required by a bound introduced by this call
   |
   = help: the trait `std::ops::Fn<()>` is not implemented for `MissingValueAfterEq`

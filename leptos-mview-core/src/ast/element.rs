@@ -1,22 +1,17 @@
 use proc_macro2::{TokenStream, TokenTree};
-use proc_macro_error::{abort, emit_error};
+use proc_macro_error::emit_error;
 use quote::{ToTokens, TokenStreamExt};
 use syn::{
     parse::{Parse, ParseStream},
     Token,
 };
 
-use super::{
-    attribute::{
-        selector::{SelectorShorthand, SelectorShorthands},
-        Attr,
-    },
-    Attrs, Children, Tag,
-};
+use super::{attribute::selector::SelectorShorthands, Attrs, Children, Tag};
 use crate::{
-    error_ext::ResultExt,
     expand::{component_to_tokens, xml_to_tokens},
-    parse, span,
+    parse,
+    recover::rollback_err,
+    span,
 };
 
 /// A HTML or custom component.
@@ -63,50 +58,38 @@ pub struct Element {
 
 impl Parse for Element {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let tag: Tag = input.parse()?;
-        let selectors: SelectorShorthands = input.parse().unwrap_or_abort();
-        let attrs: Attrs = input.parse().unwrap_or_abort();
+        let tag = Tag::parse(input)?;
+        let selectors = SelectorShorthands::parse(input)?;
+        let attrs = Attrs::parse(input)?;
 
-        if input.peek(Token![;]) {
+        if rollback_err(input, <Token![;]>::parse).is_some() {
             // no children, terminated by semicolon.
-            input.parse::<Token![;]>().unwrap();
             Ok(Self::new(tag, selectors, attrs, None, None))
         } else if input.is_empty() {
             // allow no ending token if its the last child
             // makes for better editing experience when writing sequentially,
             // as syntax highlighting/autocomplete doesn't work if macro
             // can't fully compile.
-
-            let last_span = attrs.last().map_or(
-                selectors.last().map_or(tag.span(), SelectorShorthand::span),
-                Attr::span,
-            );
             emit_error!(
-                span::join(tag.span(), last_span), "unterminated element";
+                tag.span(), "unterminated element";
                 help = "add a `;` to terminate the element with no children"
             );
             Ok(Self::new(tag, selectors, attrs, None, None))
         } else if input.peek(syn::token::Brace) || input.peek(syn::token::Paren) {
             let children = if input.peek(syn::token::Brace) {
-                parse::parse_braced::<Children>(input).unwrap_or_abort().0
+                parse::braced::<Children>(input)?.1
             } else {
-                parse::parse_parenthesized::<Children>(input)
-                    .unwrap_or_abort()
-                    .0
+                parse::parenthesized::<Children>(input)?.1
             };
 
             Ok(Self::new(tag, selectors, attrs, None, Some(children)))
         } else if input.peek(Token![|]) {
             // extra args for the children
-            let args = parse_closure_args(input).unwrap_or_abort();
+            let args = parse_closure_args(input)?;
             let children = if input.peek(syn::token::Brace) {
-                Some(parse::parse_braced::<Children>(input).unwrap_or_abort().0)
+                Some(parse::braced::<Children>(input)?.1)
             } else if input.peek(syn::token::Paren) {
-                Some(
-                    parse::parse_parenthesized::<Children>(input)
-                        .unwrap_or_abort()
-                        .0,
-                )
+                Some(parse::parenthesized::<Children>(input)?.1)
             } else {
                 // continue trying to parse as if there are no children
                 emit_error!(
@@ -171,7 +154,7 @@ impl Element {
 ///
 /// # Parsing
 /// If the first pipe is not found, an [`Err`] will be returned. Otherwise,
-/// tokens are parsed until a second `|` is found. Aborts if a second `|` is not
+/// tokens are parsed until a second `|` is found. Errors if a second `|` is not
 /// found.
 ///
 /// This is ok because closure params take a
@@ -192,7 +175,10 @@ fn parse_closure_args(input: ParseStream) -> syn::Result<TokenStream> {
         } else if let Ok(tt) = input.parse::<TokenTree>() {
             tokens.append(tt);
         } else {
-            abort!(first_pipe.span, "closure arguments not closed");
+            break Err(syn::Error::new_spanned(
+                first_pipe,
+                "closure arguments not closed",
+            ));
         }
     }
 }

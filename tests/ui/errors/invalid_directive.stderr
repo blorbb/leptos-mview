@@ -4,13 +4,13 @@ error: unknown directive
 5 |         div something:yes="b" {}
   |             ^^^^^^^^^
 
-error: invalid key after directive: input is not a kebab-cased ident
+error: expected a kebab-cased ident
   --> tests/ui/errors/invalid_directive.rs:11:19
    |
 11 |         div class:("abcd") = true {}
    |                   ^
 
-error: invalid key after directive: input is not a kebab-cased ident
+error: expected a kebab-cased ident
   --> tests/ui/errors/invalid_directive.rs:17:19
    |
 17 |         div style:[1, 2]="black" {}

@@ -116,7 +116,7 @@ impl Parse for KebabIdent {
             repr.push('-');
             spans.push(dash.span);
         } else {
-            return Err(input.error("input is not a kebab-cased ident"));
+            return Err(input.error("expected a kebab-cased ident"));
         };
 
         // Whether we are parsing the second token now.

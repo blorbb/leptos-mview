@@ -10,6 +10,7 @@ mod error_ext;
 mod expand;
 mod kw;
 mod parse;
+mod recover;
 mod span;
 
 use ast::Child;
@@ -30,6 +31,7 @@ pub fn mview_impl(input: TokenStream) -> TokenStream {
         Ok(tree) => tree,
         Err(e) => return e.to_compile_error(),
     };
+
     // If there's a single top level component, can just expand like
     // div().attr(...).child(...)...
     // If there are multiple top-level children, need to use the fragment.
