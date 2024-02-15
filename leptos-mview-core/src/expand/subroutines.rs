@@ -322,8 +322,7 @@ pub(super) fn component_classes_to_method(
 
     let first_span = classes[0].0.span();
 
-    // if there are no reactive classes, just create the string now
-    // add `||` to reject `class:thing={true}`
+    // if there are no reactive classes, just create the string
     if classes.iter().all(|(_, signal)| signal.is_none()) {
         let string = classes
             .into_iter()
@@ -338,6 +337,7 @@ pub(super) fn component_classes_to_method(
         // maybe `leptos::Class`?
 
         let classes_array = classes.into_iter().map(|(class, signal)| {
+            let signal = signal.unwrap_or(quote! { || true });
             // add extra bracket to make sure the closure is called
             let signal_called = quote_spanned! { signal.span()=> (#signal)() };
             let class = class.to_lit_str();
