@@ -12,8 +12,9 @@ use syn::spanned::Spanned;
 
 use crate::ast::{
     attribute::{
-        directive::{self, DirectiveAttr},
+        directive::Directive,
         kv::KvAttr,
+        parsing::KebabIdentOrStr,
         selector::{SelectorShorthand, SelectorShorthands},
         spread_attrs::SpreadAttr,
     },
@@ -126,33 +127,37 @@ fn xml_kv_attribute_tokens(attr: &KvAttr) -> TokenStream {
     }
 }
 
-fn xml_directive_tokens(directive: &DirectiveAttr) -> TokenStream {
-    match directive {
-        DirectiveAttr::Class(c) => {
-            let (dir, name, value) = c.explode();
-            quote! { .#dir(#name, #value) }
+fn emit_error_if_modifier(m: Option<&syn::Ident>) {
+    if let Some(modifier) = m {
+        emit_error!(
+            modifier.span(),
+            "modifiers are only supported on `on:` directives"
+        );
+    }
+}
+
+fn xml_directive_tokens(directive: &Directive) -> TokenStream {
+    let Directive {
+        dir,
+        key,
+        modifier,
+        value,
+    } = directive;
+
+    match dir.to_string().as_str() {
+        "class" | "style" | "prop" => {
+            let key = key.to_lit_str();
+            emit_error_if_modifier(modifier.as_ref());
+            quote! { .#dir(#key, #value) }
         }
-        DirectiveAttr::Style(s) => {
-            let (dir, name, value) = s.explode();
-            quote! { .#dir(#name, #value) }
-        }
-        DirectiveAttr::Prop(p) => {
-            let (dir, name, value) = p.explode();
-            let name_str = name.to_string();
-            let name = quote_spanned!(name.span()=> #name_str);
-            quote! { .#dir(#name, #value) }
-        }
-        DirectiveAttr::On(o) => {
-            let (dir, ev, value) = o.explode();
-            quote! { .#dir(::leptos::ev::#ev, #value) }
-        }
-        DirectiveAttr::Use(u) => use_directive_to_method(u),
-        DirectiveAttr::Attr(a) => {
-            emit_error!(a.full_span(), "`attr:` not supported on elements");
+        "on" => event_listener_tokens(directive),
+        "use" => use_directive_to_method(directive),
+        "attr" | "clone" => {
+            emit_error!(dir.span(), "`{}:` is not supported on elements", dir);
             quote! {}
         }
-        DirectiveAttr::Clone(c) => {
-            emit_error!(c.full_span(), "`clone:` not supported on elements");
+        _ => {
+            emit_error!(dir.span(), "unknown directive");
             quote! {}
         }
     }
@@ -222,27 +227,25 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
 
     // attribute methods to add when building
     let mut attrs = TokenStream::new();
-    let mut dyn_attrs: Vec<&directive::Attr> = Vec::new();
-    let mut use_directives: Vec<&directive::Use> = Vec::new();
+    let mut dyn_attrs: Vec<&Directive> = Vec::new();
+    let mut use_directives: Vec<&Directive> = Vec::new();
     // the variables (idents) to clone before making children
     // in the form `let name = name.clone();`
     let mut clones = TokenStream::new();
     let mut event_listeners = TokenStream::new();
     // components can take `.some-class` or `class:this={signal}` by passing it into
     // the `class` prop
-    // .0 is the class string, .1 is the 'signal' (or just "move || true" if using
-    // selectors)
-    let mut dyn_classes: Vec<(syn::LitStr, TokenStream)> = Vec::new();
+    // .0 is the class string, .1 is the 'signal' (or `None` if using selectors)
+    let mut dyn_classes: Vec<(KebabIdentOrStr, Option<TokenStream>)> = Vec::new();
     // ids are not reactive (no `id:this={signal}`), will just be from selectors
     let mut selector_ids: Vec<syn::LitStr> = Vec::new();
 
     for sel in element.selectors().iter() {
         match sel {
             SelectorShorthand::Id { id, .. } => selector_ids.push(id.to_lit_str()),
-            SelectorShorthand::Class { dot_symbol, class } => dyn_classes.push((
-                class.to_lit_str(),
-                quote_spanned!(dot_symbol.span=> move || true),
-            )),
+            SelectorShorthand::Class { class, .. } => {
+                dyn_classes.push((KebabIdentOrStr::KebabIdent(class.clone()), None))
+            }
         };
     }
 
@@ -254,39 +257,47 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
                 "spread attributes not supported on components/slots"
             );
         }
-        Attr::Directive(dir) => match dir {
-            DirectiveAttr::On(o) => {
+        Attr::Directive(dir) => match dir.dir.to_string().as_str() {
+            "on" => {
                 if IS_SLOT {
-                    emit_error!(o.full_span(), "`on:` not supported on slots");
+                    emit_error!(dir.dir.span(), "`on:` is not supported on slots");
                 } else {
-                    event_listeners.extend(component_event_listener_tokens(o));
+                    event_listeners.extend(event_listener_tokens(dir))
                 }
             }
-            // TODO: seems like attr: could be supported on slots, but #[prop(attrs)] isn't
-            // supported. allow them if they are updated in the future.
-            DirectiveAttr::Attr(a) => {
+            "attr" => {
                 if IS_SLOT {
-                    emit_error!(a.full_span(), "`attr:` not supported on slots");
+                    emit_error!(dir.dir.span(), "`attr:` is not supported on slots");
                 } else {
-                    dyn_attrs.push(a);
+                    emit_error_if_modifier(dir.modifier.as_ref());
+                    dyn_attrs.push(dir)
                 }
             }
-            DirectiveAttr::Clone(c) => clones.extend(component_clone_tokens(c)),
-            DirectiveAttr::Use(u) => {
+            "use" => {
                 if IS_SLOT {
-                    emit_error!(u.full_span(), "`use:` not supported on slots");
+                    emit_error!(dir.dir.span(), "`use:` is not supported on slots");
                 } else {
-                    use_directives.push(u);
+                    emit_error_if_modifier(dir.modifier.as_ref());
+                    use_directives.push(dir)
                 }
             }
-            DirectiveAttr::Class(c) => {
-                dyn_classes.push((c.key().clone(), c.value().to_token_stream()));
+            "clone" => {
+                emit_error_if_modifier(dir.modifier.as_ref());
+                clones.extend(component_clone_tokens(dir))
             }
-            DirectiveAttr::Style(s) => {
-                emit_error!(s.full_span(), "`style:` not supported on components/slots");
+            "class" => {
+                emit_error_if_modifier(dir.modifier.as_ref());
+                dyn_classes.push((dir.key.clone(), Some(dir.value.to_token_stream())))
             }
-            DirectiveAttr::Prop(p) => {
-                emit_error!(p.full_span(), "`prop:` not supported on components/slots");
+            "style" | "prop" => {
+                emit_error!(
+                    dir.dir.span(),
+                    "`{}:` is not supported on components/slots",
+                    dir.dir
+                )
+            }
+            _ => {
+                emit_error!(dir.dir.span(), "unknown directive")
             }
         },
     });
@@ -355,19 +366,45 @@ fn component_kv_attribute_tokens(attr: &KvAttr) -> TokenStream {
     quote_spanned! { attr.span()=> .#key(#value) }
 }
 
-fn component_event_listener_tokens(dir: &directive::On) -> TokenStream {
-    let (dir, ev, callback) = dir.explode();
-    quote! {
-        .#dir(
-            ::leptos::ev::undelegated(::leptos::ev::#ev),
-            #callback
-        )
-    }
+fn event_listener_tokens(dir: &Directive) -> TokenStream {
+    let Directive {
+        dir,
+        key,
+        modifier,
+        value,
+    } = dir;
+    if dir != "on" {
+        panic!("directive should be `on:`");
+    };
+
+    let ev_name = match key {
+        KebabIdentOrStr::KebabIdent(ident) => ident.to_snake_ident(),
+        KebabIdentOrStr::Str(s) => {
+            emit_error!(s.span(), "event type must be an identifier");
+            syn::Ident::new("invalid_event", s.span())
+        }
+    };
+
+    let event = if let Some(modifier) = modifier {
+        if modifier.to_string() == "undelegated" {
+            quote! { ::leptos::ev::#modifier(::leptos::ev::#ev_name) }
+        } else {
+            emit_error!(
+                modifier.span(), "unknown modifier";
+                help = ":undelegated is the only known modifier"
+            );
+            quote! { ::leptos::ev::#ev_name }
+        }
+    } else {
+        quote! { ::leptos::ev::#ev_name }
+    };
+    quote! { .#dir(#event, #value) }
 }
 
 /// Expands to a `let` statement `let to_clone = to_clone.clone();`.
-fn component_clone_tokens(dir: &directive::Clone) -> TokenStream {
-    let to_clone = dir.key();
+fn component_clone_tokens(dir: &Directive) -> TokenStream {
+    let to_clone = dir.key.to_ident_or_emit();
+    emit_error_if_modifier(dir.modifier.as_ref());
     quote! { let #to_clone = #to_clone.clone(); }
 }
 
@@ -447,15 +484,19 @@ fn component_children_tokens<'a>(
     }
 }
 
-fn dyn_attrs_to_methods(dyn_attrs: &[&directive::Attr]) -> Option<TokenStream> {
+fn dyn_attrs_to_methods(dyn_attrs: &[&Directive]) -> Option<TokenStream> {
     // expand dyn attrs to the method if any exist
     if dyn_attrs.is_empty() {
         return None;
     };
 
-    let dyn_attrs_method = syn::Ident::new("dyn_attrs", dyn_attrs[0].dir().span);
+    let dyn_attrs_method = syn::Ident::new("dyn_attrs", dyn_attrs[0].dir.span());
 
-    let (keys, values): (Vec<_>, Vec<_>) = dyn_attrs.iter().map(|a| (a.key(), a.value())).unzip();
+    let (keys, values): (Vec<_>, Vec<_>) = dyn_attrs
+        .into_iter()
+        .map(|a| (a.key.to_lit_str(), &a.value))
+        .unzip();
+
     Some(quote! {
         .#dyn_attrs_method(
             ::std::vec![
@@ -487,7 +528,9 @@ fn dyn_attrs_to_methods(dyn_attrs: &[&directive::Attr]) -> Option<TokenStream> {
 ///
 /// For now, what is passed in to `{signal}` must be something that impls `Fn()
 /// -> bool`, it cannot just be a `bool`.
-fn component_classes_to_method(classes: Vec<(syn::LitStr, TokenStream)>) -> Option<TokenStream> {
+fn component_classes_to_method(
+    classes: Vec<(KebabIdentOrStr, Option<TokenStream>)>,
+) -> Option<TokenStream> {
     if classes.is_empty() {
         return None;
     };
@@ -496,13 +539,10 @@ fn component_classes_to_method(classes: Vec<(syn::LitStr, TokenStream)>) -> Opti
 
     // if there are no reactive classes, just create the string now
     // add `||` to reject `class:thing={true}`
-    if classes
-        .iter()
-        .all(|(_, signal)| signal.to_string().ends_with("|| true"))
-    {
+    if classes.iter().all(|(_, signal)| signal.is_none()) {
         let string = classes
             .into_iter()
-            .map(|(class, _)| class.value())
+            .map(|(class, _)| class.to_lit_str().value())
             .collect::<Vec<_>>()
             .join(" ");
         Some(quote_spanned!(first_span=> .class(#string)))
@@ -515,6 +555,8 @@ fn component_classes_to_method(classes: Vec<(syn::LitStr, TokenStream)>) -> Opti
         let classes_array = classes.into_iter().map(|(class, signal)| {
             // add extra bracket to make sure the closure is called
             let signal_called = quote_spanned! { signal.span()=> (#signal)() };
+            let class = class.to_lit_str();
+
             // use fully qualified path so that error says 'incorrect type' instead of
             // 'method `then_some` not found'
             quote_spanned! { signal_called.span()=>
@@ -565,14 +607,27 @@ fn component_ids_to_method(ids: Vec<syn::LitStr>) -> Option<TokenStream> {
 /// use:d => .directive(d, ().into())
 /// use:d={some_value} => .directive(d, some_value.into())
 /// ```
-fn use_directive_to_method(u: &directive::Use) -> TokenStream {
-    let (use_token, func, value) = u.explode();
-    let directive = syn::Ident::new("directive", use_token.span);
-    let value = value.as_ref().map_or(
-        quote_spanned! {func.span()=> ().into() },
+///
+/// **Panics** if the provided directive is not `use:`.
+fn use_directive_to_method(u: &Directive) -> TokenStream {
+    let Directive {
+        dir: use_token,
+        key,
+        modifier,
+        value,
+    } = u;
+    if use_token != "use" {
+        panic!("directive should be `use:`")
+    };
+    let directive_fn = key.to_ident_or_emit();
+    emit_error_if_modifier(modifier.as_ref());
+
+    let directive = syn::Ident::new("directive", use_token.span());
+    let value = value.as_ref().map_or_else(
+        || quote_spanned! {directive_fn.span()=> ().into() },
         |val| quote! { ::std::convert::Into::into(#val) },
     );
-    quote! { .#directive(#func, #value) }
+    quote! { .#directive(#directive_fn, #value) }
 }
 
 /// Converts the children into a `leptos::Fragment::lazy()` token stream.

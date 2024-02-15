@@ -1,5 +1,7 @@
 //! A collection of structs and functions for parsing attributes.
 
+use proc_macro2::Span;
+use proc_macro_error::emit_error;
 use quote::ToTokens;
 use syn::{
     parse::{Parse, ParseStream},
@@ -40,88 +42,35 @@ pub fn parse_kebab_or_braced_or_bool(input: ParseStream) -> syn::Result<(KebabId
     }
 }
 
-/// Parsing function for attributes that can accept:
-/// - Normal `key={value}` pairs
-/// - Keys that are str literals `"something"={value}`
-/// - Shorthand attributes like `{class}` to `class={class}`.
-/// - The above can also be kebab-case idents.
-pub fn parse_kebab_or_braced_or_str(input: ParseStream) -> syn::Result<(syn::LitStr, Value)> {
-    // either a shorthand `{class}` or key-value pair `class={class}`.
-    if input.peek(syn::token::Brace) {
-        let braced_ident = input.parse::<BracedKebabIdent>()?;
-        Ok((
-            braced_ident.ident().to_lit_str(),
-            braced_ident.into_block_value(),
-        ))
-    } else {
-        let class = KebabIdentOrStr::parse(input)?.into_lit_str();
-        <Token![=]>::parse(input)?;
-        let value = Value::parse_or_emit_err(input);
-        Ok((class, value))
-    }
-}
-
-/// Parsing functions for attributes that can accept:
-/// - Normal `key={value}` pairs
-/// - Shorthand attributes like `{class}` to `class={class}`
-/// - All idents must be a regular ident, cannot be a keyword.
-pub fn parse_ident_or_braced(input: ParseStream) -> syn::Result<(syn::Ident, Value)> {
-    if input.peek(syn::token::Brace) {
-        let ident = BracedIdent::parse(input)?;
-        Ok((ident.ident().clone(), ident.into_block_value()))
-    } else {
-        let ident = input.parse::<syn::Ident>()?;
-        input.parse::<Token![=]>()?;
-        let value = Value::parse_or_emit_err(input);
-        Ok((ident, value))
-    }
-}
-
-/// Parsing functions for attributes that can accept:
-/// - Normal `key={value}` pairs
-/// - Shorthand attributes like `{class}` to `class={class}`
-/// - Just an ident, no value afterward.
-/// - All idents must be a regular ident, cannot be a keyword.
-pub fn parse_ident_optional_value(input: ParseStream) -> syn::Result<(syn::Ident, Option<Value>)> {
-    if input.peek(syn::token::Brace) {
-        let ident = BracedIdent::parse(input)?;
-        Ok((ident.ident().clone(), Some(ident.into_block_value())))
-    } else {
-        let ident = syn::Ident::parse(input)?;
-        if rollback_err(input, <Token![=]>::parse).is_some() {
-            // add a value
-            let value = Value::parse_or_emit_err(input);
-            Ok((ident, Some(value)))
-        } else {
-            // no value
-            Ok((ident, None))
-        }
-    }
-}
-
-/// Generic parsing function for directives.
-///
-/// Tries the parse the `Kw` and colon, then parses the `next` function.
-pub fn parse_dir_then<Kw: syn::token::Token + Parse, R>(
-    input: ParseStream,
-    next: fn(ParseStream) -> syn::Result<R>,
-) -> syn::Result<(Kw, R)> {
-    let dir = Kw::parse(input)?; // should not advance if no match
-    <Token![:]>::parse(input)?;
-    Ok((dir, next(input)?))
-}
-
 // Parse either a kebab-case ident or a str literal.
+#[derive(Clone)]
 pub enum KebabIdentOrStr {
     KebabIdent(KebabIdent),
     Str(syn::LitStr),
 }
 
 impl KebabIdentOrStr {
-    pub fn into_lit_str(self) -> syn::LitStr {
+    pub fn to_lit_str(&self) -> syn::LitStr {
         match self {
             Self::KebabIdent(ident) => ident.to_lit_str(),
-            Self::Str(s) => s,
+            Self::Str(s) => s.clone(),
+        }
+    }
+
+    pub fn to_ident_or_emit(&self) -> syn::Ident {
+        match self {
+            KebabIdentOrStr::KebabIdent(i) => i.to_snake_ident(),
+            KebabIdentOrStr::Str(s) => {
+                emit_error!(s.span(), "expected identifier");
+                syn::Ident::new("__invalid_identifier_found_str", s.span())
+            }
+        }
+    }
+
+    pub fn span(&self) -> Span {
+        match self {
+            KebabIdentOrStr::KebabIdent(k) => k.span(),
+            KebabIdentOrStr::Str(s) => s.span(),
         }
     }
 }
@@ -165,41 +114,6 @@ impl BracedKebabIdent {
 impl Parse for BracedKebabIdent {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let (brace, ident) = parse::braced::<KebabIdent>(input)?;
-        Ok(Self::new(brace, ident))
-    }
-}
-
-/// Parses a braced ident like `{abc_123}`
-///
-/// Does not advance the token stream if it cannot be parsed.
-///
-/// Does not parse kebab-case identifiers - see [`BracedKebabIdent`] instead.
-pub struct BracedIdent {
-    brace_token: Brace,
-    ident: syn::Ident,
-}
-
-impl BracedIdent {
-    pub const fn new(brace: Brace, ident: syn::Ident) -> Self {
-        Self {
-            brace_token: brace,
-            ident,
-        }
-    }
-
-    pub const fn ident(&self) -> &syn::Ident { &self.ident }
-
-    pub fn into_block_value(self) -> Value {
-        Value::Block {
-            tokens: self.ident().into_token_stream(),
-            braces: self.brace_token,
-        }
-    }
-}
-
-impl Parse for BracedIdent {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        let (brace, ident) = parse::braced::<syn::Ident>(input)?;
         Ok(Self::new(brace, ident))
     }
 }

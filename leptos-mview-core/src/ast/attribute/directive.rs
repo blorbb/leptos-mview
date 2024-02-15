@@ -1,18 +1,11 @@
-use proc_macro2::Span;
 use syn::{
+    ext::IdentExt,
     parse::{Parse, ParseStream},
-    token::Token,
     Token,
 };
 
-use super::parsing::{
-    parse_dir_then, parse_ident_optional_value, parse_ident_or_braced,
-    parse_kebab_or_braced_or_bool, parse_kebab_or_braced_or_str,
-};
-use crate::{
-    ast::{KebabIdent, Value},
-    kw,
-};
+use super::parsing::{BracedKebabIdent, KebabIdentOrStr};
+use crate::{ast::Value, recover::rollback_err};
 
 /// A special attribute like `on:click={...}`.
 ///
@@ -28,127 +21,55 @@ use crate::{
 /// button class:{primary} style:color="grey";
 /// ```
 ///
-/// # Parsing
-/// Parsing will fail if no `:` is found. The `ParseStream` will not be
-/// advnaced in this case.
-///
-/// If a `:` is found but any other part of the parsing fails (including unknown
-/// directives), the macro will abort.
+/// If an extra `:modifier` is added, there will also be a modifier.
+/// ```ignore
+/// button on:click:undelegated={on_click};
+/// ```
+/// `on:{click}:undelegated` also works for the shorthand.
 #[derive(Clone)]
-pub enum DirectiveAttr {
-    Class(Class),
-    Style(Style),
-    Attr(Attr),
-    On(On),
-    Prop(Prop),
-    Clone(Clone),
-    Use(Use),
+pub struct Directive {
+    pub(crate) dir: syn::Ident,
+    pub(crate) key: KebabIdentOrStr,
+    pub(crate) modifier: Option<syn::Ident>, // on:event:undelegated
+    pub(crate) value: Option<Value>,
 }
 
-// impl DirectiveAttr {
-//     pub fn span(&self) -> Span {
-//         match self {
-//             Self::Class(a) => a.full_span(),
-//             Self::Style(a) => a.full_span(),
-//             Self::Attr(a) => a.full_span(),
-//             Self::On(a) => a.full_span(),
-//             Self::Prop(a) => a.full_span(),
-//             Self::Clone(a) => a.full_span(),
-//             Self::Use(a) => a.full_span(),
-//         }
-//     }
-// }
+impl Parse for Directive {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let name = syn::Ident::parse_any(input)?;
+        <Token![:]>::parse(input)?;
 
-impl Parse for DirectiveAttr {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        if input.peek(kw::class) {
-            Ok(Self::Class(Class::parse(input)?))
-        } else if input.peek(kw::style) {
-            Ok(Self::Style(Style::parse(input)?))
-        } else if input.peek(kw::attr) {
-            Ok(Self::Attr(Attr::parse(input)?))
-        } else if input.peek(kw::on) {
-            Ok(Self::On(On::parse(input)?))
-        } else if input.peek(kw::prop) {
-            Ok(Self::Prop(Prop::parse(input)?))
-        } else if input.peek(kw::clone) {
-            Ok(Self::Clone(Clone::parse(input)?))
-        } else if input.peek(Token![use]) {
-            Ok(Self::Use(Use::parse(input)?))
+        let try_parse_modifier = |input| {
+            rollback_err(input, <Token![:]>::parse)
+                .is_some()
+                .then(|| syn::Ident::parse_any(input))
+                .transpose()
+        };
+
+        let key: KebabIdentOrStr;
+        let value: Option<Value>;
+        let modifier: Option<syn::Ident>;
+
+        if input.peek(syn::token::Brace) {
+            // on:{click}:undelegated
+            let ident = BracedKebabIdent::parse(input)?;
+            key = KebabIdentOrStr::KebabIdent(ident.ident().clone());
+            value = Some(ident.into_block_value());
+            modifier = try_parse_modifier(input)?;
         } else {
-            Err(input.error("unknown directive"))
-        }
+            // on:click:undelegated={on_click}
+            key = KebabIdentOrStr::parse(input)?;
+            modifier = try_parse_modifier(input)?;
+            value = rollback_err(input, <Token![=]>::parse)
+                .is_some()
+                .then(|| Value::parse_or_emit_err(input));
+        };
+
+        Ok(Self {
+            dir: name,
+            key,
+            modifier,
+            value,
+        })
     }
 }
-
-macro_rules! create_directive {
-    ($struct_name:ident { $dir:ty : $key:ty = $value:ty } uses $parser:ident) => {
-        #[derive(Clone)]
-        pub struct $struct_name {
-            dir: $dir,
-            key: $key,
-            value: $value,
-        }
-
-        impl Parse for $struct_name {
-            fn parse(input: ParseStream) -> syn::Result<Self> {
-                let (dir, (key, value)) = parse_dir_then(input, $parser)?;
-                Ok(Self { dir, key, value })
-            }
-        }
-
-        #[allow(dead_code)]
-        impl $struct_name {
-            pub fn dir_name() -> &'static str { <$dir>::display() }
-
-            pub const fn dir(&self) -> &$dir { &self.dir }
-            pub const fn key(&self) -> &$key { &self.key }
-            pub const fn value(&self) -> &$value { &self.value }
-
-            pub const fn explode(&self) -> (&$dir, &$key, &$value) {
-                (self.dir(), self.key(), self.value())
-            }
-
-            pub fn full_span(&self) -> Span {
-                crate::span::join(self.dir().span, self.key().span())
-            }
-        }
-    };
-    // no value
-    ($struct_name:ident { $dir:ty : $key:ty } uses $parser:expr) => {
-        #[derive(Clone)]
-        pub struct $struct_name {
-            dir: $dir,
-            key: $key,
-        }
-
-        impl Parse for $struct_name {
-            fn parse(input: ParseStream) -> syn::Result<Self> {
-                let (dir, key) = parse_dir_then(input, $parser)?;
-                Ok(Self { dir, key })
-            }
-        }
-
-        #[allow(dead_code)]
-        impl $struct_name {
-            pub fn dir_name() -> &'static str { <$dir>::display() }
-
-            pub const fn dir(&self) -> &$dir { &self.dir }
-            pub const fn key(&self) -> &$key { &self.key }
-
-            pub const fn explode(&self) -> (&$dir, &$key) { (self.dir(), self.key()) }
-
-            pub fn full_span(&self) -> Span {
-                crate::span::join(self.dir().span, self.key().span())
-            }
-        }
-    };
-}
-
-create_directive! { Class { kw::class : syn::LitStr = Value } uses parse_kebab_or_braced_or_str }
-create_directive! { Style { kw::style : syn::LitStr = Value } uses parse_kebab_or_braced_or_str }
-create_directive! { Attr { kw::attr : KebabIdent = Value } uses parse_kebab_or_braced_or_bool }
-create_directive! { On { kw::on : syn::Ident = Value } uses parse_ident_or_braced }
-create_directive! { Prop { kw::prop : syn::Ident = Value } uses parse_ident_or_braced }
-create_directive! { Clone { kw::clone : syn::Ident } uses syn::Ident::parse }
-create_directive! { Use { Token![use] : syn::Ident = Option<Value> } uses parse_ident_optional_value }
