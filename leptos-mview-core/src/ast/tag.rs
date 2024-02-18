@@ -1,11 +1,11 @@
 use proc_macro2::Span;
-use proc_macro_error::emit_error;
 use syn::{
     parse::{Parse, ParseStream},
-    parse_quote, Token,
+    spanned::Spanned,
+    Token,
 };
 
-use crate::{ast::KebabIdent, error_ext::ResultExt};
+use crate::ast::KebabIdent;
 
 #[allow(clippy::doc_markdown)]
 /// The name of the element, like `div`, `path`, `For`, `leptos-island`, etc.
@@ -34,29 +34,13 @@ use crate::{ast::KebabIdent, error_ext::ResultExt};
 pub enum Tag {
     Html(syn::Ident),
     /// The generic will contain a leading `::`.
-    Component(syn::Ident, Option<syn::AngleBracketedGenericArguments>),
+    Component(syn::Path),
     Svg(syn::Ident),
     Math(syn::Ident),
     WebComponent(KebabIdent),
 }
 
 impl Tag {
-    /// Returns the tag identifier.
-    ///
-    /// Web-components are a [`KebabIdent`], and all other tags are turned into
-    /// a `KebabIdent`.
-    ///
-    /// Use the [`Tag::span`] function if just the span is required.
-    pub fn ident(&self) -> KebabIdent {
-        match self {
-            Self::Html(ident)
-            | Self::Component(ident, _)
-            | Self::Svg(ident)
-            | Self::Math(ident) => ident.clone().into(),
-            Self::WebComponent(ident) => ident.clone(),
-        }
-    }
-
     /// Returns the [`Span`] of the tag identifier.
     ///
     /// Component generics are not included in this span.
@@ -64,40 +48,29 @@ impl Tag {
     /// Use the [`Tag::ident`] function if the identifier itself is required.
     pub fn span(&self) -> Span {
         match self {
-            Self::Html(ident)
-            | Self::Component(ident, _)
-            | Self::Svg(ident)
-            | Self::Math(ident) => ident.span(),
+            Self::Html(ident) | Self::Svg(ident) | Self::Math(ident) => ident.span(),
             Self::WebComponent(ident) => ident.span(),
+            Self::Component(path) => path.span(),
         }
     }
 }
 
 impl Parse for Tag {
     fn parse(input: ParseStream) -> syn::Result<Self> {
+        // peek 1 in case it's a leading ::
+        // this will also include any generics
+        // also look for generics without a full path
+        if input.peek2(Token![::]) || input.peek(Token![::]) || input.peek2(Token![<]) {
+            // this is a path segment: must be a component
+            let path = syn::Path::parse(input)?;
+            return Ok(Self::Component(path));
+        }
+
         let ident = input.parse::<KebabIdent>()?;
         let kind = TagKind::from(ident.repr());
         Ok(match kind {
             TagKind::Html => Self::Html(ident.to_snake_ident()),
-            TagKind::Component => {
-                if input.peek(Token![::]) {
-                    emit_error! {
-                        input.span(), "unexpected token `::`";
-                        help = "turbofish syntax is not used for component generics, \
-                        place angle brackets directly after the component name"
-                    }
-                    // skip the :: and continue
-                    input.parse::<Token![::]>().unwrap();
-                }
-
-                let generics = input.peek(Token![<]).then(|| {
-                    let non_leading_generic = input
-                        .parse::<syn::AngleBracketedGenericArguments>()
-                        .expect_or_abort("failed to parse component generics");
-                    parse_quote!(::#non_leading_generic)
-                });
-                Self::Component(ident.to_snake_ident(), generics)
-            }
+            TagKind::Component => Self::Component(syn::Path::from(ident.to_snake_ident())),
             TagKind::Svg => Self::Svg(ident.to_snake_ident()),
             TagKind::Math => Self::Math(ident.to_snake_ident()),
             TagKind::WebComponent => Self::WebComponent(ident),

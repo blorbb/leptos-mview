@@ -8,10 +8,11 @@ use std::collections::HashMap;
 use proc_macro2::{Span, TokenStream};
 use proc_macro_error::emit_error;
 use quote::{quote, quote_spanned, ToTokens};
+use syn::spanned::Spanned;
 
 use crate::ast::{
     attribute::{directive::Directive, selector::SelectorShorthand},
-    Attr, Element, KebabIdent, KebabIdentOrStr, NodeChild, Tag,
+    Attr, Element, KebabIdentOrStr, NodeChild, Tag,
 };
 
 /// Functions for specific parts of an element's expansion.
@@ -161,9 +162,10 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
 /// ```
 #[allow(clippy::too_many_lines)]
 pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<TokenStream> {
-    let Tag::Component(ident, generics) = element.tag() else {
+    let Tag::Component(path) = element.tag() else {
         return None;
     };
+    let path = turbofishify(path.clone());
 
     // collect a bunch of info about the element attributes //
 
@@ -266,13 +268,13 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
 
     // if attributes are missing, an error is made in `.build()` by the component
     // builder.
-    let build = quote_spanned!(ident.span()=> .build());
+    let build = quote_spanned!(path.span()=> .build());
 
     if IS_SLOT {
         // Into is for turning a single slot into a vec![slot] if needed
         Some(quote! {
             ::std::convert::Into::into(
-                #ident #generics::builder()
+                #path::builder()
                     #attrs
                     #dyn_classes
                     #selector_ids
@@ -286,8 +288,8 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
             // this causes unreachable code warning in ::leptos::component_view
             #[allow(unreachable_code)]
             ::leptos::component_view(
-                &#ident,
-                ::leptos::component_props_builder(&#ident #generics)
+                &#path,
+                ::leptos::component_props_builder(&#path)
                     #attrs
                     #dyn_classes
                     #selector_ids
@@ -332,14 +334,22 @@ fn slots_to_tokens<'a>(children: impl Iterator<Item = &'a Element>) -> TokenStre
 
     // Mapping from the slot name (component, UpperCamelCase name, not snake_case)
     // to a vec of the each slot's expansion.
-    let mut slot_children = HashMap::<KebabIdent, Vec<TokenStream>>::new();
+    let mut slot_children = HashMap::<syn::Ident, Vec<TokenStream>>::new();
     for el in children {
-        let component_name = el.tag().ident();
+        let Tag::Component(path) = el.tag() else {
+            panic!("called `slots_to_tokens` on non-slot element")
+        };
+        let slot_name = if let Some(ident) = path.get_ident() {
+            ident.clone()
+        } else {
+            emit_error!(path.span(), "slot name must be a single ident, not a path");
+            continue;
+        };
 
         let slot_component =
-            component_to_tokens::<true>(el).expect("all children should be slot components");
+            component_to_tokens::<true>(el).expect("checked that element is a component");
         slot_children
-            .entry(component_name)
+            .entry(slot_name)
             .or_default()
             .push(slot_component);
     }
@@ -349,7 +359,7 @@ fn slots_to_tokens<'a>(children: impl Iterator<Item = &'a Element>) -> TokenStre
         .into_iter()
         .map(|(slot_name, slot_tokens)| {
             let method = syn::Ident::new_raw(
-                &utils::upper_camel_to_snake_case(slot_name.repr()),
+                &utils::upper_camel_to_snake_case(&slot_name.to_string()),
                 slot_name.span(),
             );
 
