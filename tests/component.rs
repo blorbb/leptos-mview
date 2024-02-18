@@ -83,6 +83,21 @@ fn qualified_paths() {
     check_str(result, Contains::AllOfNoneOf([&["a"], &["b"]]))
 }
 
+// don't try parse slot:: as a slot
+mod slot {
+    use leptos::*;
+
+    #[component]
+    pub fn NotASlot() -> impl IntoView {}
+}
+
+#[test]
+fn slot_peek() {
+    _ = mview! {
+        slot::NotASlot;
+    }
+}
+
 #[test]
 fn let_patterns() {
     if false {
