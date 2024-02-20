@@ -124,11 +124,10 @@ This macro will be compatible with the latest stable release of Leptos.
 
 Elements have the following structure:
 
-1. Element / component tag name (`div`, `App`).
-2. Any generics where applicable.
-3. Any classes or ids prefixed with a dot `.` or hash `#` respectively.
-4. A space-separated list of attributes and directives (`class="primary"`, `on:click={...}`).
-5. Either children in braces/parens (`{ "hi!" }` or `("hi")`) or a semi-colon for no children (`;`).
+1. Element / component tag name / path (`div`, `App`, `component::Codeblock`).
+2. Any classes or ids prefixed with a dot `.` or hash `#` respectively.
+3. A space-separated list of attributes and directives (`class="primary"`, `on:click={...}`).
+4. Either children in braces/parens (`{ "hi!" }` or `("hi")`) or a semi-colon for no children (`;`).
 
 Example:
 ```
@@ -143,7 +142,7 @@ mview! {
 # ;
 ```
 
-Adding generics is the same as in leptos: add it directly after the component name, without the turbofish `::<...>`.
+Adding generics is the same as in leptos: add it directly after the component name, with or without the turbofish.
 ```
 # use leptos::*; use leptos_mview::mview;
 # use core::marker::PhantomData;
@@ -155,7 +154,8 @@ pub fn GenericComponent<S>(ty: PhantomData<S>) -> impl IntoView {
 #[component]
 pub fn App() -> impl IntoView {
     mview! {
-        GenericComponent<String> ty={PhantomData};
+        // both with and without turbofish is supported
+        GenericComponent::<String> ty={PhantomData};
         GenericComponent<usize> ty={PhantomData};
         GenericComponent<i32> ty={PhantomData};
     }
