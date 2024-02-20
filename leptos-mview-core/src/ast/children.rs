@@ -66,9 +66,10 @@ impl Parse for Child {
             } else {
                 Ok(Self::Node(NodeChild::Value(value)))
             }
-        } else if let Some((slot, _)) = rollback_err(input, |input| {
-            Ok((kw::slot::parse(input)?, <Token![:]>::parse(input)?))
-        }) {
+        // make sure its not a fully qualified path
+        } else if input.peek(kw::slot) && input.peek2(Token![:]) && !input.peek2(Token![::]) {
+            let slot = kw::slot::parse(input).unwrap();
+            <Token![:]>::parse(input).unwrap();
             let elem = Element::parse(input)?;
             Ok(Self::Slot(slot, elem))
         } else if input.peek(syn::Ident::peek_any) {

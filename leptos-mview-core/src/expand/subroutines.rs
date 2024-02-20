@@ -11,9 +11,10 @@ use crate::{
             selector::{SelectorShorthand, SelectorShorthands},
             spread_attrs::SpreadAttr,
         },
-        KebabIdentOrStr, NodeChild,
+        KebabIdent, KebabIdentOrStr, NodeChild,
     },
     expand::{children_fragment_tokens, emit_error_if_modifier},
+    span,
 };
 
 ////////////////////////////////////////////////////////////////
@@ -313,43 +314,72 @@ pub(super) fn component_dyn_attrs_to_methods(dyn_attrs: &[&Directive]) -> Option
 ///
 /// For now, what is passed in to `{signal}` must be something that impls `Fn()
 /// -> bool`, it cannot just be a `bool`.
+///
+/// Returns [`None`] if `class_span` is [`None`] or `classes` is empty.
 pub(super) fn component_classes_to_method(
     classes: Vec<(KebabIdentOrStr, Option<TokenStream>)>,
+    class_span: Option<Span>,
 ) -> Option<TokenStream> {
+    let Some(class_span) = class_span else { return None };
     if classes.is_empty() {
         return None;
     };
 
-    let first_span = classes[0].0.span();
+    fn generate_dummy_assignments(
+        idents: impl IntoIterator<Item = (KebabIdentOrStr, Option<TokenStream>)>,
+    ) -> impl Iterator<Item = TokenStream> {
+        idents
+            .into_iter()
+            .filter_map(|(maybe_ident, _)| match maybe_ident {
+                KebabIdentOrStr::KebabIdent(ident) => {
+                    Some(span::color_all(ident.spans()).collect::<TokenStream>())
+                }
+                KebabIdentOrStr::Str(_) => None,
+            })
+    }
 
     // if there are no reactive classes, just create the string
     if classes.iter().all(|(_, signal)| signal.is_none()) {
         let string = classes
-            .into_iter()
+            .iter()
             .map(|(class, _)| class.to_lit_str().value())
             .collect::<Vec<_>>()
             .join(" ");
-        Some(quote_spanned!(first_span=> .class(#string)))
+
+        let dummy_assignments = generate_dummy_assignments(classes);
+
+        let class = quote_spanned!(class_span=> class);
+        Some(quote!(.#class({
+            #(#dummy_assignments)*
+            #string
+        })))
     } else {
         // there are reactive classes: need to construct it at runtime
 
         // TODO: is there a way to accept both `bool` and `Fn() -> bool`?
         // maybe `leptos::Class`?
 
-        let classes_array = classes.into_iter().map(|(class, signal)| {
-            let signal = signal.unwrap_or(quote! { || true });
-            // add extra bracket to make sure the closure is called
-            let signal_called = quote_spanned! { signal.span()=> (#signal)() };
-            let class = class.to_lit_str();
+        let classes_array = {
+            let classes_iter = classes.iter().map(|(class, signal)| {
+                let class_str = class.to_lit_str();
+                let bool_signal = match signal {
+                    Some(signal) => {
+                        // add extra bracket to make sure the closure is called
+                        quote_spanned!(signal.span()=> (#signal)())
+                    }
+                    None => quote!(true),
+                };
 
-            // use fully qualified path so that error says 'incorrect type' instead of
-            // 'method `then_some` not found'
-            quote_spanned! { signal_called.span()=>
-                ::std::primitive::bool::then_some(#signal_called, #class)
-            }
-        });
-        let classes_array = quote_spanned!(first_span=> [#(#classes_array),*]);
-        let contents = quote_spanned! { first_span=>
+                // use fully qualified path so that error says 'incorrect type' instead of
+                // 'method `then_some` not found'
+                quote_spanned! { bool_signal.span()=>
+                    ::std::primitive::bool::then_some(#bool_signal, #class_str)
+                }
+            });
+
+            quote_spanned!(class_span=> [#(#classes_iter),*])
+        };
+        let contents = quote_spanned! { class_span=>
             #classes_array
                 .iter()
                 .flatten() // remove None
@@ -358,9 +388,14 @@ pub(super) fn component_classes_to_method(
                 .join(" ")
         };
 
-        // span to the first item
-        Some(quote_spanned! { first_span=>
-            .class(move || #contents)
+        let dummy_assignments = generate_dummy_assignments(classes);
+
+        let class = quote_spanned!(class_span=> class);
+        Some(quote! {
+            .#class(move || {
+                #(#dummy_assignments)*
+                #contents
+            })
         })
     }
 }
@@ -368,18 +403,31 @@ pub(super) fn component_classes_to_method(
 /// Adds a list of strings to the `id` prop of a component.
 ///
 /// IDs should not be changed reactively, so it is not supported.
-pub(super) fn component_ids_to_method(ids: Vec<syn::LitStr>) -> Option<TokenStream> {
+///
+/// Returns [`None`] if `id_span` is [`None`] or `ids` is empty.
+pub(super) fn component_ids_to_method(
+    ids: Vec<KebabIdent>,
+    id_span: Option<Span>,
+) -> Option<TokenStream> {
+    let id_span = id_span?;
     if ids.is_empty() {
         return None;
     };
 
-    let first_span = ids[0].span();
     // ids are not reactive, so just give one big string
-    let ids = ids
-        .into_iter()
-        .map(|id| id.value())
+    let id_str = ids
+        .iter()
+        .map(|id| id.to_lit_str().value())
         .collect::<Vec<_>>()
         .join(" ");
 
-    Some(quote_spanned!(first_span=> .id(#ids)))
+    let dummy_assignments = ids
+        .into_iter()
+        .map(|ident| span::color_all(ident.spans()).collect::<TokenStream>());
+
+    let id = quote_spanned!(id_span=> id);
+    Some(quote!(.#id({
+        #(#dummy_assignments)*
+        #id_str
+    })))
 }

@@ -1,4 +1,5 @@
-use proc_macro_error::emit_error;
+use proc_macro_error::{abort, emit_error};
+use syn::{parse_quote, spanned::Spanned};
 
 #[allow(clippy::doc_markdown)]
 // just doing a manual implementation as theres only one need for this (slots).
@@ -23,6 +24,51 @@ pub fn emit_error_if_modifier(m: Option<&syn::Ident>) {
         emit_error!(
             modifier.span(),
             "unknown modifier: modifiers are only supported on `on:` directives"
+        );
+    }
+}
+
+/// Converts a [`syn::Path`] (which could include things like `Vec<i32>`) to
+/// always use the turbofish (like `Vec::<i32>`).
+pub fn turbofishify(mut path: syn::Path) -> syn::Path {
+    path.segments
+        .iter_mut()
+        .for_each(|segment| match &mut segment.arguments {
+            syn::PathArguments::None => (),
+            syn::PathArguments::AngleBracketed(generics) => {
+                generics.colon2_token.get_or_insert(parse_quote!(::));
+            }
+            // this would probably never happen, not caring about recoverability.
+            syn::PathArguments::Parenthesized(p) => {
+                abort!(p.span(), "function generics are not allowed")
+            }
+        });
+    path
+}
+
+#[cfg(test)]
+mod tests {
+    use quote::{quote, ToTokens};
+
+    use super::turbofishify;
+
+    #[test]
+    fn add_turbofish() {
+        let path = syn::parse2::<syn::Path>(quote! { std::vec::Vec<i32> }).unwrap();
+        let path = turbofishify(path);
+        assert_eq!(
+            "std::vec::Vec::<i32>",
+            path.to_token_stream().to_string().replace(' ', "")
+        );
+    }
+
+    #[test]
+    fn leave_turbofish() {
+        let path = syn::parse2::<syn::Path>(quote! { std::vec::Vec::<i32> }).unwrap();
+        let path = turbofishify(path);
+        assert_eq!(
+            "std::vec::Vec::<i32>",
+            path.to_token_stream().to_string().replace(' ', "")
         );
     }
 }

@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use proc_macro2::{Span, TokenStream};
 use proc_macro_error::emit_error;
 use quote::{quote, quote_spanned, ToTokens};
+use syn::spanned::Spanned;
 
 use crate::ast::{
     attribute::{directive::Directive, selector::SelectorShorthand},
@@ -161,9 +162,10 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
 /// ```
 #[allow(clippy::too_many_lines)]
 pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<TokenStream> {
-    let Tag::Component(ident, generics) = element.tag() else {
+    let Tag::Component(path) = element.tag() else {
         return None;
     };
+    let path = turbofishify(path.clone());
 
     // collect a bunch of info about the element attributes //
 
@@ -179,14 +181,20 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
     // the `class` prop
     // .0 is the class string, .1 is the 'signal' (or `None` if using selectors)
     let mut dyn_classes: Vec<(KebabIdentOrStr, Option<TokenStream>)> = Vec::new();
+    let mut classes_span: Option<Span> = None;
     // ids are not reactive (no `id:this={signal}`), will just be from selectors
-    let mut selector_ids: Vec<syn::LitStr> = Vec::new();
+    let mut selector_ids: Vec<KebabIdent> = Vec::new();
+    let mut id_span: Option<Span> = None;
 
     for sel in element.selectors().iter() {
         match sel {
-            SelectorShorthand::Id { id, .. } => selector_ids.push(id.to_lit_str()),
-            SelectorShorthand::Class { class, .. } => {
+            SelectorShorthand::Id { id, pound_symbol } => {
+                selector_ids.push(id.clone());
+                id_span.get_or_insert(pound_symbol.span);
+            }
+            SelectorShorthand::Class { class, dot_symbol } => {
                 dyn_classes.push((KebabIdentOrStr::KebabIdent(class.clone()), None));
+                classes_span.get_or_insert(dot_symbol.span);
             }
         };
     }
@@ -230,6 +238,7 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
             "class" => {
                 emit_error_if_modifier(dir.modifier.as_ref());
                 dyn_classes.push((dir.key.clone(), Some(dir.value.to_token_stream())));
+                classes_span.get_or_insert(dir.dir.span());
             }
             "style" | "prop" => {
                 emit_error!(
@@ -261,18 +270,18 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
 
     let dyn_attrs = component_dyn_attrs_to_methods(&dyn_attrs);
     let use_directives = use_directives.into_iter().map(use_directive_to_method);
-    let dyn_classes = component_classes_to_method(dyn_classes);
-    let selector_ids = component_ids_to_method(selector_ids);
+    let dyn_classes = component_classes_to_method(dyn_classes, classes_span);
+    let selector_ids = component_ids_to_method(selector_ids, id_span);
 
     // if attributes are missing, an error is made in `.build()` by the component
     // builder.
-    let build = quote_spanned!(ident.span()=> .build());
+    let build = quote_spanned!(path.span()=> .build());
 
     if IS_SLOT {
         // Into is for turning a single slot into a vec![slot] if needed
         Some(quote! {
             ::std::convert::Into::into(
-                #ident #generics::builder()
+                #path::builder()
                     #attrs
                     #dyn_classes
                     #selector_ids
@@ -286,8 +295,8 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
             // this causes unreachable code warning in ::leptos::component_view
             #[allow(unreachable_code)]
             ::leptos::component_view(
-                &#ident,
-                ::leptos::component_props_builder(&#ident #generics)
+                &#path,
+                ::leptos::component_props_builder(&#path)
                     #attrs
                     #dyn_classes
                     #selector_ids
@@ -332,14 +341,22 @@ fn slots_to_tokens<'a>(children: impl Iterator<Item = &'a Element>) -> TokenStre
 
     // Mapping from the slot name (component, UpperCamelCase name, not snake_case)
     // to a vec of the each slot's expansion.
-    let mut slot_children = HashMap::<KebabIdent, Vec<TokenStream>>::new();
+    let mut slot_children = HashMap::<syn::Ident, Vec<TokenStream>>::new();
     for el in children {
-        let component_name = el.tag().ident();
+        let Tag::Component(path) = el.tag() else {
+            panic!("called `slots_to_tokens` on non-slot element")
+        };
+        let slot_name = if let Some(ident) = path.get_ident() {
+            ident.clone()
+        } else {
+            emit_error!(path.span(), "slot name must be a single ident, not a path");
+            continue;
+        };
 
         let slot_component =
-            component_to_tokens::<true>(el).expect("all children should be slot components");
+            component_to_tokens::<true>(el).expect("checked that element is a component");
         slot_children
-            .entry(component_name)
+            .entry(slot_name)
             .or_default()
             .push(slot_component);
     }
@@ -349,7 +366,7 @@ fn slots_to_tokens<'a>(children: impl Iterator<Item = &'a Element>) -> TokenStre
         .into_iter()
         .map(|(slot_name, slot_tokens)| {
             let method = syn::Ident::new_raw(
-                &utils::upper_camel_to_snake_case(slot_name.repr()),
+                &utils::upper_camel_to_snake_case(&slot_name.to_string()),
                 slot_name.span(),
             );
 

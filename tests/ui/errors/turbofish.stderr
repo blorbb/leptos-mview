@@ -1,7 +1,0 @@
-error: unexpected token `::`
-  --> tests/ui/errors/turbofish.rs:14:25
-   |
-14 |         GenericComponent::<String> ty={PhantomData};
-   |                         ^
-   |
-   = help: turbofish syntax is not used for component generics, place angle brackets directly after the component name

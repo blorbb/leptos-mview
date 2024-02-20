@@ -1,7 +1,7 @@
 use leptos::*;
 use leptos_mview::mview;
 mod utils;
-use utils::check_str;
+use utils::{check_str, Contains};
 
 #[test]
 fn clones() {
@@ -58,6 +58,44 @@ fn generics() {
     };
 
     check_str(result, ["alloc::string::String", "usize", "i32"].as_slice());
+
+    // also accept turbofish
+    let result = mview! {
+        GenericComponent::<String> ty={PhantomData};
+        GenericComponent::<usize> ty={PhantomData};
+        GenericComponent::<i32> ty={PhantomData};
+    };
+
+    check_str(result, ["alloc::string::String", "usize", "i32"].as_slice());
+}
+
+#[test]
+fn qualified_paths() {
+    let result = mview! {
+        leptos::Show when=[true] {
+            "a"
+        }
+        leptos::Show when=[false] {
+            "b"
+        }
+    };
+
+    check_str(result, Contains::AllOfNoneOf([&["a"], &["b"]]))
+}
+
+// don't try parse slot:: as a slot
+mod slot {
+    use leptos::*;
+
+    #[component]
+    pub fn NotASlot() -> impl IntoView {}
+}
+
+#[test]
+fn slot_peek() {
+    _ = mview! {
+        slot::NotASlot;
+    }
 }
 
 #[test]
