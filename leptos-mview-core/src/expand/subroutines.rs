@@ -11,7 +11,7 @@ use crate::{
             selector::{SelectorShorthand, SelectorShorthands},
             spread_attrs::SpreadAttr,
         },
-        KebabIdentOrStr, NodeChild,
+        KebabIdent, KebabIdentOrStr, NodeChild,
     },
     expand::{children_fragment_tokens, emit_error_if_modifier},
     span,
@@ -403,18 +403,31 @@ pub(super) fn component_classes_to_method(
 /// Adds a list of strings to the `id` prop of a component.
 ///
 /// IDs should not be changed reactively, so it is not supported.
-pub(super) fn component_ids_to_method(ids: Vec<syn::LitStr>) -> Option<TokenStream> {
+///
+/// Returns [`None`] if `id_span` is [`None`] or `ids` is empty.
+pub(super) fn component_ids_to_method(
+    ids: Vec<KebabIdent>,
+    id_span: Option<Span>,
+) -> Option<TokenStream> {
+    let id_span = id_span?;
     if ids.is_empty() {
         return None;
     };
 
-    let first_span = ids[0].span();
     // ids are not reactive, so just give one big string
-    let ids = ids
-        .into_iter()
-        .map(|id| id.value())
+    let id_str = ids
+        .iter()
+        .map(|id| id.to_lit_str().value())
         .collect::<Vec<_>>()
         .join(" ");
 
-    Some(quote_spanned!(first_span=> .id(#ids)))
+    let dummy_assignments = ids
+        .into_iter()
+        .map(|ident| span::color_all(ident.spans()).collect::<TokenStream>());
+
+    let id = quote_spanned!(id_span=> id);
+    Some(quote!(.#id({
+        #(#dummy_assignments)*
+        #id_str
+    })))
 }
