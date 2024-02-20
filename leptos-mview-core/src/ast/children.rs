@@ -43,10 +43,6 @@ impl NodeChild {
 ///
 /// Children can either be a [`NodeChild`] (i.e. an actual element), or a slot.
 /// Slots are distinguished by prefixing the child with `slot:`.
-///
-/// # Parsing
-/// Mostly **aborts** if parsing fails. An [`Err`] is only returned if there are
-/// no tokens remaining.
 pub enum Child {
     Node(NodeChild),
     Slot(kw::slot, Element),
@@ -85,9 +81,6 @@ impl Parse for Child {
 ///
 /// Parsing does not include the surrounding braces.
 /// If no children are present, an empty vector will be stored.
-///
-/// There are two ways of passing children, so no `ToTokens` implementation
-/// is provided. Use `to_child_methods` or `to_fragment` instead.
 pub struct Children(Vec<Child>);
 
 impl std::ops::Deref for Children {

@@ -23,10 +23,6 @@ use crate::{parse, recover::rollback_err};
 /// expressions. rust-analyzer can produce errors at the correct span using this
 /// `TokenStream`, and provides better autocompletion (e.g. when looking for
 /// methods by entering `something.`).
-///
-/// # Parsing
-/// This AST is considered 'basic', so if parsing fails, an [`Err`] will be
-/// returned and it will not advance the [`ParseStream`].
 #[derive(Clone)]
 pub enum Value {
     Lit(syn::Lit),

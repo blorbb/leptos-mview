@@ -21,14 +21,6 @@ pub fn extract_braced(input: ParseStream) -> syn::Result<(syn::token::Brace, Par
     Ok((delim, stream))
 }
 
-// pub fn parenthesized_tokens(
-//     input: ParseStream,
-// ) -> syn::Result<(syn::token::Paren, TokenStream)> {
-//     let (delim, buf) = extract_parenthesized(input)?;
-//     let ts = TokenStream::parse(&buf).expect("parsing tokenstream never
-// fails");     Ok((delim, ts))
-// }
-
 pub fn bracketed_tokens(input: ParseStream) -> syn::Result<(syn::token::Bracket, TokenStream)> {
     let (delim, buf) = extract_bracketed(input)?;
     let ts = TokenStream::parse(&buf).expect("parsing tokenstream never fails");
