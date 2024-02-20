@@ -181,14 +181,16 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
     // the `class` prop
     // .0 is the class string, .1 is the 'signal' (or `None` if using selectors)
     let mut dyn_classes: Vec<(KebabIdentOrStr, Option<TokenStream>)> = Vec::new();
+    let mut classes_span: Option<Span> = None;
     // ids are not reactive (no `id:this={signal}`), will just be from selectors
     let mut selector_ids: Vec<syn::LitStr> = Vec::new();
 
     for sel in element.selectors().iter() {
         match sel {
             SelectorShorthand::Id { id, .. } => selector_ids.push(id.to_lit_str()),
-            SelectorShorthand::Class { class, .. } => {
+            SelectorShorthand::Class { class, dot_symbol } => {
                 dyn_classes.push((KebabIdentOrStr::KebabIdent(class.clone()), None));
+                classes_span.get_or_insert(dot_symbol.span);
             }
         };
     }
@@ -232,6 +234,7 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
             "class" => {
                 emit_error_if_modifier(dir.modifier.as_ref());
                 dyn_classes.push((dir.key.clone(), Some(dir.value.to_token_stream())));
+                classes_span.get_or_insert(dir.dir.span());
             }
             "style" | "prop" => {
                 emit_error!(
@@ -263,7 +266,7 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
 
     let dyn_attrs = component_dyn_attrs_to_methods(&dyn_attrs);
     let use_directives = use_directives.into_iter().map(use_directive_to_method);
-    let dyn_classes = component_classes_to_method(dyn_classes);
+    let dyn_classes = component_classes_to_method(dyn_classes, classes_span);
     let selector_ids = component_ids_to_method(selector_ids);
 
     // if attributes are missing, an error is made in `.build()` by the component

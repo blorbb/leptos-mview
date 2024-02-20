@@ -213,13 +213,6 @@ impl KebabIdentOrStr {
             }
         }
     }
-
-    pub fn span(&self) -> Span {
-        match self {
-            Self::KebabIdent(k) => k.span(),
-            Self::Str(s) => s.span(),
-        }
-    }
 }
 
 impl Parse for KebabIdentOrStr {

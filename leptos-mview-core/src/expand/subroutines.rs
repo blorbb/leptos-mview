@@ -314,14 +314,16 @@ pub(super) fn component_dyn_attrs_to_methods(dyn_attrs: &[&Directive]) -> Option
 ///
 /// For now, what is passed in to `{signal}` must be something that impls `Fn()
 /// -> bool`, it cannot just be a `bool`.
+///
+/// Returns [`None`] if `class_span` is [`None`] or `classes` is empty.
 pub(super) fn component_classes_to_method(
     classes: Vec<(KebabIdentOrStr, Option<TokenStream>)>,
+    class_span: Option<Span>,
 ) -> Option<TokenStream> {
+    let Some(class_span) = class_span else { return None };
     if classes.is_empty() {
         return None;
     };
-
-    let first_span = classes[0].0.span();
 
     fn generate_dummy_assignments(
         idents: impl IntoIterator<Item = (KebabIdentOrStr, Option<TokenStream>)>,
@@ -346,7 +348,7 @@ pub(super) fn component_classes_to_method(
 
         let dummy_assignments = generate_dummy_assignments(classes);
 
-        let class = quote_spanned!(first_span=> class);
+        let class = quote_spanned!(class_span=> class);
         Some(quote!(.#class({
             #(#dummy_assignments)*
             #string
@@ -375,9 +377,9 @@ pub(super) fn component_classes_to_method(
                 }
             });
 
-            quote_spanned!(first_span=> [#(#classes_iter),*])
+            quote_spanned!(class_span=> [#(#classes_iter),*])
         };
-        let contents = quote_spanned! { first_span=>
+        let contents = quote_spanned! { class_span=>
             #classes_array
                 .iter()
                 .flatten() // remove None
@@ -388,7 +390,7 @@ pub(super) fn component_classes_to_method(
 
         let dummy_assignments = generate_dummy_assignments(classes);
 
-        let class = quote_spanned!(first_span=> class);
+        let class = quote_spanned!(class_span=> class);
         Some(quote! {
             .#class(move || {
                 #(#dummy_assignments)*
