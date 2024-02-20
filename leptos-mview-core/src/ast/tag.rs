@@ -60,7 +60,7 @@ impl Parse for Tag {
             return Ok(Self::Component(path));
         }
 
-        let ident = input.parse::<KebabIdent>()?;
+        let ident = KebabIdent::parse(input)?;
         let kind = TagKind::from(ident.repr());
         Ok(match kind {
             TagKind::Html => Self::Html(ident.to_snake_ident()),

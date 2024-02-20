@@ -23,13 +23,13 @@ pub fn extract_braced(input: ParseStream) -> syn::Result<(syn::token::Brace, Par
 
 pub fn bracketed_tokens(input: ParseStream) -> syn::Result<(syn::token::Bracket, TokenStream)> {
     let (delim, buf) = extract_bracketed(input)?;
-    let ts = TokenStream::parse(&buf).expect("parsing tokenstream never fails");
+    let ts = take_rest(&buf);
     Ok((delim, ts))
 }
 
 pub fn braced_tokens(input: ParseStream) -> syn::Result<(syn::token::Brace, TokenStream)> {
     let (delim, buf) = extract_braced(input)?;
-    let ts = TokenStream::parse(&buf).expect("parsing tokenstream never fails");
+    let ts = take_rest(&buf);
     Ok((delim, ts))
 }
 
@@ -88,4 +88,9 @@ where
         }
         Err(_) => None,
     }
+}
+
+/// Equivalent to parsing a [`TokenStream`] and unwrapping.
+pub fn take_rest(input: ParseStream) -> TokenStream {
+    TokenStream::parse(input).expect("parsing TokenStream should never fail")
 }

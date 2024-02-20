@@ -156,17 +156,17 @@ impl Element {
 /// so no other `|` characters are allowed within a pattern that is outside of a
 /// nested group.
 fn parse_closure_args(input: ParseStream) -> syn::Result<TokenStream> {
-    let first_pipe = input.parse::<Token![|]>()?;
+    let first_pipe = <Token![|]>::parse(input)?;
 
     let mut tokens = TokenStream::new();
     first_pipe.to_tokens(&mut tokens);
 
     loop {
         // parse until second `|` is found
-        if let Ok(pipe) = input.parse::<Token![|]>() {
+        if let Some(pipe) = rollback_err(input, <Token![|]>::parse) {
             pipe.to_tokens(&mut tokens);
             break Ok(tokens);
-        } else if let Ok(tt) = input.parse::<TokenTree>() {
+        } else if let Some(tt) = rollback_err(input, TokenTree::parse) {
             tokens.append(tt);
         } else {
             break Err(syn::Error::new_spanned(

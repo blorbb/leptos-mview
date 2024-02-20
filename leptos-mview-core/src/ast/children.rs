@@ -1,4 +1,4 @@
-use proc_macro2::{Span, TokenStream};
+use proc_macro2::Span;
 use proc_macro_error::emit_error;
 use quote::ToTokens;
 use syn::{
@@ -8,7 +8,12 @@ use syn::{
 };
 
 use super::Element;
-use crate::{ast::Value, error_ext::SynErrorExt, kw, parse::rollback_err};
+use crate::{
+    ast::Value,
+    error_ext::SynErrorExt,
+    kw,
+    parse::{self, rollback_err},
+};
 
 /// A child that is an actual HTML value (i.e. not a slot).
 ///
@@ -102,7 +107,7 @@ impl Parse for Children {
                     e.emit_as_error();
                     // skip the rest of the tokens
                     // need to consume all tokens otherwise an error is made on drop
-                    input.parse::<TokenStream>().unwrap();
+                    parse::take_rest(input);
                 }
             };
         }

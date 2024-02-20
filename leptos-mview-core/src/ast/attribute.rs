@@ -30,7 +30,7 @@ impl Parse for Attr {
             Ok(Self::Directive(dir))
         } else if input.peek(syn::Ident) {
             // definitely a k-v attribute
-            let kv = input.parse::<KvAttr>()?;
+            let kv = KvAttr::parse(input)?;
             Ok(Self::Kv(kv))
         } else if let Some(kv) = rollback_err(input, KvAttr::parse) {
             // k-v attributes don't necessarily start with ident, try the rest

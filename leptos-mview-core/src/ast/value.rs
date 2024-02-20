@@ -50,7 +50,7 @@ impl Parse for Value {
             })
         // with prefixes like `f["{}", something]`
         } else if input.peek(syn::Ident::peek_any) && input.peek2(syn::token::Bracket) {
-            let prefixes = input.call(syn::Ident::parse_any).unwrap();
+            let prefixes = syn::Ident::parse_any(input).unwrap();
             let (brackets, tokens) = parse::bracketed_tokens(input).unwrap();
             Ok(Self::Bracket {
                 tokens,

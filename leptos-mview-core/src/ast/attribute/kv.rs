@@ -41,7 +41,7 @@ impl KvAttr {
 impl Parse for KvAttr {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let (ident, value) = if input.peek(syn::token::Brace) {
-            let braced_ident = input.parse::<BracedKebabIdent>()?;
+            let braced_ident = BracedKebabIdent::parse(input)?;
             (
                 braced_ident.ident().clone(),
                 braced_ident.into_block_value(),

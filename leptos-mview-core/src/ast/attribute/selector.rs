@@ -57,13 +57,13 @@ impl SelectorShorthand {
 impl Parse for SelectorShorthand {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         if let Some(dot) = rollback_err(input, <Token![.]>::parse) {
-            let class = input.parse::<KebabIdent>()?;
+            let class = KebabIdent::parse(input)?;
             Ok(Self::Class {
                 dot_symbol: dot,
                 class,
             })
         } else if let Some(pound) = rollback_err(input, <Token![#]>::parse) {
-            let id = input.parse::<KebabIdent>()?;
+            let id = KebabIdent::parse(input)?;
             Ok(Self::Id {
                 pound_symbol: pound,
                 id,
