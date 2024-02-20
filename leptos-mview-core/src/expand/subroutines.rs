@@ -14,6 +14,7 @@ use crate::{
         KebabIdentOrStr, NodeChild,
     },
     expand::{children_fragment_tokens, emit_error_if_modifier},
+    span,
 };
 
 ////////////////////////////////////////////////////////////////
@@ -322,33 +323,60 @@ pub(super) fn component_classes_to_method(
 
     let first_span = classes[0].0.span();
 
+    fn generate_dummy_assignments(
+        idents: impl IntoIterator<Item = (KebabIdentOrStr, Option<TokenStream>)>,
+    ) -> impl Iterator<Item = TokenStream> {
+        idents
+            .into_iter()
+            .filter_map(|(maybe_ident, _)| match maybe_ident {
+                KebabIdentOrStr::KebabIdent(ident) => {
+                    Some(span::color_all(ident.spans()).collect::<TokenStream>())
+                }
+                KebabIdentOrStr::Str(_) => None,
+            })
+    }
+
     // if there are no reactive classes, just create the string
     if classes.iter().all(|(_, signal)| signal.is_none()) {
         let string = classes
-            .into_iter()
+            .iter()
             .map(|(class, _)| class.to_lit_str().value())
             .collect::<Vec<_>>()
             .join(" ");
-        Some(quote_spanned!(first_span=> .class(#string)))
+
+        let dummy_assignments = generate_dummy_assignments(classes);
+
+        let class = quote_spanned!(first_span=> class);
+        Some(quote!(.#class({
+            #(#dummy_assignments)*
+            #string
+        })))
     } else {
         // there are reactive classes: need to construct it at runtime
 
         // TODO: is there a way to accept both `bool` and `Fn() -> bool`?
         // maybe `leptos::Class`?
 
-        let classes_array = classes.into_iter().map(|(class, signal)| {
-            let signal = signal.unwrap_or(quote! { || true });
-            // add extra bracket to make sure the closure is called
-            let signal_called = quote_spanned! { signal.span()=> (#signal)() };
-            let class = class.to_lit_str();
+        let classes_array = {
+            let classes_iter = classes.iter().map(|(class, signal)| {
+                let class_str = class.to_lit_str();
+                let bool_signal = match signal {
+                    Some(signal) => {
+                        // add extra bracket to make sure the closure is called
+                        quote_spanned!(signal.span()=> (#signal)())
+                    }
+                    None => quote!(true),
+                };
 
-            // use fully qualified path so that error says 'incorrect type' instead of
-            // 'method `then_some` not found'
-            quote_spanned! { signal_called.span()=>
-                ::std::primitive::bool::then_some(#signal_called, #class)
-            }
-        });
-        let classes_array = quote_spanned!(first_span=> [#(#classes_array),*]);
+                // use fully qualified path so that error says 'incorrect type' instead of
+                // 'method `then_some` not found'
+                quote_spanned! { bool_signal.span()=>
+                    ::std::primitive::bool::then_some(#bool_signal, #class_str)
+                }
+            });
+
+            quote_spanned!(first_span=> [#(#classes_iter),*])
+        };
         let contents = quote_spanned! { first_span=>
             #classes_array
                 .iter()
@@ -358,9 +386,14 @@ pub(super) fn component_classes_to_method(
                 .join(" ")
         };
 
-        // span to the first item
-        Some(quote_spanned! { first_span=>
-            .class(move || #contents)
+        let dummy_assignments = generate_dummy_assignments(classes);
+
+        let class = quote_spanned!(first_span=> class);
+        Some(quote! {
+            .#class(move || {
+                #(#dummy_assignments)*
+                #contents
+            })
         })
     }
 }
