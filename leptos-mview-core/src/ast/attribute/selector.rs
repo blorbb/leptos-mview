@@ -3,7 +3,7 @@ use syn::{
     Token,
 };
 
-use crate::{ast::KebabIdent, recover::rollback_err};
+use crate::{ast::KebabIdent, parse::rollback_err};
 
 /// A shorthand for adding class or ids to an element.
 ///

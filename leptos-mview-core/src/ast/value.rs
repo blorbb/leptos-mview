@@ -6,7 +6,7 @@ use syn::{
     parse::{Parse, ParseStream},
 };
 
-use crate::{parse, recover::rollback_err};
+use crate::parse::{self, rollback_err};
 
 /// Interpolated Rust expressions within the macro.
 ///

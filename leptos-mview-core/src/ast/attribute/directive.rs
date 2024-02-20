@@ -6,7 +6,7 @@ use syn::{
 
 use crate::{
     ast::{BracedKebabIdent, KebabIdentOrStr, Value},
-    recover::rollback_err,
+    parse::rollback_err,
 };
 
 /// A special attribute like `on:click={...}`.

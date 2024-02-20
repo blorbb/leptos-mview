@@ -3,7 +3,7 @@ use syn::{parse::Parse, parse_quote, Token};
 
 use crate::{
     ast::{BracedKebabIdent, KebabIdent, Value},
-    recover::rollback_err,
+    parse::rollback_err,
     span,
 };
 

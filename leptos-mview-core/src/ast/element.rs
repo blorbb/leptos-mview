@@ -9,8 +9,7 @@ use syn::{
 use super::{attribute::selector::SelectorShorthands, Attrs, Children, Tag};
 use crate::{
     expand::{component_to_tokens, xml_to_tokens},
-    parse,
-    recover::rollback_err,
+    parse::{self, rollback_err},
     span,
 };
 

@@ -10,7 +10,7 @@ use syn::{
 };
 
 use self::{directive::Directive, kv::KvAttr, spread_attrs::SpreadAttr};
-use crate::{error_ext::ResultExt, recover::rollback_err};
+use crate::{error_ext::ResultExt, parse::rollback_err};
 
 #[derive(Clone)]
 pub enum Attr {

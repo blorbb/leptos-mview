@@ -8,7 +8,7 @@ use syn::{
 };
 
 use super::Element;
-use crate::{ast::Value, error_ext::SynErrorExt, kw, recover::rollback_err};
+use crate::{ast::Value, error_ext::SynErrorExt, kw, parse::rollback_err};
 
 /// A child that is an actual HTML value (i.e. not a slot).
 ///

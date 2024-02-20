@@ -4,7 +4,7 @@ use syn::{
     Token,
 };
 
-use crate::{parse::extract_braced, recover::rollback_err};
+use crate::parse::{extract_braced, rollback_err};
 
 /// A spread attribute like `{..attrs}`.
 ///
