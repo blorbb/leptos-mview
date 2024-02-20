@@ -117,6 +117,7 @@ pub(super) fn xml_kv_attribute_tokens(attr: &KvAttr) -> TokenStream {
         let node_ref = syn::Ident::new("node_ref", key.span());
         quote! { .#node_ref(#value) }
     } else {
+        let key = key.to_lit_str();
         quote! { .attr(#key, #value) }
     }
 }

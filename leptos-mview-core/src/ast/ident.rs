@@ -2,7 +2,7 @@ use std::hash::Hash;
 
 use proc_macro2::{Span, TokenStream};
 use proc_macro_error::emit_error;
-use quote::{quote, quote_spanned, ToTokens};
+use quote::{quote, ToTokens};
 use syn::{
     ext::IdentExt,
     parse::{Parse, ParseStream},
@@ -34,11 +34,6 @@ use crate::{
 /// If the next token is not a `-` or ident, an [`Err`] is returned and the
 /// [`ParseStream`] is not advanced. Otherwise, parsing will stop once the ident
 /// ends, and the `ParseStream` is advanced to after this kebab-ident.
-///
-/// # Expanding
-/// The default [`ToTokens`] implementation expands this to a string literal
-/// with the appropriate [`Span`]. If a [`syn::Ident`] is desired, use
-/// [`Self::to_snake_ident`] instead.
 ///
 /// # Invariants
 /// The [`repr`](Self::repr) and [`spans`](Self::spans) fields are not empty. To
@@ -157,15 +152,6 @@ impl Parse for KebabIdent {
 
         // both repr and spans are not empty due to the first-segment check
         Ok(Self { repr, spans })
-    }
-}
-
-impl ToTokens for KebabIdent {
-    /// The identifier will be most often used as a string, so the default
-    /// implementation adds an appropriately spanned string.
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let repr = self.repr();
-        tokens.extend(quote_spanned!(self.span()=> #repr));
     }
 }
 

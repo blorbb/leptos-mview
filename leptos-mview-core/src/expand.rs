@@ -93,6 +93,7 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
         Tag::Svg(ident) => quote! { ::leptos::svg::#ident() },
         Tag::Math(ident) => quote! { ::leptos::math::#ident() },
         Tag::WebComponent(ident) => {
+            let ident = ident.to_lit_str();
             let custom = syn::Ident::new("custom", ident.span());
             quote! { ::leptos::html::#custom(::leptos::html::Custom::new(#ident)) }
         }
