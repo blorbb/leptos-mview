@@ -4,6 +4,14 @@ error: invalid child: expected literal, block, bracket or element
 6 |         (a)
   |         ^
 
+error: extra semi-colon found
+  --> tests/ui/errors/invalid_child.rs:37:27
+   |
+37 |         div { "hi there" };
+   |                           ^
+   |
+   = help: remove this semi-colon
+
 error[E0277]: expected a `Fn()` closure, found `str`
   --> tests/ui/errors/invalid_child.rs:17:14
    |

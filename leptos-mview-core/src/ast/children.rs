@@ -104,10 +104,19 @@ impl Parse for Children {
             match Child::parse(input) {
                 Ok(child) => vec.push(child),
                 Err(e) => {
-                    e.emit_as_error();
-                    // skip the rest of the tokens
-                    // need to consume all tokens otherwise an error is made on drop
-                    parse::take_rest(input);
+                    if input.peek(Token![;]) {
+                        // an extra semi-colon: just skip it and keep parsing
+                        emit_error!(
+                            e.span(), "extra semi-colon found";
+                            help="remove this semi-colon"
+                        );
+                        <Token![;]>::parse(input).unwrap();
+                    } else {
+                        e.emit_as_error();
+                        // skip the rest of the tokens
+                        // need to consume all tokens otherwise an error is made on drop
+                        parse::take_rest(input);
+                    }
                 }
             };
         }

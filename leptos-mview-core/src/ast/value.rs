@@ -76,7 +76,11 @@ impl ToTokens for Value {
             Self::Lit(lit) => lit.into_token_stream(),
             // using the tokens as the span instead of the block provides better error messages
             // see test ui/errors/invalid_child
-            Self::Block { tokens, .. } => quote_spanned!(tokens.span()=> {#tokens}),
+            Self::Block { tokens, braces } => {
+                // fallback in case `tokens` is empty, span would be the whole call site
+                let span = if tokens.is_empty() { braces.span.join() } else { tokens.span() };
+                quote_spanned!(span=> {#tokens})
+            }
             Self::Bracket {
                 tokens,
                 prefixes,
@@ -95,7 +99,7 @@ impl ToTokens for Value {
                         quote! {}
                     }
                 } else {
-                    quote_spanned!(brackets.span.join()=> move || #tokens)
+                    quote_spanned!(brackets.span.join()=> move || {#tokens})
                 }
             }
         });
@@ -116,13 +120,16 @@ impl Value {
 
     /// Either parses a valid [`Value`], or inserts a `MissingValueAfterEq`
     /// never-type enum.
-    pub fn parse_or_emit_err(input: ParseStream) -> Self {
+    pub fn parse_or_emit_err(input: ParseStream, fallback_span: Span) -> Self {
         if let Some(value) = rollback_err(input, Self::parse) {
             value
         } else {
+            // avoid call-site span
+            let span = if input.is_empty() { fallback_span } else { input.span() };
+
             // incomplete typing; place a MissingValueAfterEq and continue
             let error = Diagnostic::spanned(
-                input.span(),
+                span,
                 proc_macro_error::Level::Error,
                 "expected value after =".to_string(),
             );
@@ -136,8 +143,8 @@ impl Value {
 
             error.emit();
             Self::Block {
-                tokens: quote_spanned!(input.span() => ::leptos_mview::MissingValueAfterEq),
-                braces: syn::token::Brace(input.span()),
+                tokens: quote_spanned!(span => ::leptos_mview::MissingValueAfterEq),
+                braces: syn::token::Brace(span),
             }
         }
     }

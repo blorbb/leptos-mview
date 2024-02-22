@@ -31,3 +31,10 @@ fn not_impl_intoview() {
         }
     }
 }
+
+fn extra_semicolons() {
+    _ = mview! {
+        div { "hi there" };
+        span;
+    };
+}

@@ -48,8 +48,8 @@ impl Parse for KvAttr {
             )
         } else {
             let ident = KebabIdent::parse(input)?;
-            if rollback_err(input, <Token![=]>::parse).is_some() {
-                let value = Value::parse_or_emit_err(input);
+            if let Some(eq) = rollback_err(input, <Token![=]>::parse) {
+                let value = Value::parse_or_emit_err(input, eq.span);
                 (ident, value)
             } else {
                 // don't span the attribute name to the `true` or it becomes bool-colored

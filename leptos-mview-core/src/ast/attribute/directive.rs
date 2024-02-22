@@ -63,8 +63,7 @@ impl Parse for Directive {
             key = KebabIdentOrStr::parse(input)?;
             modifier = try_parse_modifier(input)?;
             value = rollback_err(input, <Token![=]>::parse)
-                .is_some()
-                .then(|| Value::parse_or_emit_err(input));
+                .map(|eq| Value::parse_or_emit_err(input, eq.span));
         };
 
         Ok(Self {
