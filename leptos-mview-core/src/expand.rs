@@ -295,18 +295,19 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
             // the .build() returns `!` if not all props are present.
             // this causes unreachable code warning in ::leptos::component_view
             #[allow(unreachable_code)]
-            ::leptos::component_view(
-                &#path,
-                ::leptos::component_props_builder(&#path)
-                    #attrs
-                    #dyn_classes
-                    #selector_ids
-                    #children
-                    #slot_children
-                    #build
-                    #dyn_attrs
+            ::leptos::IntoView::into_view(
+                ::leptos::component_view(
+                    &#path,
+                    ::leptos::component_props_builder(&#path)
+                        #attrs
+                        #dyn_classes
+                        #selector_ids
+                        #children
+                        #slot_children
+                        #build
+                        #dyn_attrs
+                )
             )
-            .into_view()
             #(#use_directives)*
             #event_listeners
         })
