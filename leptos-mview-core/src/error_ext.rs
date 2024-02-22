@@ -80,5 +80,5 @@ pub trait SynErrorExt {
 }
 
 impl SynErrorExt for syn::Error {
-    fn emit_as_error(self) { emit_error!(self.span(), "{}", self.to_string()) }
+    fn emit_as_error(self) { emit_error!(self.span(), "{}", self) }
 }

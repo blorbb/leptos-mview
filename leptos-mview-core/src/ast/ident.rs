@@ -2,7 +2,7 @@ use std::hash::Hash;
 
 use proc_macro2::{Span, TokenStream};
 use proc_macro_error::emit_error;
-use quote::{quote, quote_spanned, ToTokens};
+use quote::{quote, ToTokens};
 use syn::{
     ext::IdentExt,
     parse::{Parse, ParseStream},
@@ -11,7 +11,10 @@ use syn::{
 };
 
 use super::Value;
-use crate::{parse, span};
+use crate::{
+    parse::{self, rollback_err},
+    span,
+};
 
 /// A kebab-cased identifier.
 ///
@@ -31,11 +34,6 @@ use crate::{parse, span};
 /// If the next token is not a `-` or ident, an [`Err`] is returned and the
 /// [`ParseStream`] is not advanced. Otherwise, parsing will stop once the ident
 /// ends, and the `ParseStream` is advanced to after this kebab-ident.
-///
-/// # Expanding
-/// The default [`ToTokens`] implementation expands this to a string literal
-/// with the appropriate [`Span`]. If a [`syn::Ident`] is desired, use
-/// [`Self::to_snake_ident`] instead.
 ///
 /// # Invariants
 /// The [`repr`](Self::repr) and [`spans`](Self::spans) fields are not empty. To
@@ -112,10 +110,10 @@ impl Parse for KebabIdent {
         let mut spans = Vec::new();
 
         // Start with `-` or letter.
-        if let Ok(ident) = input.call(syn::Ident::parse_any) {
+        if let Some(ident) = rollback_err(input, syn::Ident::parse_any) {
             repr.push_str(&ident.to_string());
             spans.push(ident.span());
-        } else if let Ok(dash) = input.parse::<Token![-]>() {
+        } else if let Some(dash) = rollback_err(input, <Token![-]>::parse) {
             repr.push('-');
             spans.push(dash.span);
         } else {
@@ -132,7 +130,7 @@ impl Parse for KebabIdent {
             // After every loop, the next ident should be a `-`.
             // Otherwise, this means it was two idents separated by a space,
             // e.g. `one two`.
-            if input.parse::<Token![-]>().is_ok() {
+            if rollback_err(input, <Token![-]>::parse).is_some() {
                 repr.push('-');
             } else if !(is_second_token && repr == "-") {
                 // unless the ident starts with a single `-`, then the next
@@ -143,10 +141,10 @@ impl Parse for KebabIdent {
             is_second_token = false;
 
             // add ident or number
-            if let Ok(ident) = input.call(syn::Ident::parse_any) {
+            if let Some(ident) = rollback_err(input, syn::Ident::parse_any) {
                 repr.push_str(&ident.to_string());
                 spans.push(ident.span());
-            } else if let Ok(int) = input.parse::<syn::LitInt>() {
+            } else if let Some(int) = rollback_err(input, syn::LitInt::parse) {
                 repr.push_str(&int.to_string());
                 spans.push(int.span());
             };
@@ -154,15 +152,6 @@ impl Parse for KebabIdent {
 
         // both repr and spans are not empty due to the first-segment check
         Ok(Self { repr, spans })
-    }
-}
-
-impl ToTokens for KebabIdent {
-    /// The identifier will be most often used as a string, so the default
-    /// implementation adds an appropriately spanned string.
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let repr = self.repr();
-        tokens.extend(quote_spanned!(self.span()=> #repr));
     }
 }
 
@@ -216,11 +205,11 @@ impl KebabIdentOrStr {
 }
 
 impl Parse for KebabIdentOrStr {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        if let Ok(str) = input.parse::<syn::LitStr>() {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        if let Some(str) = rollback_err(input, |input| <syn::LitStr as Parse>::parse(input)) {
             Ok(Self::Str(str))
         } else {
-            Ok(Self::KebabIdent(input.parse()?))
+            Ok(Self::KebabIdent(KebabIdent::parse(input)?))
         }
     }
 }

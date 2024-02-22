@@ -3,7 +3,7 @@ use syn::{parse::Parse, parse_quote, Token};
 
 use crate::{
     ast::{BracedKebabIdent, KebabIdent, Value},
-    recover::rollback_err,
+    parse::rollback_err,
     span,
 };
 
@@ -41,17 +41,18 @@ impl KvAttr {
 impl Parse for KvAttr {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let (ident, value) = if input.peek(syn::token::Brace) {
-            let braced_ident = input.parse::<BracedKebabIdent>()?;
+            let braced_ident = BracedKebabIdent::parse(input)?;
             (
                 braced_ident.ident().clone(),
                 braced_ident.into_block_value(),
             )
         } else {
             let ident = KebabIdent::parse(input)?;
-            if rollback_err(input, <Token![=]>::parse).is_some() {
-                let value = Value::parse_or_emit_err(input);
+            if let Some(eq) = rollback_err(input, <Token![=]>::parse) {
+                let value = Value::parse_or_emit_err(input, eq.span);
                 (ident, value)
             } else {
+                // don't span the attribute name to the `true` or it becomes bool-colored
                 let value = Value::Lit(parse_quote!(true));
                 (ident, value)
             }

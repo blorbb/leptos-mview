@@ -25,12 +25,6 @@ use crate::ast::KebabIdent;
 /// placed directly after (`Component<T>`).
 ///
 /// See [`TagKind`] for a discriminant-only version of this enum.
-///
-/// # Parsing
-/// If parsing of a [`KebabIdent`] fails, an [`Err`] will be returned and the
-/// [`ParseStream`] will not be advanced. However, if a [`Tag::Component`] is
-/// found and there are generics, parsing will **abort** if parsing the generics
-/// fails.
 pub enum Tag {
     Html(syn::Ident),
     /// The generic will contain a leading `::`.
@@ -66,7 +60,7 @@ impl Parse for Tag {
             return Ok(Self::Component(path));
         }
 
-        let ident = input.parse::<KebabIdent>()?;
+        let ident = KebabIdent::parse(input)?;
         let kind = TagKind::from(ident.repr());
         Ok(match kind {
             TagKind::Html => Self::Html(ident.to_snake_ident()),

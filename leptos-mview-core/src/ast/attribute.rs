@@ -10,7 +10,7 @@ use syn::{
 };
 
 use self::{directive::Directive, kv::KvAttr, spread_attrs::SpreadAttr};
-use crate::{error_ext::ResultExt, recover::rollback_err};
+use crate::{error_ext::ResultExt, parse::rollback_err};
 
 #[derive(Clone)]
 pub enum Attr {
@@ -18,16 +18,6 @@ pub enum Attr {
     Directive(Directive),
     Spread(SpreadAttr),
 }
-
-// impl Attr {
-//     pub fn span(&self) -> Span {
-//         match self {
-//             Self::Kv(kv) => kv.span(),
-//             Self::Directive(dir) => dir.span(),
-//             Self::Spread(s) => s.span(),
-//         }
-//     }
-// }
 
 impl Parse for Attr {
     fn parse(input: ParseStream) -> syn::Result<Self> {
@@ -40,7 +30,7 @@ impl Parse for Attr {
             Ok(Self::Directive(dir))
         } else if input.peek(syn::Ident) {
             // definitely a k-v attribute
-            let kv = input.parse::<KvAttr>()?;
+            let kv = KvAttr::parse(input)?;
             Ok(Self::Kv(kv))
         } else if let Some(kv) = rollback_err(input, KvAttr::parse) {
             // k-v attributes don't necessarily start with ident, try the rest

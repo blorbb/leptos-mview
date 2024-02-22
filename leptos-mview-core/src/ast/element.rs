@@ -9,8 +9,7 @@ use syn::{
 use super::{attribute::selector::SelectorShorthands, Attrs, Children, Tag};
 use crate::{
     expand::{component_to_tokens, xml_to_tokens},
-    parse,
-    recover::rollback_err,
+    parse::{self, rollback_err},
     span,
 };
 
@@ -43,11 +42,6 @@ use crate::{
 ///
 /// Whether the element is a slot or not is distinguished by
 /// [`Child`](crate::ast::Child).
-///
-/// # Parsing
-/// Parsing will return an [`Err`] if parsing the [`Tag`] fails (i.e. the next
-/// token is not an ident; however, will abort if a component is found +
-/// generics fail). If anything else fails, parsing will **abort**.
 pub struct Element {
     tag: Tag,
     selectors: SelectorShorthands,
@@ -162,17 +156,17 @@ impl Element {
 /// so no other `|` characters are allowed within a pattern that is outside of a
 /// nested group.
 fn parse_closure_args(input: ParseStream) -> syn::Result<TokenStream> {
-    let first_pipe = input.parse::<Token![|]>()?;
+    let first_pipe = <Token![|]>::parse(input)?;
 
     let mut tokens = TokenStream::new();
     first_pipe.to_tokens(&mut tokens);
 
     loop {
         // parse until second `|` is found
-        if let Ok(pipe) = input.parse::<Token![|]>() {
+        if let Some(pipe) = rollback_err(input, <Token![|]>::parse) {
             pipe.to_tokens(&mut tokens);
             break Ok(tokens);
-        } else if let Ok(tt) = input.parse::<TokenTree>() {
+        } else if let Some(tt) = rollback_err(input, TokenTree::parse) {
             tokens.append(tt);
         } else {
             break Err(syn::Error::new_spanned(

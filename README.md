@@ -112,16 +112,19 @@ The `view!` macros in Leptos is often the largest part of a component, and can g
 
 ## Performance note
 
-Currently, the macro expands to the [builder syntax](https://github.com/leptos-rs/leptos/blob/main/docs/book/src/view/builder.md) (ish), but it has some [performance downsides](https://github.com/leptos-rs/leptos/issues/1492#issuecomment-1664675672) in SSR mode. This is expected to be fixed with the new renderer in leptos `0.7`, so I'm not going to make this implementation.
+Currently, the macro expands to the [builder syntax](https://github.com/leptos-rs/leptos/blob/main/docs/book/src/view/builder.md) (ish), but it has some [performance downsides](https://github.com/leptos-rs/leptos/issues/1492#issuecomment-1664675672) in SSR mode. This is expected to be fixed with the new renderer in Leptos `0.7`, so I'm not going to make this implementation.
 
 ## Compatibility
 
-This macro will be compatible with the latest stable release of Leptos.
+This macro will be compatible with the latest stable release of Leptos. The macro references Leptos items using `::leptos::...`, no items are re-exported from this crate. Therefore, this crate will likely work with any Leptos version if no view-related items are changed.
+
+The below are the versions with which I have tested it to be working. It is likely that the macro works with more versions of Leptos.
 
 | `leptos_mview` version | Compatible `leptos` version |
 | ---------------------- | --------------------------- |
-| `0.1`                  | `0.5.0`-`0.5.1`             |
-| `0.2`                  | `0.5.2`+, `0.6`             |
+| `0.1`                  | `0.5`                       |
+| `0.2`                  | `0.5`, `0.6`                |
+| `0.3`                  | `0.6`                       |
 
 ## Syntax details
 
@@ -143,7 +146,7 @@ mview! {
 }
 ```
 
-Adding generics is the same as in leptos: add it directly after the component name, with or without the turbofish.
+Adding generics is the same as in Leptos: add it directly after the component name, with or without the turbofish.
 ```rust
 #[component]
 pub fn GenericComponent<S>(ty: PhantomData<S>) -> impl IntoView {
@@ -338,6 +341,8 @@ mview! {
 }
 ```
 
+Note that the `use:` directive automatically calls `.into()` on its argument, consistent with behaviour from Leptos.
+
 #### Special Attributes
 
 There are a few special attributes you can put on your component to emulate some features only available on HTML elements.
@@ -347,7 +352,7 @@ If a component has a `class` attribute, the classes using the selector syntax `.
 ```rust
 #[component]
 // the `class` parameter should have these attributes and type to work properly
-fn TakesClasses(#[prop(into, default="".into())] class: TextProp) -> impl IntoView {
+fn TakesClasses(#[prop(optional, into)] class: TextProp) -> impl IntoView {
     mview! {
         // "my-component" will always be present, extra classes passed in will also be added
         div.my-component class=[class.get()] { "..." }

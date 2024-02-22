@@ -1,4 +1,4 @@
-use proc_macro2::{Span, TokenStream};
+use proc_macro2::Span;
 use proc_macro_error::emit_error;
 use quote::ToTokens;
 use syn::{
@@ -8,7 +8,12 @@ use syn::{
 };
 
 use super::Element;
-use crate::{ast::Value, error_ext::SynErrorExt, kw, recover::rollback_err};
+use crate::{
+    ast::Value,
+    error_ext::SynErrorExt,
+    kw,
+    parse::{self, rollback_err},
+};
 
 /// A child that is an actual HTML value (i.e. not a slot).
 ///
@@ -43,10 +48,6 @@ impl NodeChild {
 ///
 /// Children can either be a [`NodeChild`] (i.e. an actual element), or a slot.
 /// Slots are distinguished by prefixing the child with `slot:`.
-///
-/// # Parsing
-/// Mostly **aborts** if parsing fails. An [`Err`] is only returned if there are
-/// no tokens remaining.
 pub enum Child {
     Node(NodeChild),
     Slot(kw::slot, Element),
@@ -85,9 +86,6 @@ impl Parse for Child {
 ///
 /// Parsing does not include the surrounding braces.
 /// If no children are present, an empty vector will be stored.
-///
-/// There are two ways of passing children, so no `ToTokens` implementation
-/// is provided. Use `to_child_methods` or `to_fragment` instead.
 pub struct Children(Vec<Child>);
 
 impl std::ops::Deref for Children {
@@ -106,10 +104,19 @@ impl Parse for Children {
             match Child::parse(input) {
                 Ok(child) => vec.push(child),
                 Err(e) => {
-                    e.emit_as_error();
-                    // skip the rest of the tokens
-                    // need to consume all tokens otherwise an error is made on drop
-                    input.parse::<TokenStream>().unwrap();
+                    if input.peek(Token![;]) {
+                        // an extra semi-colon: just skip it and keep parsing
+                        emit_error!(
+                            e.span(), "extra semi-colon found";
+                            help="remove this semi-colon"
+                        );
+                        <Token![;]>::parse(input).unwrap();
+                    } else {
+                        e.emit_as_error();
+                        // skip the rest of the tokens
+                        // need to consume all tokens otherwise an error is made on drop
+                        parse::take_rest(input);
+                    }
                 }
             };
         }

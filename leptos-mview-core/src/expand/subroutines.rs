@@ -117,6 +117,9 @@ pub(super) fn xml_kv_attribute_tokens(attr: &KvAttr) -> TokenStream {
         let node_ref = syn::Ident::new("node_ref", key.span());
         quote! { .#node_ref(#value) }
     } else {
+        // don't span the attribute to the string, unnecessary and makes it
+        // string-colored
+        let key = key.repr();
         quote! { .attr(#key, #value) }
     }
 }

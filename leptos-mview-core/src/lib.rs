@@ -10,7 +10,6 @@ mod error_ext;
 mod expand;
 mod kw;
 mod parse;
-mod recover;
 mod span;
 
 use ast::Child;

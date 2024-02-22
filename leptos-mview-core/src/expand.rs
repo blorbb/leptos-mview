@@ -93,6 +93,7 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
         Tag::Svg(ident) => quote! { ::leptos::svg::#ident() },
         Tag::Math(ident) => quote! { ::leptos::math::#ident() },
         Tag::WebComponent(ident) => {
+            let ident = ident.to_lit_str();
             let custom = syn::Ident::new("custom", ident.span());
             quote! { ::leptos::html::#custom(::leptos::html::Custom::new(#ident)) }
         }
@@ -294,18 +295,19 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
             // the .build() returns `!` if not all props are present.
             // this causes unreachable code warning in ::leptos::component_view
             #[allow(unreachable_code)]
-            ::leptos::component_view(
-                &#path,
-                ::leptos::component_props_builder(&#path)
-                    #attrs
-                    #dyn_classes
-                    #selector_ids
-                    #children
-                    #slot_children
-                    #build
-                    #dyn_attrs
+            ::leptos::IntoView::into_view(
+                ::leptos::component_view(
+                    &#path,
+                    ::leptos::component_props_builder(&#path)
+                        #attrs
+                        #dyn_classes
+                        #selector_ids
+                        #children
+                        #slot_children
+                        #build
+                        #dyn_attrs
+                )
             )
-            .into_view()
             #(#use_directives)*
             #event_listeners
         })

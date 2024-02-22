@@ -21,23 +21,15 @@ pub fn extract_braced(input: ParseStream) -> syn::Result<(syn::token::Brace, Par
     Ok((delim, stream))
 }
 
-// pub fn parenthesized_tokens(
-//     input: ParseStream,
-// ) -> syn::Result<(syn::token::Paren, TokenStream)> {
-//     let (delim, buf) = extract_parenthesized(input)?;
-//     let ts = TokenStream::parse(&buf).expect("parsing tokenstream never
-// fails");     Ok((delim, ts))
-// }
-
 pub fn bracketed_tokens(input: ParseStream) -> syn::Result<(syn::token::Bracket, TokenStream)> {
     let (delim, buf) = extract_bracketed(input)?;
-    let ts = TokenStream::parse(&buf).expect("parsing tokenstream never fails");
+    let ts = take_rest(&buf);
     Ok((delim, ts))
 }
 
 pub fn braced_tokens(input: ParseStream) -> syn::Result<(syn::token::Brace, TokenStream)> {
     let (delim, buf) = extract_braced(input)?;
-    let ts = TokenStream::parse(&buf).expect("parsing tokenstream never fails");
+    let ts = take_rest(&buf);
     Ok((delim, ts))
 }
 
@@ -82,4 +74,23 @@ pub fn parenthesized<T: Parse>(input: ParseStream) -> syn::Result<(syn::token::P
     } else {
         Err(input.error("no paren found"))
     }
+}
+
+pub fn rollback_err<F, T>(input: ParseStream, parser: F) -> Option<T>
+where
+    F: Fn(ParseStream) -> syn::Result<T>,
+{
+    let fork = input.fork();
+    match parser(&fork) {
+        Ok(val) => {
+            input.advance_to(&fork);
+            Some(val)
+        }
+        Err(_) => None,
+    }
+}
+
+/// Equivalent to parsing a [`TokenStream`] and unwrapping.
+pub fn take_rest(input: ParseStream) -> TokenStream {
+    TokenStream::parse(input).expect("parsing TokenStream should never fail")
 }
