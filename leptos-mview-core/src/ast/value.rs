@@ -4,6 +4,7 @@ use quote::{quote, quote_spanned, ToTokens};
 use syn::{
     ext::IdentExt,
     parse::{Parse, ParseStream},
+    spanned::Spanned,
 };
 
 use crate::parse::{self, rollback_err};
@@ -73,7 +74,9 @@ impl ToTokens for Value {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         tokens.extend(match self {
             Self::Lit(lit) => lit.into_token_stream(),
-            Self::Block { tokens, braces } => quote_spanned!(braces.span.join()=> {#tokens}),
+            // using the tokens as the span instead of the block provides better error messages
+            // see test ui/errors/invalid_child
+            Self::Block { tokens, .. } => quote_spanned!(tokens.span()=> {#tokens}),
             Self::Bracket {
                 tokens,
                 prefixes,
