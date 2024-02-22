@@ -52,6 +52,7 @@ impl Parse for KvAttr {
                 let value = Value::parse_or_emit_err(input);
                 (ident, value)
             } else {
+                // don't span the attribute name to the `true` or it becomes bool-colored
                 let value = Value::Lit(parse_quote!(true));
                 (ident, value)
             }
