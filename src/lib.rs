@@ -553,5 +553,6 @@ Please feel free to make a PR/issue if you have feature ideas/bugs to report/fee
 
 pub use leptos_mview_macro::mview;
 
+/// Not for public use. Do not implement anything on this.
 #[doc(hidden)]
 pub struct MissingValueAfterEq;
