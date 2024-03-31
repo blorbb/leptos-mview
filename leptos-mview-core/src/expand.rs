@@ -51,9 +51,9 @@ pub fn children_fragment_tokens<'a>(
 ) -> TokenStream {
     quote_spanned! { span=>
         ::leptos::Fragment::lazy(|| {
-            ::std::vec![
+            <[_]>::into_vec(::std::boxed::Box::new([
                 #(  ::leptos::IntoView::into_view(#children) ),*
-            ]
+            ]))
         })
     }
 }
@@ -379,9 +379,9 @@ fn slots_to_tokens<'a>(children: impl Iterator<Item = &'a Element>) -> TokenStre
                 }
             } else {
                 quote! {
-                    .#method(::std::vec![
+                    .#method(<[_]>::into_vec(::std::boxed::Box::new([
                         #(#slot_tokens),*
-                    ])
+                    ])))
                 }
             }
         })

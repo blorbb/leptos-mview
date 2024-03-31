@@ -288,9 +288,9 @@ pub(super) fn component_dyn_attrs_to_methods(dyn_attrs: &[&Directive]) -> Option
 
     Some(quote! {
         .#dyn_attrs_method(
-            ::std::vec![
+            <[_]>::into_vec(std::boxed::Box::new([
                 #( (#keys, ::leptos::IntoAttribute::into_attribute(#values)) ),*
-            ]
+            ]))
         )
     })
 }
