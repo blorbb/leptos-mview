@@ -15,14 +15,11 @@ error: extra semi-colon found
 error[E0277]: expected a `Fn()` closure, found `str`
   --> tests/ui/errors/invalid_child.rs:17:14
    |
-15 |       _ = mview! {
-   |  _________-
-16 | |         span (
-17 | |             {value}
-   | |              ^^^^^ expected an `Fn()` closure, found `str`
-18 | |         )
-19 | |     };
-   | |_____- required by a bound introduced by this call
+17 |             {value}
+   |             -^^^^^-
+   |             ||
+   |             |expected an `Fn()` closure, found `str`
+   |             required by a bound introduced by this call
    |
    = help: the trait `std::ops::Fn<()>` is not implemented for `str`
    = note: wrap the `str` in a closure with no arguments: `|| { /* code */ }`
@@ -38,20 +35,17 @@ note: required by a bound in `leptos::HtmlElement::<El>::child`
 error[E0277]: expected a `Fn()` closure, found `std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:27:22: 27:33}>`
   --> tests/ui/errors/invalid_child.rs:25:14
    |
-23 |        _ = mview! {
-   |  __________-
-24 | |          ul {
-25 | |              {values
-   | | ______________^
+25 |                {values
+   |   _____________-^
+   |  |_____________|
+   | ||
 26 | ||                 .into_iter()
 27 | ||                 .map(|val: &str| {
 28 | ||                     mview! { li({val}) }
 29 | ||                 })
    | ||__________________^ expected an `Fn()` closure, found `std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:27:22: 27:33}>`
 30 | |              }
-31 | |          }
-32 | |      }
-   | |______- required by a bound introduced by this call
+   | |______________- required by a bound introduced by this call
    |
    = help: the trait `std::ops::Fn<()>` is not implemented for `std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:27:22: 27:33}>`
    = note: wrap the `std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:27:22: 27:33}>` in a closure with no arguments: `|| { /* code */ }`
@@ -71,3 +65,14 @@ note: required by a bound in `leptos::HtmlElement::<El>::child`
    |
    |     pub fn child(self, child: impl IntoView) -> Self {
    |                                    ^^^^^^^^ required by this bound in `HtmlElement::<El>::child`
+
+warning: unreachable call
+  --> tests/ui/errors/invalid_child.rs:45:13
+   |
+45 |             {todo!()}
+   |             ^-------^
+   |             ||
+   |             |any code following this expression is unreachable
+   |             unreachable call
+   |
+   = note: `#[warn(unreachable_code)]` on by default

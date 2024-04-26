@@ -38,3 +38,11 @@ fn extra_semicolons() {
         span;
     };
 }
+
+fn unreachable_code() {
+    _ = mview! {
+        div {
+            {todo!()}
+        }
+    }
+}

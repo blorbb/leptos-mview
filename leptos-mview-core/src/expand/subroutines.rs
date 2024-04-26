@@ -172,9 +172,14 @@ pub(super) fn xml_spread_tokens(attr: &SpreadAttr) -> TokenStream {
 pub(super) fn xml_child_methods_tokens<'a>(
     children: impl Iterator<Item = &'a NodeChild>,
 ) -> TokenStream {
-    quote! {
-        #( .child(#children) )*
+    let mut ts = TokenStream::new();
+    for child in children {
+        let child_method = syn::Ident::new("child", child.span());
+        ts.extend(quote! {
+            .#child_method(#child)
+        });
     }
+    ts
 }
 
 ////////////////////////////////////////////////////////////
