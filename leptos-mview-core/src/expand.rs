@@ -187,6 +187,9 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
     let mut selector_ids: Vec<KebabIdent> = Vec::new();
     let mut id_span: Option<Span> = None;
 
+    let mut spread_attrs = TokenStream::new();
+
+
     for sel in element.selectors().iter() {
         match sel {
             SelectorShorthand::Id { id, pound_symbol } => {
@@ -203,10 +206,11 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
     element.attrs().iter().for_each(|a| match a {
         Attr::Kv(attr) => attrs.extend(component_kv_attribute_tokens(attr)),
         Attr::Spread(spread) => {
-            emit_error!(
-                spread.span(),
-                "spread attributes not supported on components/slots"
-            );
+            if IS_SLOT {
+                emit_error!(spread.span(), "spread syntax is not supported on slots");
+            } else {
+                spread_attrs.extend(component_spread_tokens(spread));
+            }
         }
         Attr::Directive(dir) => match dir.dir.to_string().as_str() {
             "on" => {
@@ -306,6 +310,7 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
                         #slot_children
                         #build
                         #dyn_attrs
+                        #spread_attrs
                 )
             )
             #(#use_directives)*

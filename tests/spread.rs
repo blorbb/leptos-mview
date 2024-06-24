@@ -22,7 +22,7 @@ fn spread_html_element() {
 }
 
 #[test]
-fn spread_on_component() {
+fn spread_in_component() {
     #[component]
     fn Spreadable(#[prop(attrs)] attrs: Vec<(&'static str, Attribute)>) -> impl IntoView {
         mview! {
@@ -36,5 +36,29 @@ fn spread_on_component() {
     check_str(
         res,
         r#"<div class="b" contenteditable data-index="0" data-hk="0-0-0-2"></div>"#,
+    );
+}
+
+#[test]
+fn spread_on_component() {
+    #[component]
+    fn Spreadable(#[prop(attrs)] attrs: Vec<(&'static str, Attribute)>) -> impl IntoView {
+        mview! {
+            div {..attrs};
+        }
+    }
+
+    let attrs: Vec<(&'static str, Attribute)> = vec![
+        ("a", "b".into_attribute()),
+        ("data-index", 0.into_attribute()),
+        ("class", "c".into_attribute()),
+    ];
+
+    let res = mview! {
+        Spreadable attr:contenteditable=true {..attrs};
+    };
+    check_str(
+        res,
+        r#"<div contenteditable a="b" data-index="0" class="c" data-hk="0-0-0-2"></div>"#,
     );
 }

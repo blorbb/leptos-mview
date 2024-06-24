@@ -300,6 +300,14 @@ pub(super) fn component_dyn_attrs_to_methods(dyn_attrs: &[&Directive]) -> Option
     })
 }
 
+pub(super) fn component_spread_tokens(attr: &SpreadAttr) -> TokenStream {
+    let (dotdot, expr) = (attr.dotdot(), attr.expr());
+    let dyn_bindings = syn::Ident::new("dyn_bindings", dotdot.span());
+    quote! {
+        .#dyn_bindings(#expr)
+    }
+}
+
 // special attributes on components that add to a special set of props //
 
 /// Adds potentially reactive classes to the `class` attribute of a component.
