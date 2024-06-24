@@ -72,8 +72,8 @@ error[E0277]: the trait bound `leptos::Callback<i32, leptos::View>: ToChildren<{
    | |_____^ the trait `ToChildren<{closure@$DIR/tests/ui/errors/slot_builder_spans.rs:73:37: 73:43}>` is not implemented for `leptos::Callback<i32, leptos::View>`
    |
    = help: the following other types implement trait `ToChildren<F>`:
-             Box<(dyn std::ops::Fn() -> Fragment + 'static)>
              Box<(dyn FnMut() -> Fragment + 'static)>
              Box<(dyn FnOnce() -> Fragment + 'static)>
+             Box<(dyn std::ops::Fn() -> Fragment + 'static)>
              Rc<(dyn std::ops::Fn() -> Fragment + 'static)>
    = note: this error originates in the macro `mview` (in Nightly builds, run with -Z macro-backtrace for more info)

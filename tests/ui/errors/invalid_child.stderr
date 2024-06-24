@@ -12,27 +12,34 @@ error: extra semi-colon found
    |
    = help: remove this semi-colon
 
-error[E0277]: expected a `Fn()` closure, found `str`
+error[E0277]: the trait bound `&&str: IntoView` is not satisfied
   --> tests/ui/errors/invalid_child.rs:17:14
    |
 17 |             {value}
    |             -^^^^^-
    |             ||
-   |             |expected an `Fn()` closure, found `str`
+   |             |the trait `std::ops::Fn<()>` is not implemented for `&&str`, which is required by `&&str: IntoView`
    |             required by a bound introduced by this call
    |
-   = help: the trait `std::ops::Fn<()>` is not implemented for `str`
-   = note: wrap the `str` in a closure with no arguments: `|| { /* code */ }`
-   = help: the trait `IntoView` is implemented for `&'static str`
+   = help: the following other types implement trait `IntoView`:
+             &'static str
+             &Fragment
+             &leptos::View
+             &std::string::String
+             ()
+             (A, B)
+             (A, B, C)
+             (A, B, C, D)
+           and $N others
    = note: required for `&str` to implement `FnOnce<()>`
    = note: required for `&&str` to implement `IntoView`
 note: required by a bound in `leptos::HtmlElement::<El>::child`
-  --> $CARGO/leptos_dom-0.6.3/src/html.rs
+  --> $CARGO/leptos_dom-0.6.12/src/html.rs
    |
    |     pub fn child(self, child: impl IntoView) -> Self {
    |                                    ^^^^^^^^ required by this bound in `HtmlElement::<El>::child`
 
-error[E0277]: expected a `Fn()` closure, found `std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:27:22: 27:33}>`
+error[E0277]: the trait bound `std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:27:22: 27:33}>: IntoView` is not satisfied
   --> tests/ui/errors/invalid_child.rs:25:14
    |
 25 |                {values
@@ -43,25 +50,23 @@ error[E0277]: expected a `Fn()` closure, found `std::iter::Map<std::vec::IntoIte
 27 | ||                 .map(|val: &str| {
 28 | ||                     mview! { li({val}) }
 29 | ||                 })
-   | ||__________________^ expected an `Fn()` closure, found `std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:27:22: 27:33}>`
+   | ||__________________^ the trait `std::ops::Fn<()>` is not implemented for `std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:27:22: 27:33}>`, which is required by `std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:27:22: 27:33}>: IntoView`
 30 | |              }
    | |______________- required by a bound introduced by this call
    |
-   = help: the trait `std::ops::Fn<()>` is not implemented for `std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:27:22: 27:33}>`
-   = note: wrap the `std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:27:22: 27:33}>` in a closure with no arguments: `|| { /* code */ }`
    = help: the following other types implement trait `IntoView`:
-             bool
-             char
-             isize
-             i8
-             i16
-             i32
-             i64
-             i128
+             &'static str
+             &Fragment
+             &leptos::View
+             &std::string::String
+             ()
+             (A, B)
+             (A, B, C)
+             (A, B, C, D)
            and $N others
    = note: required for `std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:27:22: 27:33}>` to implement `IntoView`
 note: required by a bound in `leptos::HtmlElement::<El>::child`
-  --> $CARGO/leptos_dom-0.6.3/src/html.rs
+  --> $CARGO/leptos_dom-0.6.12/src/html.rs
    |
    |     pub fn child(self, child: impl IntoView) -> Self {
    |                                    ^^^^^^^^ required by this bound in `HtmlElement::<El>::child`
@@ -76,3 +81,11 @@ warning: unreachable call
    |             unreachable call
    |
    = note: `#[warn(unreachable_code)]` on by default
+
+warning: unused variable: `a`
+ --> tests/ui/errors/invalid_child.rs:4:9
+  |
+4 |     let a = "a";
+  |         ^ help: if this is intentional, prefix it with an underscore: `_a`
+  |
+  = note: `#[warn(unused_variables)]` on by default

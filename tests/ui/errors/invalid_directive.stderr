@@ -77,3 +77,11 @@ error[E0425]: cannot find value `clicky_click` in module `leptos::ev`
    |
 24 |         button on:clicky-click={move |_| ()};
    |                   ^^^^^^^^^^^^ not found in `leptos::ev`
+
+warning: unused variable: `to_clone`
+  --> tests/ui/errors/invalid_directive.rs:56:9
+   |
+56 |     let to_clone = String::new();
+   |         ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_to_clone`
+   |
+   = note: `#[warn(unused_variables)]` on by default

@@ -2,15 +2,14 @@ error[E0277]: the trait bound `i32: From<()>` is not satisfied
   --> tests/ui/errors/use_directive.rs:10:17
    |
 10 |         div use:arg_dir;
-   |                 ^^^^^^^ the trait `From<()>` is not implemented for `i32`
+   |                 ^^^^^^^ the trait `From<()>` is not implemented for `i32`, which is required by `(): Into<_>`
    |
    = help: the following other types implement trait `From<T>`:
              <i32 as From<bool>>
-             <i32 as From<i8>>
              <i32 as From<i16>>
-             <i32 as From<u8>>
+             <i32 as From<i8>>
              <i32 as From<u16>>
-             <i32 as From<NonZeroI32>>
+             <i32 as From<u8>>
    = note: required for `()` to implement `Into<i32>`
 
 error[E0277]: the trait bound `(): From<{integer}>` is not satisfied
@@ -19,18 +18,18 @@ error[E0277]: the trait bound `(): From<{integer}>` is not satisfied
 15 |       _ = mview! {
    |  _________-
 16 | |         span use:no_arg_dir=2;
-   | |                             ^ the trait `From<{integer}>` is not implemented for `()`
+   | |                             ^ the trait `From<{integer}>` is not implemented for `()`, which is required by `{integer}: Into<_>`
 17 | |     };
    | |_____- required by a bound introduced by this call
    |
    = help: the following other types implement trait `From<T>`:
-             <(usize, usize) as From<toml::tokens::Span>>
-             <(T,) as From<[T; 1]>>
              <(T, T) as From<[T; 2]>>
              <(T, T, T) as From<[T; 3]>>
              <(T, T, T, T) as From<[T; 4]>>
              <(T, T, T, T, T) as From<[T; 5]>>
              <(T, T, T, T, T, T) as From<[T; 6]>>
              <(T, T, T, T, T, T, T) as From<[T; 7]>>
+             <(T, T, T, T, T, T, T, T) as From<[T; 8]>>
+             <(T, T, T, T, T, T, T, T, T) as From<[T; 9]>>
            and $N others
    = note: required for `{integer}` to implement `Into<()>`

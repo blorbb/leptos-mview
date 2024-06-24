@@ -10,20 +10,14 @@ error: `prop:` is not supported on components/slots
 12 |         Component prop:value="1";
    |                   ^^^^
 
-error: spread attributes not supported on components/slots
-  --> tests/ui/errors/unsupported_attrs.rs:24:19
-   |
-24 |         Component {..attrs};
-   |                   ^^^^^^^^^
-
 error: `attr:` is not supported on elements
-  --> tests/ui/errors/unsupported_attrs.rs:30:15
+  --> tests/ui/errors/unsupported_attrs.rs:18:15
    |
-30 |         input attr:class="no" type="text";
+18 |         input attr:class="no" type="text";
    |               ^^^^
 
 error: `clone:` is not supported on elements
-  --> tests/ui/errors/unsupported_attrs.rs:38:18
+  --> tests/ui/errors/unsupported_attrs.rs:26:18
    |
-38 |             span clone:notcopy {
+26 |             span clone:notcopy {
    |                  ^^^^^

@@ -13,7 +13,7 @@ error[E0061]: this method takes 1 argument but 0 arguments were supplied
    |         ^^^ an argument of type `ForPropsBuilder_Error_Missing_required_field_key` is missing
    |
 note: method defined here
-  --> $CARGO/leptos-0.6.3/src/for_loop.rs
+  --> $CARGO/leptos-0.6.12/src/for_loop.rs
    |
    | #[component(transparent)]
    | ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -29,11 +29,11 @@ error[E0277]: expected a `Fn()` closure, found `str`
 17 |         Show when={"no"} {
    |              ^^^^ expected an `Fn()` closure, found `str`
    |
-   = help: the trait `std::ops::Fn<()>` is not implemented for `str`
+   = help: the trait `std::ops::Fn<()>` is not implemented for `str`, which is required by `&str: FnOnce()`
    = note: wrap the `str` in a closure with no arguments: `|| { /* code */ }`
    = note: required for `&str` to implement `FnOnce<()>`
 note: required by a bound in `ShowPropsBuilder::<W, (__children, (), __fallback)>::when`
-  --> $CARGO/leptos-0.6.3/src/show.rs
+  --> $CARGO/leptos-0.6.12/src/show.rs
    |
    |     when: W,
    |     ---- required by a bound in this associated function
@@ -47,11 +47,11 @@ error[E0277]: expected a `Fn()` closure, found `str`
 17 |         Show when={"no"} {
    |         ^^^^ expected an `Fn()` closure, found `str`
    |
-   = help: the trait `std::ops::Fn<()>` is not implemented for `str`
+   = help: the trait `std::ops::Fn<()>` is not implemented for `str`, which is required by `&str: Fn()`
    = note: wrap the `str` in a closure with no arguments: `|| { /* code */ }`
    = note: required for `&str` to implement `std::ops::Fn<()>`
 note: required by a bound in `leptos::Show`
-  --> $CARGO/leptos-0.6.3/src/show.rs
+  --> $CARGO/leptos-0.6.12/src/show.rs
    |
    | pub fn Show<W>(
    |        ---- required by a bound in this function
@@ -71,12 +71,10 @@ error[E0599]: the method `children` exists for struct `ShowPropsBuilder<&str, ((
    |
    |
    = note: the following trait bounds were not satisfied:
-           `<&str as FnOnce<()>>::Output = bool`
-           `&str: std::ops::Fn<()>`
-           `&str: FnMut<()>`
-           which is required by `&str: std::ops::Fn<()>`
-           `&str: FnOnce<()>`
-           which is required by `&str: std::ops::Fn<()>`
+           `str: std::ops::Fn<()>`
+           which is required by `<&str as FnOnce<()>>::Output = bool`
+           `str: FnOnce<()>`
+           which is required by `<&str as FnOnce<()>>::Output = bool`
 
 error[E0308]: mismatched types
   --> tests/ui/errors/com_builder_spans.rs:29:21
@@ -111,17 +109,17 @@ error[E0283]: type annotations needed
    |
    = note: cannot satisfy `_: leptos::IntoView`
    = help: the following types implement trait `leptos::IntoView`:
-             bool
-             char
-             isize
-             i8
-             i16
-             i32
-             i64
-             i128
+             &'static str
+             &Fragment
+             &leptos::View
+             &std::string::String
+             ()
+             (A, B)
+             (A, B, C)
+             (A, B, C, D)
            and $N others
 note: required by a bound in `leptos::Await`
-  --> $CARGO/leptos-0.6.3/src/await_.rs
+  --> $CARGO/leptos-0.6.12/src/await_.rs
    |
    | pub fn Await<T, Fut, FF, VF, V>(
    |        ----- required by a bound in this function
@@ -141,13 +139,13 @@ error[E0283]: type annotations needed
    |
    = note: multiple `impl`s satisfying `_: ToChildren<{closure@$DIR/tests/ui/errors/com_builder_spans.rs:49:38: 49:47}>` found in the `leptos` crate:
            - impl<F> ToChildren<F> for Box<(dyn FnMut() -> Fragment + 'static)>
-             where <F as FnOnce<()>>::Output == Fragment, F: FnMut<()>, F: 'static;
+             where <F as FnOnce<()>>::Output == Fragment, F: FnMut(), F: 'static;
            - impl<F> ToChildren<F> for Box<(dyn FnOnce() -> Fragment + 'static)>
-             where <F as FnOnce<()>>::Output == Fragment, F: FnOnce<()>, F: 'static;
+             where <F as FnOnce<()>>::Output == Fragment, F: FnOnce(), F: 'static;
            - impl<F> ToChildren<F> for Box<(dyn std::ops::Fn() -> Fragment + 'static)>
-             where <F as FnOnce<()>>::Output == Fragment, F: std::ops::Fn<()>, F: 'static;
+             where <F as FnOnce<()>>::Output == Fragment, F: Fn(), F: 'static;
            - impl<F> ToChildren<F> for Rc<(dyn std::ops::Fn() -> Fragment + 'static)>
-             where <F as FnOnce<()>>::Output == Fragment, F: std::ops::Fn<()>, F: 'static;
+             where <F as FnOnce<()>>::Output == Fragment, F: Fn(), F: 'static;
 help: consider specifying the generic arguments
    |
 49 |         Await::<i32, _, _, VF, V> future=[async { 3 }] { "no args" }

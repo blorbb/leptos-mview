@@ -13,18 +13,6 @@ fn prop_on_component() {
     };
 }
 
-#[component]
-fn SpreadOnComponent() -> impl IntoView {
-    #[allow(unused_variables)]
-    let attrs = vec![
-        ("class", "something"),
-        ("data", "a"),
-    ];
-    mview! {
-        Component {..attrs};
-    };
-}
-
 fn attr_on_element() {
     mview! {
         input attr:class="no" type="text";

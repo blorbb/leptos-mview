@@ -19,7 +19,7 @@ error[E0061]: this method takes 1 argument but 0 arguments were supplied
   |         ^^^^^ an argument of type `AwaitPropsBuilder_Error_Missing_required_field_children` is missing
   |
 note: method defined here
- --> $CARGO/leptos-0.6.3/src/await_.rs
+ --> $CARGO/leptos-0.6.12/src/await_.rs
   |
   | #[component]
   | ^^^^^^^^^^^^

@@ -1,4 +1,4 @@
-error: spread attributes not supported on components/slots
+error: spread syntax is not supported on slots
   --> tests/ui/errors/slot_unsupported_dirs.rs:14:26
    |
 14 |             slot:Nothing {..attrs};
@@ -27,3 +27,11 @@ error: `prop:` is not supported on components/slots
    |
 39 |             slot:Nothing prop:value="1";
    |                          ^^^^
+
+warning: unused variable: `attrs`
+  --> tests/ui/errors/slot_unsupported_dirs.rs:11:9
+   |
+11 |     let attrs: Vec<(&'static str, Attribute)> = Vec::new();
+   |         ^^^^^ help: if this is intentional, prefix it with an underscore: `_attrs`
+   |
+   = note: `#[warn(unused_variables)]` on by default
