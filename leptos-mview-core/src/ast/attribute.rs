@@ -78,6 +78,7 @@ mod tests {
 
     #[test]
     fn parse_complex_attrs() {
+        #[allow(non_local_definitions)]
         impl Attr {
             fn is_kv(&self) -> bool { matches!(self, Self::Kv(..)) }
 
@@ -85,6 +86,7 @@ mod tests {
 
             fn is_spread(&self) -> bool { matches!(self, Self::Spread(..)) }
         }
+
         let attrs: Attrs = parse_quote! {
             key-1 = "value"
             a-long-thing=[some()]
