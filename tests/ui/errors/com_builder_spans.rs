@@ -20,6 +20,14 @@ fn incorrect_arg_value() {
     };
 }
 
+fn missing_closure() {
+    _ = mview! {
+        Show when={true} {
+            "hi"
+        }
+    };
+}
+
 fn incorrect_closure() {
     #[component]
     fn Thing(label: &'static str) -> impl IntoView { label }

@@ -189,7 +189,6 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
 
     let mut spread_attrs = TokenStream::new();
 
-
     for sel in element.selectors().iter() {
         match sel {
             SelectorShorthand::Id { id, pound_symbol } => {
@@ -295,6 +294,12 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
             )
         })
     } else {
+        // this whole thing needs to be spanned to avoid errors occurring at the whole
+        // call site.
+        let component_props_builder = quote_spanned! {
+            path.span()=> ::leptos::component_props_builder(&#path)
+        };
+
         Some(quote! {
             // the .build() returns `!` if not all props are present.
             // this causes unreachable code warning in ::leptos::component_view
@@ -302,7 +307,7 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
             ::leptos::IntoView::into_view(
                 ::leptos::component_view(
                     &#path,
-                    ::leptos::component_props_builder(&#path)
+                    #component_props_builder
                         #attrs
                         #dyn_classes
                         #selector_ids

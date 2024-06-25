@@ -76,35 +76,86 @@ error[E0599]: the method `children` exists for struct `ShowPropsBuilder<&str, ((
            `str: FnOnce<()>`
            which is required by `<&str as FnOnce<()>>::Output = bool`
 
-error[E0308]: mismatched types
-  --> tests/ui/errors/com_builder_spans.rs:29:21
+error[E0277]: expected a `Fn()` closure, found `bool`
+  --> tests/ui/errors/com_builder_spans.rs:25:14
    |
-29 |         Thing label=[false];
+25 |         Show when={true} {
+   |              ^^^^ expected an `Fn()` closure, found `bool`
+   |
+   = help: the trait `std::ops::Fn<()>` is not implemented for `bool`
+   = note: wrap the `bool` in a closure with no arguments: `|| { /* code */ }`
+note: required by a bound in `ShowPropsBuilder::<W, (__children, (), __fallback)>::when`
+  --> $CARGO/leptos-0.6.12/src/show.rs
+   |
+   |     when: W,
+   |     ---- required by a bound in this associated function
+...
+   |     W: Fn() -> bool + 'static,
+   |        ^^^^^^^^^^^^ required by this bound in `ShowPropsBuilder::<W, (__children, (), __fallback)>::when`
+
+error[E0277]: expected a `Fn()` closure, found `bool`
+  --> tests/ui/errors/com_builder_spans.rs:25:9
+   |
+25 |         Show when={true} {
+   |         ^^^^ expected an `Fn()` closure, found `bool`
+   |
+   = help: the trait `std::ops::Fn<()>` is not implemented for `bool`, which is required by `fn(ShowProps<_>) -> impl leptos::IntoView {leptos::Show::<_>}: leptos::Component<_>`
+   = note: wrap the `bool` in a closure with no arguments: `|| { /* code */ }`
+   = note: required for `ShowProps<bool>` to implement `leptos::Props`
+   = note: required for `fn(ShowProps<bool>) -> impl leptos::IntoView {leptos::Show::<bool>}` to implement `leptos::Component<ShowProps<bool>>`
+note: required by a bound in `component_props_builder`
+  --> $CARGO/leptos-0.6.12/src/lib.rs
+   |
+   | pub fn component_props_builder<P: PropsOrNoPropsBuilder>(
+   |        ----------------------- required by a bound in this function
+   |     _f: &impl Component<P>,
+   |               ^^^^^^^^^^^^ required by this bound in `component_props_builder`
+
+error[E0599]: the method `children` exists for struct `ShowPropsBuilder<bool, ((), (bool,), ())>`, but its trait bounds were not satisfied
+  --> tests/ui/errors/com_builder_spans.rs:26:13
+   |
+24 |       _ = mview! {
+   |  _________-
+25 | |         Show when={true} {
+26 | |             "hi"
+   | |            -^^^^ method cannot be called on `ShowPropsBuilder<bool, ((), (bool,), ())>` due to unsatisfied trait bounds
+   | |____________|
+   |
+   |
+   = note: the following trait bounds were not satisfied:
+           `bool: std::ops::Fn<()>`
+           `bool: FnOnce<()>`
+           which is required by `<bool as FnOnce<()>>::Output = bool`
+
+error[E0308]: mismatched types
+  --> tests/ui/errors/com_builder_spans.rs:37:21
+   |
+37 |         Thing label=[false];
    |               ----- ^^^^^^^ expected `&str`, found closure
    |               |
    |               arguments to this method are incorrect
    |
    = note: expected reference `&'static str`
-                found closure `{closure@$DIR/tests/ui/errors/com_builder_spans.rs:29:21: 29:28}`
+                found closure `{closure@$DIR/tests/ui/errors/com_builder_spans.rs:37:21: 37:28}`
 note: method defined here
-  --> tests/ui/errors/com_builder_spans.rs:25:14
+  --> tests/ui/errors/com_builder_spans.rs:33:14
    |
-25 |     fn Thing(label: &'static str) -> impl IntoView { label }
+33 |     fn Thing(label: &'static str) -> impl IntoView { label }
    |              ^^^^^--------------
 
 error[E0308]: mismatched types
-  --> tests/ui/errors/com_builder_spans.rs:40:15
+  --> tests/ui/errors/com_builder_spans.rs:48:15
    |
-40 |         Thing |s| { "hello" }
+48 |         Thing |s| { "hello" }
    |               ^^^ expected `Box<dyn FnOnce() -> Fragment>`, found closure
    |
    = note: expected struct `Box<(dyn FnOnce() -> Fragment + 'static)>`
-             found closure `{closure@$DIR/tests/ui/errors/com_builder_spans.rs:40:15: 40:18}`
+             found closure `{closure@$DIR/tests/ui/errors/com_builder_spans.rs:48:15: 48:18}`
 
 error[E0283]: type annotations needed
-  --> tests/ui/errors/com_builder_spans.rs:49:9
+  --> tests/ui/errors/com_builder_spans.rs:57:9
    |
-49 |         Await future=[async { 3 }] { "no args" }
+57 |         Await future=[async { 3 }] { "no args" }
    |         ^^^^^ cannot infer type of the type parameter `V` declared on the function `Await`
    |
    = note: cannot satisfy `_: leptos::IntoView`
@@ -128,16 +179,16 @@ note: required by a bound in `leptos::Await`
    |        ^^^^^^^^ required by this bound in `Await`
 help: consider specifying the generic arguments
    |
-49 |         Await::<i32, _, _, VF, V> future=[async { 3 }] { "no args" }
+57 |         Await::<i32, _, _, VF, V> future=[async { 3 }] { "no args" }
    |              ++++++++++++++++++++
 
 error[E0283]: type annotations needed
-  --> tests/ui/errors/com_builder_spans.rs:49:9
+  --> tests/ui/errors/com_builder_spans.rs:57:9
    |
-49 |         Await future=[async { 3 }] { "no args" }
+57 |         Await future=[async { 3 }] { "no args" }
    |         ^^^^^ cannot infer type of the type parameter `VF` declared on the function `Await`
    |
-   = note: multiple `impl`s satisfying `_: ToChildren<{closure@$DIR/tests/ui/errors/com_builder_spans.rs:49:38: 49:47}>` found in the `leptos` crate:
+   = note: multiple `impl`s satisfying `_: ToChildren<{closure@$DIR/tests/ui/errors/com_builder_spans.rs:57:38: 57:47}>` found in the `leptos` crate:
            - impl<F> ToChildren<F> for Box<(dyn FnMut() -> Fragment + 'static)>
              where <F as FnOnce<()>>::Output == Fragment, F: FnMut(), F: 'static;
            - impl<F> ToChildren<F> for Box<(dyn FnOnce() -> Fragment + 'static)>
@@ -148,5 +199,5 @@ error[E0283]: type annotations needed
              where <F as FnOnce<()>>::Output == Fragment, F: Fn(), F: 'static;
 help: consider specifying the generic arguments
    |
-49 |         Await::<i32, _, _, VF, V> future=[async { 3 }] { "no args" }
+57 |         Await::<i32, _, _, VF, V> future=[async { 3 }] { "no args" }
    |              ++++++++++++++++++++
