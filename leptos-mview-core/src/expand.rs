@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use proc_macro2::{Span, TokenStream};
 use proc_macro_error::emit_error;
 use quote::{quote, quote_spanned, ToTokens};
-use syn::spanned::Spanned;
+use syn::{ext::IdentExt, spanned::Spanned};
 
 use crate::ast::{
     attribute::{directive::Directive, selector::SelectorShorthand},
@@ -378,7 +378,7 @@ fn slots_to_tokens<'a>(children: impl Iterator<Item = &'a Element>) -> TokenStre
         .into_iter()
         .map(|(slot_name, slot_tokens)| {
             let method = syn::Ident::new_raw(
-                &utils::upper_camel_to_snake_case(&slot_name.to_string()),
+                &utils::upper_camel_to_snake_case(&slot_name.unraw().to_string()),
                 slot_name.span(),
             );
 

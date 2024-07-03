@@ -1,5 +1,6 @@
 use proc_macro2::Span;
 use syn::{
+    ext::IdentExt,
     parse::{Parse, ParseStream},
     spanned::Spanned,
     Token,
@@ -64,7 +65,7 @@ impl Parse for Tag {
         let kind = TagKind::from(ident.repr());
         Ok(match kind {
             TagKind::Html => Self::Html(ident.to_snake_ident()),
-            TagKind::Component => Self::Component(syn::Path::from(ident.to_snake_ident())),
+            TagKind::Component => Self::Component(syn::Path::from(ident.to_snake_ident().unraw())),
             TagKind::Svg => Self::Svg(ident.to_snake_ident()),
             TagKind::Math => Self::Math(ident.to_snake_ident()),
             TagKind::WebComponent => Self::WebComponent(ident),

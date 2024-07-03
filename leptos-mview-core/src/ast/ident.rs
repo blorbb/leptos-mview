@@ -1,5 +1,3 @@
-use std::hash::Hash;
-
 use proc_macro2::{Span, TokenStream};
 use proc_macro_error::emit_error;
 use quote::{quote, ToTokens};
@@ -46,7 +44,9 @@ pub struct KebabIdent {
 }
 
 impl KebabIdent {
-    /// Returns a reference to the repr of this [`KebabIdent`].
+    /// Returns the string representation of the identifier, in kebab-case.
+    ///
+    /// This is not a raw identifier, i.e. it does not start with "r#".
     pub fn repr(&self) -> &str { self.repr.as_ref() }
 
     /// Returns the span of this [`KebabIdent`].
@@ -94,13 +94,15 @@ impl KebabIdent {
     /// The span will only be the first 'section' on stable, but correctly
     /// covers the full ident on nightly. See [`KebabIdent::span`] for more
     /// details.
+    ///
+    /// The ident will also be a raw identifier.
     pub fn to_snake_ident(&self) -> syn::Ident {
         let snake_string = self.repr().replace('-', "_");
         // This will always be valid as the first 'section' must be a `-` or rust ident,
         // which means it starts with `_` or another valid identifier beginning. The int
         // literals within the ident (e.g. between `-`s, like `blue-100`) are allowed
         // since the ident does not start with a number.
-        syn::Ident::new(&snake_string, self.span())
+        syn::Ident::new_raw(&snake_string, self.span())
     }
 }
 
@@ -111,7 +113,9 @@ impl Parse for KebabIdent {
 
         // Start with `-` or letter.
         if let Some(ident) = rollback_err(input, syn::Ident::parse_any) {
-            repr.push_str(&ident.to_string());
+            // only store the non-raw representation: in expansion,
+            // this should expand to a raw ident.
+            repr.push_str(&ident.unraw().to_string());
             spans.push(ident.span());
         } else if let Some(dash) = rollback_err(input, <Token![-]>::parse) {
             repr.push('-');
@@ -142,7 +146,11 @@ impl Parse for KebabIdent {
 
             // add ident or number
             if let Some(ident) = rollback_err(input, syn::Ident::parse_any) {
-                repr.push_str(&ident.to_string());
+                let unraw = ident.unraw();
+                if ident != unraw {
+                    emit_error!(ident.span(), "invalid raw identifier within kebab-ident");
+                }
+                repr.push_str(&unraw.to_string());
                 spans.push(ident.span());
             } else if let Some(int) = rollback_err(input, syn::LitInt::parse) {
                 repr.push_str(&int.to_string());
@@ -160,7 +168,7 @@ impl From<proc_macro2::Ident> for KebabIdent {
         // repr is not empty as `proc_macro2::Ident` must be a valid Rust identifier,
         // and "" is not.
         Self {
-            repr: value.to_string(),
+            repr: value.unraw().to_string(),
             spans: vec![value.span()],
         }
     }
@@ -173,10 +181,6 @@ impl PartialEq for KebabIdent {
 }
 
 impl Eq for KebabIdent {}
-
-impl Hash for KebabIdent {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.repr.hash(state); }
-}
 
 // Parse either a kebab-case ident or a str literal.
 #[derive(Clone)]
@@ -250,6 +254,8 @@ impl Parse for BracedKebabIdent {
 
 #[cfg(test)]
 mod tests {
+    use std::iter;
+
     use super::KebabIdent;
 
     #[test]
@@ -292,6 +298,16 @@ mod tests {
         for stream in streams {
             let ident = syn::parse_str::<KebabIdent>(stream).unwrap();
             assert_eq!(ident.repr(), stream.replace(' ', ""));
+        }
+    }
+
+    #[test]
+    fn raw() {
+        let raws = ["r#move", "move", "r#some-thing"];
+        let results = ["move", "move", "some-thing"];
+        for (stream, res) in iter::zip(raws, results) {
+            let ident = syn::parse_str::<KebabIdent>(stream).unwrap();
+            assert_eq!(ident.repr(), res);
         }
     }
 }
