@@ -18,20 +18,11 @@ error[E0277]: the trait bound `&&str: IntoView` is not satisfied
 17 |             {value}
    |             -^^^^^-
    |             ||
-   |             |the trait `std::ops::Fn<()>` is not implemented for `&&str`, which is required by `&&str: IntoView`
+   |             |the trait `Fn()` is not implemented for `str`, which is required by `&&str: IntoView`
    |             required by a bound introduced by this call
    |
-   = help: the following other types implement trait `IntoView`:
-             &'static str
-             &Fragment
-             &leptos::View
-             &std::string::String
-             ()
-             (A, B)
-             (A, B, C)
-             (A, B, C, D)
-           and $N others
-   = note: required for `&str` to implement `FnOnce<()>`
+   = help: the trait `IntoView` is implemented for `&'static str`
+   = note: required for `&str` to implement `FnOnce()`
    = note: required for `&&str` to implement `IntoView`
 note: required by a bound in `leptos::HtmlElement::<El>::child`
   --> $CARGO/leptos_dom-0.6.12/src/html.rs
@@ -43,14 +34,13 @@ error[E0277]: the trait bound `std::iter::Map<std::vec::IntoIter<&str>, {closure
   --> tests/ui/errors/invalid_child.rs:25:14
    |
 25 |                {values
-   |   _____________-^
-   |  |_____________|
-   | ||
+   |  ______________-^
+   | | ______________|
 26 | ||                 .into_iter()
 27 | ||                 .map(|val: &str| {
 28 | ||                     mview! { li({val}) }
 29 | ||                 })
-   | ||__________________^ the trait `std::ops::Fn<()>` is not implemented for `std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:27:22: 27:33}>`, which is required by `std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:27:22: 27:33}>: IntoView`
+   | ||__________________^ the trait `Fn()` is not implemented for `std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:27:22: 27:33}>`, which is required by `std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:27:22: 27:33}>: IntoView`
 30 | |              }
    | |______________- required by a bound introduced by this call
    |
@@ -72,9 +62,9 @@ note: required by a bound in `leptos::HtmlElement::<El>::child`
    |                                    ^^^^^^^^ required by this bound in `HtmlElement::<El>::child`
 
 warning: unreachable call
-  --> tests/ui/errors/invalid_child.rs:45:13
+  --> tests/ui/errors/invalid_child.rs:46:13
    |
-45 |             {todo!()}
+46 |             {todo!()}
    |             ^-------^
    |             ||
    |             |any code following this expression is unreachable

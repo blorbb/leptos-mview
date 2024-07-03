@@ -27,7 +27,7 @@ error[E0277]: the trait bound `MissingValueAfterEq: IntoAttribute` is not satisf
   |  _________-
 5 | |         div class:x={true} {
 6 | |             span class=test
-  | |                        ^^^^ the trait `std::ops::Fn<()>` is not implemented for `MissingValueAfterEq`, which is required by `MissingValueAfterEq: IntoAttribute`
+  | |                        ^^^^ the trait `Fn()` is not implemented for `MissingValueAfterEq`, which is required by `MissingValueAfterEq: IntoAttribute`
 7 | |         }
 8 | |     }
   | |_____- required by a bound introduced by this call

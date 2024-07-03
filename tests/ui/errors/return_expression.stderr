@@ -10,7 +10,7 @@ error[E0277]: the trait bound `MissingValueAfterEq: IntoAttribute` is not satisf
 5 |       let expr = mview! {
   |  ________________-
 6 | |         div class=;
-  | |                   ^ the trait `std::ops::Fn<()>` is not implemented for `MissingValueAfterEq`, which is required by `MissingValueAfterEq: IntoAttribute`
+  | |                   ^ the trait `Fn()` is not implemented for `MissingValueAfterEq`, which is required by `MissingValueAfterEq: IntoAttribute`
 7 | |     };
   | |_____- required by a bound introduced by this call
   |

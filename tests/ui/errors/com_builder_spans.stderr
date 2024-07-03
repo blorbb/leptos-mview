@@ -29,9 +29,9 @@ error[E0277]: expected a `Fn()` closure, found `str`
 17 |         Show when={"no"} {
    |              ^^^^ expected an `Fn()` closure, found `str`
    |
-   = help: the trait `std::ops::Fn<()>` is not implemented for `str`, which is required by `&str: FnOnce()`
+   = help: the trait `Fn()` is not implemented for `str`, which is required by `&str: FnOnce()`
    = note: wrap the `str` in a closure with no arguments: `|| { /* code */ }`
-   = note: required for `&str` to implement `FnOnce<()>`
+   = note: required for `&str` to implement `FnOnce()`
 note: required by a bound in `ShowPropsBuilder::<W, (__children, (), __fallback)>::when`
   --> $CARGO/leptos-0.6.12/src/show.rs
    |
@@ -47,9 +47,9 @@ error[E0277]: expected a `Fn()` closure, found `str`
 17 |         Show when={"no"} {
    |         ^^^^ expected an `Fn()` closure, found `str`
    |
-   = help: the trait `std::ops::Fn<()>` is not implemented for `str`, which is required by `&str: Fn()`
+   = help: the trait `Fn()` is not implemented for `str`, which is required by `&str: Fn()`
    = note: wrap the `str` in a closure with no arguments: `|| { /* code */ }`
-   = note: required for `&str` to implement `std::ops::Fn<()>`
+   = note: required for `&str` to implement `Fn()`
 note: required by a bound in `leptos::Show`
   --> $CARGO/leptos-0.6.12/src/show.rs
    |
@@ -82,7 +82,7 @@ error[E0277]: expected a `Fn()` closure, found `bool`
 25 |         Show when={true} {
    |              ^^^^ expected an `Fn()` closure, found `bool`
    |
-   = help: the trait `std::ops::Fn<()>` is not implemented for `bool`
+   = help: the trait `Fn()` is not implemented for `bool`
    = note: wrap the `bool` in a closure with no arguments: `|| { /* code */ }`
 note: required by a bound in `ShowPropsBuilder::<W, (__children, (), __fallback)>::when`
   --> $CARGO/leptos-0.6.12/src/show.rs
@@ -99,7 +99,7 @@ error[E0277]: expected a `Fn()` closure, found `bool`
 25 |         Show when={true} {
    |         ^^^^ expected an `Fn()` closure, found `bool`
    |
-   = help: the trait `std::ops::Fn<()>` is not implemented for `bool`, which is required by `fn(ShowProps<_>) -> impl leptos::IntoView {leptos::Show::<_>}: leptos::Component<_>`
+   = help: the trait `Fn()` is not implemented for `bool`, which is required by `fn(ShowProps<_>) -> impl leptos::IntoView {leptos::Show::<_>}: leptos::Component<_>`
    = note: wrap the `bool` in a closure with no arguments: `|| { /* code */ }`
    = note: required for `ShowProps<bool>` to implement `leptos::Props`
    = note: required for `fn(ShowProps<bool>) -> impl leptos::IntoView {leptos::Show::<bool>}` to implement `leptos::Component<ShowProps<bool>>`

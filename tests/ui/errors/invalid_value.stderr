@@ -40,7 +40,7 @@ error[E0277]: the trait bound `MissingValueAfterEq: IntoAttribute` is not satisf
 4 |       _ = mview! {
   |  _________-
 5 | |         div a=a {}
-  | |               ^ the trait `std::ops::Fn<()>` is not implemented for `MissingValueAfterEq`, which is required by `MissingValueAfterEq: IntoAttribute`
+  | |               ^ the trait `Fn()` is not implemented for `MissingValueAfterEq`, which is required by `MissingValueAfterEq: IntoAttribute`
 6 | |     };
   | |_____- required by a bound introduced by this call
   |
@@ -88,7 +88,7 @@ error[E0277]: the trait bound `(): IntoAttribute` is not satisfied
 17 |       _ = mview! {
    |  _________-
 18 | |         a href={};
-   | |                ^^ the trait `std::ops::Fn<()>` is not implemented for `()`, which is required by `(): IntoAttribute`
+   | |                ^^ the trait `Fn()` is not implemented for `()`, which is required by `(): IntoAttribute`
 19 | |         a href=();
 20 | |         a href=[];
 21 | |     };
@@ -121,7 +121,7 @@ error[E0277]: the trait bound `MissingValueAfterEq: IntoAttribute` is not satisf
    |  _________-
 18 | |         a href={};
 19 | |         a href=();
-   | |                ^ the trait `std::ops::Fn<()>` is not implemented for `MissingValueAfterEq`, which is required by `MissingValueAfterEq: IntoAttribute`
+   | |                ^ the trait `Fn()` is not implemented for `MissingValueAfterEq`, which is required by `MissingValueAfterEq: IntoAttribute`
 20 | |         a href=[];
 21 | |     };
    | |_____- required by a bound introduced by this call
@@ -158,7 +158,7 @@ error[E0277]: expected a `Fn()` closure, found `()`
 21 | |     };
    | |_____- required by a bound introduced by this call
    |
-   = help: the trait `std::ops::Fn<()>` is not implemented for `()`, which is required by `{closure@$DIR/tests/ui/errors/invalid_value.rs:20:16: 20:18}: IntoAttribute`
+   = help: the trait `Fn()` is not implemented for `()`, which is required by `{closure@$DIR/tests/ui/errors/invalid_value.rs:20:16: 20:18}: IntoAttribute`
    = note: wrap the `()` in a closure with no arguments: `|| { /* code */ }`
    = help: the following other types implement trait `IntoAttribute`:
              &'static str
@@ -188,7 +188,7 @@ error[E0277]: the trait bound `MissingValueAfterEq: IntoAttribute` is not satisf
 26 |       _ = mview! {
    |  _________-
 27 | |         a href=
-   | |               ^ the trait `std::ops::Fn<()>` is not implemented for `MissingValueAfterEq`, which is required by `MissingValueAfterEq: IntoAttribute`
+   | |               ^ the trait `Fn()` is not implemented for `MissingValueAfterEq`, which is required by `MissingValueAfterEq: IntoAttribute`
 28 | |     };
    | |_____- required by a bound introduced by this call
    |
