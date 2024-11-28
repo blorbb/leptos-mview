@@ -3,7 +3,7 @@
 //!
 //! A simplified version of the extension traits have been added here.
 
-use proc_macro_error::{abort, emit_error};
+use proc_macro_error2::{abort, emit_error};
 
 pub trait ResultExt {
     type Ok;

@@ -1,5 +1,5 @@
 use proc_macro2::{Span, TokenStream};
-use proc_macro_error::emit_error;
+use proc_macro_error2::emit_error;
 use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;
 

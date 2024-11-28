@@ -15,7 +15,7 @@ leptos-mview-macro = { path = "leptos-mview-macro", version = "0.3.2" }
 
 [dev-dependencies]
 trybuild = "1"
-leptos = { version = "0.6.12", features = ["nightly", "csr"] }
+leptos = { version = "0.7.0-rc3", features = ["csr"] }
 
 [workspace]
 members = ["leptos-mview-core", "leptos-mview-macro"]

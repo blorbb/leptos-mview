@@ -1,5 +1,5 @@
 use proc_macro2::{TokenStream, TokenTree};
-use proc_macro_error::emit_error;
+use proc_macro_error2::emit_error;
 use quote::{ToTokens, TokenStreamExt};
 use syn::{
     parse::{Parse, ParseStream},

@@ -14,7 +14,7 @@ mod span;
 
 use ast::Child;
 use proc_macro2::{Span, TokenStream};
-use proc_macro_error::abort;
+use proc_macro_error2::abort;
 use quote::quote;
 use syn::spanned::Spanned;
 
@@ -24,7 +24,7 @@ use crate::{ast::Children, expand::children_fragment_tokens};
 pub fn mview_impl(input: TokenStream) -> TokenStream {
     // return () in case of any errors, to avoid "unexpected end of macro
     // invocation" e.g. when assigning `let res = mview! { ... };`
-    proc_macro_error::set_dummy(quote! { () });
+    proc_macro_error2::set_dummy(quote! { () });
 
     let children = match syn::parse2::<Children>(input) {
         Ok(tree) => tree,
