@@ -1,6 +1,6 @@
 use proc_macro2::Span;
 use proc_macro_error2::emit_error;
-use quote::ToTokens;
+use quote::{quote, ToTokens};
 use syn::{
     ext::IdentExt,
     parse::{Parse, ParseStream},
@@ -25,10 +25,13 @@ pub enum NodeChild {
 
 impl ToTokens for NodeChild {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        match self {
-            Self::Value(v) => tokens.extend(v.into_token_stream()),
-            Self::Element(e) => tokens.extend(e.into_token_stream()),
-        }
+        let child_tokens = match self {
+            Self::Value(v) => v.into_token_stream(),
+            Self::Element(e) => e.into_token_stream(),
+        };
+        tokens.extend(quote! {
+            ::leptos::prelude::IntoRender::into_render(#child_tokens)
+        });
     }
 }
 

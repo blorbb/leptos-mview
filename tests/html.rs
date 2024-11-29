@@ -1,4 +1,8 @@
-use leptos::*;
+use leptos::{
+    html::{self, HtmlElement},
+    prelude::*,
+    text_prop::TextProp,
+};
 use leptos_mview::mview;
 mod utils;
 use utils::check_str;
@@ -17,17 +21,17 @@ use utils::check_str;
 
 #[test]
 fn single_element() {
-    let result: HtmlElement<html::Div> = mview! {
+    let result: HtmlElement<html::Div, _, _> = mview! {
         div {
             "hi"
         }
     };
-    check_str(result, r#"<div data-hk="0-0-0-1">hi</div>"#);
+    check_str(result, r#"<div>hi</div>"#);
 }
 
 #[test]
 fn multi_element_is_fragment() {
-    let _fragment: Fragment = mview! {
+    let _fragment: View<_> = mview! {
         div { "a" }
         span { "b" }
     };
@@ -45,15 +49,19 @@ fn a_bunch() {
         input type="checkbox" checked;
     };
 
+    view! {
+        <span class="abc" style:a="b"></span>
+    };
+
     check_str(
         result,
         "hi\
-        <span class=\"abc\" data-index=\"0\" data-hk=\"0-0-0-2\">\
-            <strong data-hk=\"0-0-0-3\">d</strong>\
+        <span data-index=\"0\" class=\"abc\">\
+            <strong>d</strong>\
             3\
         </span>\
-        <br data-hk=\"0-0-0-4\"/>\
-        <input type=\"checkbox\" checked data-hk=\"0-0-0-5\"/>",
+        <br>\
+        <input type=\"checkbox\" checked>",
     );
 }
 
@@ -67,7 +75,7 @@ fn directive_before_attr() {
     let result = mview! {
         span style:color="black" style="font-size: 1em;";
     };
-    check_str(result, "font-size: 1em; color: black;");
+    check_str(result, "font-size: 1em;;color:black;");
 }
 
 #[test]
@@ -88,7 +96,7 @@ fn multiple_directives() {
 
     check_str(
         result,
-        r#"class="normal here also-here" style="line-height: 1.5; color: white; background-color: red;""#,
+        r#"class="normal here  also-here" style="line-height: 1.5;;color:white;background-color:red;""#,
     );
 }
 
@@ -104,7 +112,7 @@ fn string_directives() {
 
     check_str(
         result,
-        r#"class="complex[class]-name" style="doesn't-exist: black;""#,
+        r#"class="complex[class]-name" style="doesn't-exist:black;""#,
     )
 }
 
@@ -117,3 +125,23 @@ fn mixed_class_creation() {
 
     check_str(r, r#"class="some-class another-class always-here""#);
 }
+
+#[test]
+fn custom_web_component() {
+    let component = mview! {
+        iconify-icon icon="a" class="something" {
+            "b"
+        }
+    };
+
+    check_str(
+        component,
+        r#"<iconify-icon icon="a" class="something">b</iconify-icon>"#,
+    );
+}
+
+// #[test]
+// fn has_ref() {
+//     let node_ref = NodeRef::new();
+//     mview
+// }

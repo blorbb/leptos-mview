@@ -35,13 +35,11 @@ use utils::*;
 ///
 /// Should expand to:
 /// ```ignore
-/// Fragment::lazy(|| {
-///     [
-///         {"a"}.into_view(),
-///         {var}.into_view(),
-///         {"b"}.into_view(),
-///     ].to_vec()
-/// })
+/// View::new((
+///     {"a"},
+///     {var},
+///     {"b"},
+/// ))
 /// ```
 
 // used in the root or for component children
@@ -50,11 +48,9 @@ pub fn children_fragment_tokens<'a>(
     span: Span,
 ) -> TokenStream {
     quote_spanned! { span=>
-        ::leptos::Fragment::lazy(|| {
-            <[_]>::into_vec(::std::boxed::Box::new([
-                #(  ::leptos::IntoView::into_view(#children) ),*
-            ]))
-        })
+        ::leptos::prelude::View::new((
+            #( #children ),*
+        ))
     }
 }
 
@@ -80,22 +76,22 @@ pub fn children_fragment_tokens<'a>(
 /// Expands to:
 /// ```ignore
 /// div()
-///     .attr("class", "component")
-///     .style("color", "black")
+///     .class("component")
+///     .style(("color", "black"))
 ///     .node_ref(div)
-///     .child("Hello ")
-///     .child(strong().child("world"))
+///     .child(IntoRender::into_render("Hello "))
+///     .child(IntoRender::into_render(strong().child("world")))
 /// ```
 pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
     let tag_path = match element.tag() {
         Tag::Component(..) => return None,
-        Tag::Html(ident) => quote! { ::leptos::html::#ident() },
-        Tag::Svg(ident) => quote! { ::leptos::svg::#ident() },
-        Tag::Math(ident) => quote! { ::leptos::math::#ident() },
+        Tag::Html(ident) => quote! { ::leptos::tachys::html::element::#ident() },
+        Tag::Svg(ident) => quote! { ::leptos::tachys::svg::element::#ident() },
+        Tag::Math(ident) => quote! { ::leptos::tachys::math::element::#ident() },
         Tag::WebComponent(ident) => {
             let ident = ident.to_lit_str();
             let custom = syn::Ident::new("custom", ident.span());
-            quote! { ::leptos::html::#custom(::leptos::html::Custom::new(#ident)) }
+            quote! { ::leptos::tachys::html::element::#custom(#ident) }
         }
     };
 
@@ -111,7 +107,7 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
 
     for a in element.attrs().iter() {
         match a {
-            Attr::Kv(attr) => attrs.extend(xml_kv_attribute_tokens(attr)),
+            Attr::Kv(attr) => attrs.extend(xml_kv_attribute_tokens(attr, element.tag().kind())),
             Attr::Directive(dir) => directives.extend(xml_directive_tokens(dir)),
             Attr::Spread(spread) => spread_attrs.extend(xml_spread_tokens(spread)),
         }

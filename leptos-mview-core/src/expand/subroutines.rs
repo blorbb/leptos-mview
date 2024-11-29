@@ -11,7 +11,7 @@ use crate::{
             selector::{SelectorShorthand, SelectorShorthands},
             spread_attrs::SpreadAttr,
         },
-        KebabIdent, KebabIdentOrStr, NodeChild,
+        KebabIdent, KebabIdentOrStr, NodeChild, TagKind,
     },
     expand::{children_fragment_tokens, emit_error_if_modifier},
     span,
@@ -97,7 +97,7 @@ pub(super) fn xml_selectors_tokens(selectors: &SelectorShorthands) -> TokenStrea
     let class_methods = classes.iter().map(|class| {
         let method = syn::Ident::new("class", class.prefix().span());
         let class_name = class.ident().to_str_colored();
-        quote! { .#method(#class_name, true) }
+        quote! { .#method((#class_name, true)) }
     });
 
     let id_methods = ids.iter().map(|id| {
@@ -109,7 +109,7 @@ pub(super) fn xml_selectors_tokens(selectors: &SelectorShorthands) -> TokenStrea
     quote! { #(#class_methods)* #(#id_methods)* }
 }
 
-pub(super) fn xml_kv_attribute_tokens(attr: &KvAttr) -> TokenStream {
+pub(super) fn xml_kv_attribute_tokens(attr: &KvAttr, element_tag: TagKind) -> TokenStream {
     let key = attr.key();
     let value = attr.value();
     // special cases
@@ -117,10 +117,26 @@ pub(super) fn xml_kv_attribute_tokens(attr: &KvAttr) -> TokenStream {
         let node_ref = syn::Ident::new("node_ref", key.span());
         quote! { .#node_ref(#value) }
     } else {
-        // don't span the attribute to the string, unnecessary and makes it
-        // string-colored
-        let key = key.repr();
-        quote! { .attr(#key, #value) }
+        // https://github.com/leptos-rs/leptos/blob/main/leptos_macro/src/view/mod.rs#L960
+        // Use unchecked attributes if:
+        // - it's not `class` nor `style`, and
+        // - It's a custom web component or SVG element
+        // - or it's a custom or data attribute (has `-` except for `aria-`)
+        let is_class_or_style = ["class", "style"].contains(&key.repr());
+        let is_web_or_svg = matches!(element_tag, TagKind::Svg | TagKind::WebComponent);
+        let is_custom_attribute = key.repr().contains('-') && !key.repr().starts_with("aria-");
+
+        if is_class_or_style || !(is_web_or_svg || is_custom_attribute) {
+            // checked attribute
+            let key = key.to_snake_ident();
+            quote! { .#key(#value) }
+        } else {
+            // unchecked attribute
+            // don't span the attribute to the string, unnecessary and makes it
+            // string-colored
+            let key = key.repr();
+            quote! { .attr(#key, ::leptos::prelude::IntoAttributeValue::into_attribute_value(#value)) }
+        }
     }
 }
 
@@ -136,7 +152,7 @@ pub(super) fn xml_directive_tokens(directive: &Directive) -> TokenStream {
         "class" | "style" | "prop" => {
             let key = key.to_lit_str();
             emit_error_if_modifier(modifier.as_ref());
-            quote! { .#dir(#key, #value) }
+            quote! { .#dir((#key, #value)) }
         }
         "on" => event_listener_tokens(directive),
         "use" => use_directive_to_method(directive),
