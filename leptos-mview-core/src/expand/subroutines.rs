@@ -169,7 +169,7 @@ pub(super) fn xml_directive_tokens(directive: &Directive) -> TokenStream {
 
 pub(super) fn xml_spread_tokens(attr: &SpreadAttr) -> TokenStream {
     let (dotdot, expr) = (attr.dotdot(), attr.expr());
-    let attrs = syn::Ident::new("attrs", dotdot.span());
+    let attrs = syn::Ident::new("add_any_attr", dotdot.span());
     quote! {
         .#attrs(#expr)
     }
