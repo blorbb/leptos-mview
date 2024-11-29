@@ -49,7 +49,7 @@ pub fn children_fragment_tokens<'a>(
 ) -> TokenStream {
     quote_spanned! { span=>
         ::leptos::prelude::View::new((
-            #( #children ),*
+            #( #children, )*
         ))
     }
 }
@@ -293,15 +293,15 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
         // this whole thing needs to be spanned to avoid errors occurring at the whole
         // call site.
         let component_props_builder = quote_spanned! {
-            path.span()=> ::leptos::component_props_builder(&#path)
+            path.span()=> ::leptos::component::component_props_builder(&#path)
         };
 
         Some(quote! {
             // the .build() returns `!` if not all props are present.
             // this causes unreachable code warning in ::leptos::component_view
             #[allow(unreachable_code)]
-            ::leptos::IntoView::into_view(
-                ::leptos::component_view(
+            ::leptos::prelude::View::new(
+                ::leptos::component::component_view(
                     &#path,
                     #component_props_builder
                         #attrs

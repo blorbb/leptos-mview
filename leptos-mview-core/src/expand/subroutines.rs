@@ -280,7 +280,7 @@ pub(super) fn component_children_tokens<'a>(
         // given a regular `ChildrenFn` instead.
         let closure = quote_spanned!(child_span=> move || #children_fragment);
         quote! {
-            ::leptos::ToChildren::to_children(#closure)
+            ::leptos::children::ToChildren::to_children(#closure)
         }
     };
 
