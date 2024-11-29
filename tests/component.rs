@@ -1,4 +1,4 @@
-use leptos::{prelude::*, task::Executor, text_prop::TextProp};
+use leptos::{prelude::*, task::Executor};
 use leptos_mview::mview;
 mod utils;
 use utils::check_str;
@@ -138,18 +138,18 @@ fn let_patterns() {
 }
 
 #[component]
-fn TakesClass(#[prop(into)] class: TextProp) -> impl IntoView {
+fn TakesClass() -> impl IntoView {
     mview! {
-        div class=f["takes-class {}", class.get()] {
+        div class="takes-class" {
             "I take more classes!"
         }
     }
 }
 
 #[component]
-fn TakesIds(id: &'static str) -> impl IntoView {
+fn TakesIds() -> impl IntoView {
     mview! {
-        div {id} class="i-take-ids";
+        div class="i-take-ids";
     }
 }
 
@@ -172,7 +172,7 @@ fn class_dir() {
     };
     check_str(
         r,
-        r#"div class="takes-class test1 test-2 this complicated""#,
+        r#"div class="takes-class test1 test-2  this complicated""#,
     );
 }
 

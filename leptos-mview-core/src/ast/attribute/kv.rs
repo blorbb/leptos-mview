@@ -1,5 +1,5 @@
 use proc_macro2::Span;
-use syn::{parse::Parse, parse_quote, Token};
+use syn::{parse::Parse, Token};
 
 use crate::{
     ast::{BracedKebabIdent, KebabIdent, Value},
@@ -52,8 +52,7 @@ impl Parse for KvAttr {
                 let value = Value::parse_or_emit_err(input, eq.span);
                 (ident, value)
             } else {
-                // don't span the attribute name to the `true` or it becomes bool-colored
-                let value = Value::Lit(parse_quote!(true));
+                let value = Value::new_true();
                 (ident, value)
             }
         };

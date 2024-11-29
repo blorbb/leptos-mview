@@ -4,6 +4,7 @@ use quote::{quote, quote_spanned, ToTokens};
 use syn::{
     ext::IdentExt,
     parse::{Parse, ParseStream},
+    parse_quote,
     spanned::Spanned,
 };
 
@@ -148,6 +149,9 @@ impl Value {
             }
         }
     }
+
+    /// Constructs self as a literal `true` with no span.
+    pub fn new_true() -> Self { Self::Lit(parse_quote!(true)) }
 }
 
 #[cfg(test)]

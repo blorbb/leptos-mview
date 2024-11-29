@@ -206,6 +206,13 @@ impl KebabIdentOrStr {
             }
         }
     }
+
+    pub fn to_unspanned_string(&self) -> String {
+        match self {
+            Self::KebabIdent(kebab_ident) => kebab_ident.repr().to_string(),
+            Self::Str(lit_str) => lit_str.value(),
+        }
+    }
 }
 
 impl Parse for KebabIdentOrStr {

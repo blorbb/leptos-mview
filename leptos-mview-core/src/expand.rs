@@ -7,12 +7,12 @@ use std::collections::HashMap;
 
 use proc_macro2::{Span, TokenStream};
 use proc_macro_error2::emit_error;
-use quote::{quote, quote_spanned, ToTokens};
-use syn::{ext::IdentExt, spanned::Spanned};
+use quote::{quote, quote_spanned};
+use syn::{ext::IdentExt, parse_quote, parse_quote_spanned, spanned::Spanned};
 
 use crate::ast::{
     attribute::{directive::Directive, selector::SelectorShorthand},
-    Attr, Element, KebabIdent, KebabIdentOrStr, NodeChild, Tag,
+    Attr, Element, KebabIdent, KebabIdentOrStr, NodeChild, Tag, Value,
 };
 
 /// Functions for specific parts of an element's expansion.
@@ -168,87 +168,80 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
 
     // attribute methods to add when building
     let mut attrs = TokenStream::new();
-    let mut dyn_attrs: Vec<&Directive> = Vec::new();
-    let mut use_directives: Vec<&Directive> = Vec::new();
+    let mut directive_paths: Vec<TokenStream> = Vec::new();
     // the variables (idents) to clone before making children
     // in the form `let name = name.clone();`
     let mut clones = TokenStream::new();
-    let mut event_listeners = TokenStream::new();
-    // components can take `.some-class` or `class:this={signal}` by passing it into
-    // the `class` prop
-    // .0 is the class string, .1 is the 'signal' (or `None` if using selectors)
-    let mut dyn_classes: Vec<(KebabIdentOrStr, Option<TokenStream>)> = Vec::new();
-    let mut classes_span: Option<Span> = None;
-    // ids are not reactive (no `id:this={signal}`), will just be from selectors
-    let mut selector_ids: Vec<KebabIdent> = Vec::new();
-    let mut id_span: Option<Span> = None;
 
-    let mut spread_attrs = TokenStream::new();
-
-    for sel in element.selectors().iter() {
-        match sel {
-            SelectorShorthand::Id { id, pound_symbol } => {
-                selector_ids.push(id.clone());
-                id_span.get_or_insert(pound_symbol.span);
-            }
-            SelectorShorthand::Class { class, dot_symbol } => {
-                dyn_classes.push((KebabIdentOrStr::KebabIdent(class.clone()), None));
-                classes_span.get_or_insert(dot_symbol.span);
-            }
-        };
+    {
+        // all the ids need to be collected together
+        // as multiple attr:id=... creates multiple `id=...` attributes on teh element
+        let mut ids = Vec::<KebabIdent>::new();
+        let mut first_pound_symbol = None;
+        for sel in element.selectors().iter() {
+            match sel {
+                SelectorShorthand::Id { id, pound_symbol } => {
+                    first_pound_symbol.get_or_insert(*pound_symbol);
+                    ids.push(id.clone());
+                }
+                SelectorShorthand::Class { class, dot_symbol } => {
+                    // desugar to class:the-class
+                    directive_paths.push(
+                        directive_to_any_attr_path(&Directive {
+                            dir: syn::Ident::new("class", dot_symbol.span),
+                            key: KebabIdentOrStr::KebabIdent(class.clone()),
+                            modifier: None,
+                            value: None,
+                        })
+                        .expect("class directive is known"),
+                    );
+                }
+            };
+        }
+        // push all the ids as directive
+        if let Some(first_pound_symbol) = first_pound_symbol {
+            let joined_ids = ids
+                .iter()
+                .map(|ident| ident.repr())
+                .collect::<Vec<_>>()
+                .join(" ");
+            // desugar to attr:id="the-id id2 id3"
+            directive_paths.push(
+                directive_to_any_attr_path(&Directive {
+                    dir: syn::Ident::new("attr", Span::call_site()),
+                    key: parse_quote_spanned! { first_pound_symbol.span=> id },
+                    modifier: None,
+                    value: Some(Value::Lit(parse_quote!(#joined_ids))),
+                })
+                .expect("attr directive is known"),
+            );
+        }
     }
-
     element.attrs().iter().for_each(|a| match a {
         Attr::Kv(attr) => attrs.extend(component_kv_attribute_tokens(attr)),
         Attr::Spread(spread) => {
             if IS_SLOT {
                 emit_error!(spread.span(), "spread syntax is not supported on slots");
             } else {
-                spread_attrs.extend(component_spread_tokens(spread));
+                directive_paths.push(component_spread_tokens(spread));
             }
         }
         Attr::Directive(dir) => match dir.dir.to_string().as_str() {
-            "on" => {
-                if IS_SLOT {
-                    emit_error!(dir.dir.span(), "`on:` is not supported on slots");
-                } else {
-                    event_listeners.extend(event_listener_tokens(dir));
-                }
-            }
-            "attr" => {
-                if IS_SLOT {
-                    emit_error!(dir.dir.span(), "`attr:` is not supported on slots");
-                } else {
-                    emit_error_if_modifier(dir.modifier.as_ref());
-                    dyn_attrs.push(dir);
-                }
-            }
-            "use" => {
-                if IS_SLOT {
-                    emit_error!(dir.dir.span(), "`use:` is not supported on slots");
-                } else {
-                    emit_error_if_modifier(dir.modifier.as_ref());
-                    use_directives.push(dir);
-                }
-            }
+            // clone works on both components and slots
             "clone" => {
                 emit_error_if_modifier(dir.modifier.as_ref());
                 clones.extend(component_clone_tokens(dir));
             }
-            "class" => {
-                emit_error_if_modifier(dir.modifier.as_ref());
-                dyn_classes.push((dir.key.clone(), Some(dir.value.to_token_stream())));
-                classes_span.get_or_insert(dir.dir.span());
-            }
-            "style" | "prop" => {
-                emit_error!(
-                    dir.dir.span(),
-                    "`{}:` is not supported on components/slots",
-                    dir.dir
-                );
+            // slots support no other directives
+            other if IS_SLOT => {
+                emit_error!(dir.dir.span(), "`{}:` is not supported on slots", other);
             }
             _ => {
-                emit_error!(dir.dir.span(), "unknown directive");
+                if let Some(path) = directive_to_any_attr_path(dir) {
+                    directive_paths.push(path);
+                } else {
+                    emit_error!(dir.dir.span(), "unknown directive");
+                }
             }
         },
     });
@@ -268,27 +261,23 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
         .children()
         .map(|children| slots_to_tokens(children.slot_children()));
 
-    let dyn_attrs = component_dyn_attrs_to_methods(&dyn_attrs);
-    let use_directives = use_directives.into_iter().map(use_directive_to_method);
-    let dyn_classes = component_classes_to_method(dyn_classes, classes_span);
-    let selector_ids = component_ids_to_method(selector_ids, id_span);
-
     // if attributes are missing, an error is made in `.build()` by the component
     // builder.
     let build = quote_spanned!(path.span()=> .build());
 
     if IS_SLOT {
+        todo!()
         // Into is for turning a single slot into a vec![slot] if needed
-        Some(quote! {
-            ::std::convert::Into::into(
-                #path::builder()
-                    #attrs
-                    #dyn_classes
-                    #selector_ids
-                    #children
-                    #build
-            )
-        })
+        // Some(quote! {
+        //     ::std::convert::Into::into(
+        //         #path::builder()
+        //             #attrs
+        //             #dyn_classes
+        //             #selector_ids
+        //             #children
+        //             #build
+        //     )
+        // })
     } else {
         // this whole thing needs to be spanned to avoid errors occurring at the whole
         // call site.
@@ -305,17 +294,14 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
                     &#path,
                     #component_props_builder
                         #attrs
-                        #dyn_classes
-                        #selector_ids
                         #children
                         #slot_children
                         #build
-                        #dyn_attrs
-                        #spread_attrs
                 )
+                .add_any_attr((
+                    #(#directive_paths,)*
+                ))
             )
-            #(#use_directives)*
-            #event_listeners
         })
     }
 }
