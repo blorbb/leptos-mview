@@ -173,7 +173,15 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
     // in the form `let name = name.clone();`
     let mut clones = TokenStream::new();
 
-    {
+    // shorthands are not supported on slots
+    if IS_SLOT {
+        if let Some(first) = element.selectors().first() {
+            emit_error!(
+                first.prefix(),
+                "selector shorthands are not supported on slots"
+            )
+        }
+    } else {
         // all the ids need to be collected together
         // as multiple attr:id=... creates multiple `id=...` attributes on teh element
         let mut ids = Vec::<KebabIdent>::new();
@@ -217,6 +225,7 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
             );
         }
     }
+
     element.attrs().iter().for_each(|a| match a {
         Attr::Kv(attr) => attrs.extend(component_kv_attribute_tokens(attr)),
         Attr::Spread(spread) => {
@@ -266,18 +275,15 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
     let build = quote_spanned!(path.span()=> .build());
 
     if IS_SLOT {
-        todo!()
         // Into is for turning a single slot into a vec![slot] if needed
-        // Some(quote! {
-        //     ::std::convert::Into::into(
-        //         #path::builder()
-        //             #attrs
-        //             #dyn_classes
-        //             #selector_ids
-        //             #children
-        //             #build
-        //     )
-        // })
+        Some(quote! {
+            ::std::convert::Into::into(
+                #path::builder()
+                    #attrs
+                    #children
+                    #build
+            )
+        })
     } else {
         // this whole thing needs to be spanned to avoid errors occurring at the whole
         // call site.
