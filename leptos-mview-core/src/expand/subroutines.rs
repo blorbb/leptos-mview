@@ -181,10 +181,15 @@ pub(super) fn xml_directive_tokens(directive: &Directive) -> TokenStream {
     } = directive;
 
     match dir.to_string().as_str() {
-        "class" | "style" | "prop" => {
+        "class" | "style" => {
             let key = key.to_lit_str();
             emit_error_if_modifier(modifier.as_ref());
             quote! { .#dir((#key, #value)) }
+        }
+        "prop" => {
+            let key = key.to_lit_str();
+            emit_error_if_modifier(modifier.as_ref());
+            quote! { .#dir(#key, #value) }
         }
         "on" => {
             let event_path = event_listener_event_path(directive);
