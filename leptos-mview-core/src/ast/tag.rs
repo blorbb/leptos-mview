@@ -39,13 +39,22 @@ impl Tag {
     /// Returns the [`Span`] of the tag identifier.
     ///
     /// Component generics are not included in this span.
-    ///
-    /// Use the [`Tag::ident`] function if the identifier itself is required.
     pub fn span(&self) -> Span {
         match self {
             Self::Html(ident) | Self::Svg(ident) | Self::Math(ident) => ident.span(),
             Self::WebComponent(ident) => ident.span(),
             Self::Component(path) => path.span(),
+        }
+    }
+
+    /// Returns the [`TagKind`] of this tag.
+    pub fn kind(&self) -> TagKind {
+        match self {
+            Tag::Html(_) => TagKind::Html,
+            Tag::Component(_) => TagKind::Component,
+            Tag::Svg(_) => TagKind::Svg,
+            Tag::Math(_) => TagKind::Math,
+            Tag::WebComponent(_) => TagKind::WebComponent,
         }
     }
 }

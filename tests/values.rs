@@ -1,3 +1,4 @@
+use leptos::prelude::*;
 use leptos_mview::mview;
 use utils::check_str;
 mod utils;

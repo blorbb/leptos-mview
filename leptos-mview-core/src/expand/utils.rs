@@ -1,4 +1,4 @@
-use proc_macro_error::{abort, emit_error};
+use proc_macro_error2::{abort, emit_error};
 use syn::{parse_quote, spanned::Spanned};
 
 #[allow(clippy::doc_markdown)]

@@ -1,5 +1,5 @@
 use proc_macro2::{Span, TokenStream};
-use proc_macro_error::emit_error;
+use proc_macro_error2::emit_error;
 use quote::{quote, ToTokens};
 use syn::{
     ext::IdentExt,
@@ -204,6 +204,13 @@ impl KebabIdentOrStr {
                 emit_error!(s.span(), "expected identifier");
                 syn::Ident::new("__invalid_identifier_found_str", s.span())
             }
+        }
+    }
+
+    pub fn to_unspanned_string(&self) -> String {
+        match self {
+            Self::KebabIdent(kebab_ident) => kebab_ident.repr().to_string(),
+            Self::Str(lit_str) => lit_str.value(),
         }
     }
 }

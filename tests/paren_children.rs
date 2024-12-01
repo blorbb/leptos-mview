@@ -1,6 +1,6 @@
 //! Test allowing parentheses to wrap the children as well.
 
-use leptos::*;
+use leptos::prelude::*;
 use leptos_mview::mview;
 mod utils;
 use utils::check_str;

@@ -1,10 +1,10 @@
 #![allow(dead_code)]
 
-use leptos::*;
+use leptos::prelude::*;
 
 #[track_caller]
 pub fn check_str<'a>(component: impl IntoView, contains: impl Into<Contains<'a>>) {
-    let component_str = component.into_view().render_to_string();
+    let component_str = component.into_view().to_html();
     match contains.into() {
         Contains::Str(s) => {
             assert!(

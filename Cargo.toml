@@ -1,6 +1,6 @@
 [package]
 name = "leptos-mview"
-version = "0.3.2"
+version = "0.4.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 keywords = ["macro", "leptos", "view"]
@@ -11,11 +11,16 @@ readme = "README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-leptos-mview-macro = { path = "leptos-mview-macro", version = "0.3.2" }
+leptos-mview-macro = { path = "leptos-mview-macro", version = "0.4.0" }
 
 [dev-dependencies]
 trybuild = "1"
-leptos = { version = "0.6.12", features = ["nightly", "csr"] }
+# needs to use ssr for some view-to-HTML features to work.
+leptos = { version = "0.7.0", features = ["ssr", "nightly"] }
+leptos-mview = { path = ".", features = ["nightly"] }
+
+[features]
+nightly = ["leptos-mview-macro/nightly"]
 
 [workspace]
 members = ["leptos-mview-core", "leptos-mview-macro"]

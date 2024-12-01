@@ -1,9 +1,10 @@
 use proc_macro2::{Span, TokenStream};
-use proc_macro_error::{emit_error, Diagnostic};
+use proc_macro_error2::{emit_error, Diagnostic};
 use quote::{quote, quote_spanned, ToTokens};
 use syn::{
     ext::IdentExt,
     parse::{Parse, ParseStream},
+    parse_quote,
     spanned::Spanned,
 };
 
@@ -130,7 +131,7 @@ impl Value {
             // incomplete typing; place a MissingValueAfterEq and continue
             let error = Diagnostic::spanned(
                 span,
-                proc_macro_error::Level::Error,
+                proc_macro_error2::Level::Error,
                 "expected value after =".to_string(),
             );
             // if the token after the `=` is an ident, perhaps the user forgot to wrap in
@@ -148,6 +149,9 @@ impl Value {
             }
         }
     }
+
+    /// Constructs self as a literal `true` with no span.
+    pub fn new_true() -> Self { Self::Lit(parse_quote!(true)) }
 }
 
 #[cfg(test)]
