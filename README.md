@@ -11,7 +11,7 @@ An alternative `view!` macro for [Leptos](https://github.com/leptos-rs/leptos/tr
 A little preview of the syntax:
 
 ```rust
-use leptos::*;
+use leptos::prelude::*;
 use leptos_mview::mview;
 
 #[component]
@@ -54,7 +54,7 @@ async fn fetch_from_db(data: String) -> usize { data.len() }
 <summary> Explanation of the example: </summary>
 
 ```rust
-use leptos::*;
+use leptos::prelude::*;
 use leptos_mview::mview;
 
 #[component]
@@ -182,7 +182,7 @@ The name of the parameter in the component function must be the same as the slot
 
 Using the slots defined by the [`SlotIf` example linked](https://github.com/leptos-rs/leptos/blob/main/examples/slots/src/lib.rs):
 ```rust
-use leptos::*;
+use leptos::prelude::*;
 use leptos_mview::mview;
 
 #[component]

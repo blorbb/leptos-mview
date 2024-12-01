@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 
-use leptos::*;
-use prelude::RenderHtml;
+use leptos::prelude::*;
 
 #[track_caller]
 pub fn check_str<'a>(component: impl IntoView, contains: impl Into<Contains<'a>>) {

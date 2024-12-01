@@ -109,7 +109,7 @@ fn qualified_paths() {
 
 // don't try parse slot:: as a slot
 mod slot {
-    use leptos::*;
+    use leptos::prelude::*;
 
     #[component]
     pub fn NotASlot() -> impl IntoView {}

@@ -60,7 +60,7 @@ pub fn children_fragment_tokens<'a>(
 ///
 /// # Example
 /// ```ignore
-/// use leptos::*;
+/// use leptos::prelude::*;
 /// use leptos_mview::mview;
 /// let div = create_node_ref::<html::Div>();
 /// mview! {

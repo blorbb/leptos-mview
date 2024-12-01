@@ -6,7 +6,7 @@ An alternative `view!` macro for [Leptos](https://github.com/leptos-rs/leptos/tr
 A little preview of the syntax:
 
 ```
-use leptos::*;
+use leptos::prelude::*;
 use leptos_mview::mview;
 
 #[component]
@@ -49,7 +49,7 @@ async fn fetch_from_db(data: String) -> usize { data.len() }
 <summary> Explanation of the example: </summary>
 
 ```
-use leptos::*;
+use leptos::prelude::*;
 use leptos_mview::mview;
 
 #[component]
@@ -134,7 +134,7 @@ Elements have the following structure:
 
 Example:
 ```
-# use leptos_mview::mview; use leptos::*;
+# use leptos_mview::mview; use leptos::prelude::*;
 # let handle_input = |_| ();
 # #[component] fn MyComponent(data: i32, other: &'static str) -> impl IntoView {}
 mview! {
@@ -147,7 +147,7 @@ mview! {
 
 Adding generics is the same as in Leptos: add it directly after the component name, with or without the turbofish.
 ```
-# use leptos::*; use leptos_mview::mview;
+# use leptos::prelude::*; use leptos_mview::mview;
 # use core::marker::PhantomData;
 #[component]
 pub fn GenericComponent<S>(ty: PhantomData<S>) -> impl IntoView {
@@ -185,7 +185,7 @@ The name of the parameter in the component function must be the same as the slot
 
 Using the slots defined by the [`SlotIf` example linked](https://github.com/leptos-rs/leptos/blob/main/examples/slots/src/lib.rs):
 ```
-use leptos::*;
+use leptos::prelude::*;
 use leptos_mview::mview;
 
 #[component]
@@ -268,7 +268,7 @@ There are (currently) 3 main types of values you can pass in:
 
 - Values wrapped in **brackets** (like `value=[a_bool().to_string()]`) are shortcuts for a block with an empty closure `move || ...` (to `value={move || a_bool().to_string()}`).
     ```rust
-    # use leptos::*; use leptos_mview::mview;
+    # use leptos::prelude::*; use leptos_mview::mview;
     # let number = || 3;
     mview! {
         Show
@@ -321,7 +321,7 @@ Most attributes are `key=value` pairs. The `value` follows the rules from above.
 
         Can be used elsewhere like this:
         ```
-        # use leptos::*; use leptos_mview::mview;
+        # use leptos::prelude::*; use leptos_mview::mview;
         # #[component] fn Something(some_attribute: i32) -> impl IntoView {}
         mview! { Something some-attribute=5; }
         # ;
@@ -348,7 +348,7 @@ Note that the special `node_ref` or `ref` or `_ref` or `ref_` attribute in Lepto
 
 Another shortcut is that boolean attributes can be written without adding `=true`. Watch out though! `checked` is **very different** to `{checked}`.
 ```
-# use leptos::*; use leptos_mview::mview;
+# use leptos::prelude::*; use leptos_mview::mview;
 // recommend usually adding #[prop(optional)] to all these
 #[component]
 fn LotsOfFlags(wide: bool, tall: bool, red: bool, curvy: bool, count: i32) -> impl IntoView {}
@@ -375,7 +375,7 @@ Some special attributes (distinguished by the `:`) called **directives** have sp
 
 All of these directives except `clone` also support the attribute shorthand:
 ```
-# use leptos::*; use leptos_mview::mview;
+# use leptos::prelude::*; use leptos_mview::mview;
 let color = create_rw_signal("red".to_string());
 let disabled = false;
 mview! {
@@ -386,7 +386,7 @@ mview! {
 
 The `class` and `style` directives also support using string literals, for more complicated names. Make sure the string for `class:` doesn't have spaces, or it will panic!
 ```
-# use leptos::*; use leptos_mview::mview;
+# use leptos::prelude::*; use leptos_mview::mview;
 let yes = move || true;
 mview! {
     div class:"complex-[class]-name"={yes}
@@ -404,7 +404,7 @@ There are a few special attributes you can put on your component to emulate some
 If a component has a `class` attribute, the classes using the selector syntax `.some-class` and dynamic classes `class:thing={signal}` can be passed in!
 
 ```
-# use leptos::*; use leptos_mview::mview;
+# use leptos::prelude::*; use leptos_mview::mview;
 #[component]
 // the `class` parameter should have these attributes and type to work properly
 fn TakesClasses(#[prop(optional, into)] class: TextProp) -> impl IntoView {
@@ -436,7 +436,7 @@ There is one small difference from the `class:` syntax on HTML elements: the val
 
 This is also supported with an `id` attribute to forward `#my-id`, though not reactively.
 ```
-# use leptos::*; use leptos_mview::mview;
+# use leptos::prelude::*; use leptos_mview::mview;
 #[component]
 // the `id` parameter should have these attributes and type to work properly
 fn TakesIds(#[prop(optional)] id: &'static str) -> impl IntoView {
@@ -459,7 +459,7 @@ You may have noticed that the `let:data` prop was missing from the previous sect
 
 This is replaced with a closure right before the children block. This way, you can pass in multiple arguments to the children more easily.
 ```
-# use leptos::*; use leptos_mview::mview;
+# use leptos::prelude::*; use leptos_mview::mview;
 mview! {
     Await
         future=[async { 3 }]
@@ -474,7 +474,7 @@ Note that you will usually need to add a `*` before the data you are using. If y
 
 Children can be wrapped in either braces or parentheses, whichever you prefer.
 ```
-# use leptos::*; use leptos_mview::mview;
+# use leptos::prelude::*; use leptos_mview::mview;
 mview! {
     p {
         "my " strong("bold") " and " em("fancy") " text."
@@ -494,7 +494,7 @@ Children with closures are also supported on slots, add a field `children: Callb
 If an attribute shorthand has hyphens:
 - On components, both the key and value will be converted to underscores.
     ```
-    # use leptos::*; use leptos_mview::mview;
+    # use leptos::prelude::*; use leptos_mview::mview;
     # #[component] fn Something(some_attribute: i32) -> impl IntoView {}
     let some_attribute = 5;
     mview! { Something {some-attribute}; }
@@ -530,7 +530,7 @@ Becomes `<input type="checkbox" checked data-smth />`, NOT `checked="true"` or `
 
 To have the attribute have a value of the string "true" or "false", use `.to_string()` on the bool. Make sure that it's in a closure if you're working with signals too.
 ```
-# use leptos::*;
+# use leptos::prelude::*;
 # use leptos_mview::mview;
 let boolean_signal = RwSignal::new(true);
 mview! { input type="checkbox" checked=[boolean_signal().to_string()]; }
