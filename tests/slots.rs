@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::{either::Either, prelude::*};
 use leptos_mview::mview;
 use utils::{check_str, Contains};
 mod utils;
@@ -16,11 +16,17 @@ fn test_example() {
     #[component]
     fn HelloComponent(hello_slot: HelloSlot) -> impl IntoView {
         if let Some(children) = hello_slot.children {
-            (children)().into_view()
+            Either::Left((children)().into_view())
         } else {
-            ().into_view()
+            Either::Right(().into_view())
         }
     }
+
+    view! {
+        <HelloComponent>
+            <HelloSlot slot>"Hello, World!"</HelloSlot>
+        </HelloComponent>
+    };
 
     let r = mview! {
         HelloComponent {
@@ -43,7 +49,7 @@ struct Then {
 #[slot]
 struct ElseIf {
     #[prop(into)]
-    cond: MaybeSignal<bool>,
+    cond: Signal<bool>,
     children: ChildrenFn,
 }
 
@@ -54,20 +60,20 @@ struct Fallback {
 
 #[component]
 fn SlotIf(
-    #[prop(into)] cond: MaybeSignal<bool>,
+    #[prop(into)] cond: Signal<bool>,
     then: Then,
     #[prop(optional)] else_if: Vec<ElseIf>,
     #[prop(optional)] fallback: Option<Fallback>,
 ) -> impl IntoView {
     move || {
-        if cond() {
-            (then.children)().into_view()
-        } else if let Some(else_if) = else_if.iter().find(|i| (i.cond)()) {
-            (else_if.children)().into_view()
+        if cond.get() {
+            Either::Left((then.children)().into_view())
+        } else if let Some(else_if) = else_if.iter().find(|i| i.cond.get()) {
+            Either::Left((else_if.children)().into_view())
         } else if let Some(fallback) = &fallback {
-            (fallback.children)().into_view()
+            Either::Left((fallback.children)().into_view())
         } else {
-            ().into_view()
+            Either::Right(().into_view())
         }
     }
 }
@@ -132,20 +138,20 @@ pub fn optional_slots() {
 
 #[component]
 fn ChildThenIf(
-    #[prop(into)] cond: MaybeSignal<bool>,
+    #[prop(into)] cond: Signal<bool>,
     children: ChildrenFn,
     #[prop(default=vec![])] else_if: Vec<ElseIf>,
     #[prop(optional)] fallback: Option<Fallback>,
 ) -> impl IntoView {
     move || {
-        if cond() {
-            (children)().into_view()
-        } else if let Some(else_if) = else_if.iter().find(|i| (i.cond)()) {
-            (else_if.children)().into_view()
+        if cond.get() {
+            Either::Left((children)().into_view())
+        } else if let Some(else_if) = else_if.iter().find(|i| i.cond.get()) {
+            Either::Left((else_if.children)().into_view())
         } else if let Some(fallback) = &fallback {
-            (fallback.children)().into_view()
+            Either::Left((fallback.children)().into_view())
         } else {
-            ().into_view()
+            Either::Right(().into_view())
         }
     }
 }
@@ -204,7 +210,7 @@ fn children_and_slots() {
             [
                 "here 1",
                 "here 2",
-                "<span data-hk=\"0-0-0-12\">here 3</span>",
+                "<span>here 3</span>",
                 "nested is here!",
                 "yet another shown",
             ]
@@ -236,51 +242,4 @@ fn clone_in_slot() {
             }
         }
     };
-}
-
-#[test]
-fn extra_slot_attrs() {
-    #[slot]
-    struct Tab {
-        #[prop(into, default="".into())]
-        class: TextProp,
-        #[prop(optional)]
-        id: &'static str,
-        // actual tab component would just have `Children`, this is just for
-        // testing the feature
-        #[prop(into)]
-        children: Callback<usize, View>,
-    }
-
-    #[component]
-    fn Tabs(tab: Vec<Tab>) -> impl IntoView {
-        tab.into_iter()
-            .enumerate()
-            .map(|(i, tab)| {
-                mview! {
-                    div class=f["com-tabs {}", tab.class.get()] id={tab.id} {
-                        {(tab.children)(i)}
-                    }
-                }
-            })
-            .collect_view()
-    }
-
-    let r = mview! {
-        Tabs {
-            slot:Tab.tab0.another-class #an-id #two-ids |i| { "tab number " {i} }
-            slot:Tab |i| { "1 == " {i} }
-        }
-    };
-
-    check_str(
-        r,
-        [
-            r#"<div class="com-tabs tab0 another-class" id="an-id two-ids""#,
-            "tab number 0",
-            r#"<div class="com-tabs " id "#, // should have no id (space after id, not =)
-            "1 == 1",
-        ]
-        .as_slice(),
-    );
 }

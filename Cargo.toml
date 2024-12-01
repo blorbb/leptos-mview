@@ -15,7 +15,8 @@ leptos-mview-macro = { path = "leptos-mview-macro", version = "0.3.2" }
 
 [dev-dependencies]
 trybuild = "1"
-leptos = { version = "0.7.0-rc3", features = ["csr"] }
+# needs to use ssr for some view-to-HTML features to work.
+leptos = { version = "0.7.0", features = ["ssr"] }
 
 [workspace]
 members = ["leptos-mview-core", "leptos-mview-macro"]
