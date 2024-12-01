@@ -116,6 +116,9 @@ The below are the versions with which I have tested it to be working. It is like
 | `0.1`                  | `0.5`                       |
 | `0.2`                  | `0.5`, `0.6`                |
 | `0.3`                  | `0.6`                       |
+| `0.4`                  | `0.7`                       |
+
+This crate also has a feature `"nightly"` that enables better proc-macro diagnostics (simply enables the nightly feature in proc-macro-error2. Necessary while [this pr](https://github.com/GnomedDev/proc-macro-error-2/pull/5) is not yet merged).
 
 # Syntax details
 
