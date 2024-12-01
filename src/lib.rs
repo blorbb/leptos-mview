@@ -11,7 +11,7 @@ use leptos_mview::mview;
 
 #[component]
 fn MyComponent() -> impl IntoView {
-    let (value, set_value) = create_signal(String::new());
+    let (value, set_value) = signal(String::new());
     let red_input = move || value().len() % 2 == 0;
 
     mview! {
@@ -32,7 +32,7 @@ fn MyComponent() -> impl IntoView {
             fallback=[mview! { "..." }]
         {
             Await
-                future=[fetch_from_db(value())]
+                future={fetch_from_db(value())}
                 blocking
             |db_info| {
                 p { "Things found: " strong { {*db_info} } "!" }
@@ -54,7 +54,7 @@ use leptos_mview::mview;
 
 #[component]
 fn MyComponent() -> impl IntoView {
-    let (value, set_value) = create_signal(String::new());
+    let (value, set_value) = signal(String::new());
     let red_input = move || value().len() % 2 == 0;
 
     mview! {
@@ -80,7 +80,7 @@ fn MyComponent() -> impl IntoView {
             fallback=[mview! { "..." }] // `{move || mview! { "..." }}`
         { // I recommend placing children like this when attributes are multi-line
             Await
-                future=[fetch_from_db(value())]
+                future={fetch_from_db(value())}
                 blocking // expanded to `blocking=true`
             // children take arguments with a 'closure'
             // this is very different to `let:db_info` in Leptos!
@@ -104,10 +104,6 @@ async fn fetch_from_db(data: String) -> usize { data.len() }
 # Purpose
 
 The `view!` macros in Leptos is often the largest part of a component, and can get extremely long when writing complex components. This macro aims to be as **concise** as possible, trying to **minimise unnecessary punctuation/words** and **shorten common patterns**.
-
-# Performance note
-
-Currently, the macro expands to the [builder syntax](https://github.com/leptos-rs/leptos/blob/main/docs/book/src/view/builder.md) (ish), but it has some [performance downsides](https://github.com/leptos-rs/leptos/issues/1492#issuecomment-1664675672) in SSR mode. This is expected to be fixed with the new renderer in Leptos `0.7`, so I'm not going to make this implementation.
 
 # Compatibility
 
@@ -167,7 +163,7 @@ pub fn App() -> impl IntoView {
 
 Note that due to [Reserving syntax](https://doc.rust-lang.org/edition-guide/rust-2021/reserving-syntax.html), the `#` for ids must have a space before it.
 ```
-# use leptos_mview::mview;
+# use leptos_mview::mview; use leptos::prelude::*;
 mview! {
     nav #primary { "..." }
     // not allowed: nav#primary { "..." }
@@ -217,13 +213,13 @@ pub fn App() -> impl IntoView {
 # ) -> impl IntoView {
 #     move || {
 #         if cond() {
-#             (then.children)().into_view()
+#             (then.children)().into_any()
 #         } else if let Some(else_if) = else_if.iter().find(|i| (i.cond)()) {
-#             (else_if.children)().into_view()
+#             (else_if.children)().into_any()
 #         } else if let Some(fallback) = &fallback {
-#             (fallback.children)().into_view()
+#             (fallback.children)().into_any()
 #         } else {
-#             ().into_view()
+#             ().into_any()
 #         }
 #     }
 # }
@@ -243,14 +239,14 @@ There are (currently) 3 main types of values you can pass in:
 
 - Everything else must be passed in as a **block**, including variables, closures, or expressions.
     ```
-    # use leptos_mview::mview;
+    # use leptos_mview::mview; use leptos::prelude::*;
     # let input_type = "text";
     # let handle_input = |_a: i32| ();
     mview! {
         input
             class="main"
             checked=true
-            madeup=3
+            data-index=3
             type={input_type}
             on:input={move |_| handle_input(1)};
     }
@@ -292,7 +288,7 @@ There are (currently) 3 main types of values you can pass in:
 
         Instead:
         ```
-        # use leptos_mview::mview;
+        # use leptos_mview::mview; use leptos::prelude::*;
         # use leptos::logging::log;
         mview! {
             input type="text" on:click={|_| log!("THIS WORKS!")};
@@ -331,7 +327,7 @@ Most attributes are `key=value` pairs. The `value` follows the rules from above.
 
 - Attribute shorthand: if the name of the attribute and value are the same, e.g. `class={class}`, you can replace this with `{class}` to mean the same thing.
     ```
-    # use leptos_mview::mview;
+    # use leptos_mview::mview; use leptos::prelude::*;
     let class = "these are classes";
     let id = "primary";
     mview! {
@@ -397,62 +393,6 @@ mview! {
 
 Note that the `use:` directive automatically calls `.into()` on its argument, consistent with behaviour from Leptos.
 
-### Special Attributes
-
-There are a few special attributes you can put on your component to emulate some features only available on HTML elements.
-
-If a component has a `class` attribute, the classes using the selector syntax `.some-class` and dynamic classes `class:thing={signal}` can be passed in!
-
-```
-# use leptos::prelude::*; use leptos_mview::mview;
-#[component]
-// the `class` parameter should have these attributes and type to work properly
-fn TakesClasses(#[prop(optional, into)] class: TextProp) -> impl IntoView {
-    mview! {
-        // "my-component" will always be present, extra classes passed in will also be added
-        div.my-component class=[class.get()] { "..." }
-    }
-}
-
-// <div class="my-component extra-class">
-mview! {
-    TakesClasses.extra-class;
-};
-```
-
-It is suggested to only pass in static classes (i.e. with selectors or just a plain `class="..."`), as using dynamic classes needs to construct a new string every time any of the signals change; dynamic classes are supported if you want them though.
-
-```ignore
-let signal = RwSignal::new(true);
-// <div class="my-component always-has-this special">
-mview! {
-    TakesClasses.always-has-this class:special={signal};
-}
-signal.set(false);
-// becomes <div class="my-component always-has-this">
-```
-
-There is one small difference from the `class:` syntax on HTML elements: the value passed in must be an `Fn() -> bool`, it cannot just be a `bool`.
-
-This is also supported with an `id` attribute to forward `#my-id`, though not reactively.
-```
-# use leptos::prelude::*; use leptos_mview::mview;
-#[component]
-// the `id` parameter should have these attributes and type to work properly
-fn TakesIds(#[prop(optional)] id: &'static str) -> impl IntoView {
-    mview! {
-        div {id} { "..." }
-    }
-}
-
-// <div id="my-unique-id">
-mview! {
-    TakesIds #my-unique-id;
-};
-```
-
-This is also supported on slots by having a `class` and `id` field with the same attributes and types as the components above.
-
 ## Children
 
 You may have noticed that the `let:data` prop was missing from the previous section on directive attributes!
@@ -460,9 +400,10 @@ You may have noticed that the `let:data` prop was missing from the previous sect
 This is replaced with a closure right before the children block. This way, you can pass in multiple arguments to the children more easily.
 ```
 # use leptos::prelude::*; use leptos_mview::mview;
+# leptos::task::Executor::init_futures_executor().unwrap();
 mview! {
     Await
-        future=[async { 3 }]
+        future={async { 3 }}
     |monkeys| {
         p { {*monkeys} " little monkeys, jumping on the bed." }
     }
@@ -485,7 +426,7 @@ mview! {
 
 Summary from the previous section on values in case you missed it: children can be literal strings (not bools or numbers!), blocks with Rust code inside (`{*monkeys}`), or the closure shorthand `[number() + 1]`.
 
-Children with closures are also supported on slots, add a field `children: Callback<T, View>` to use it (`T` is whatever type you want).
+Children with closures are also supported on slots.
 
 # Extra details
 
@@ -509,7 +450,7 @@ If an attribute shorthand has hyphens:
 
 - On HTML elements, the key will keep hyphens, but the value will be turned into an identifier with underscores.
     ```
-    # use leptos_mview::mview;
+    # use leptos_mview::mview; use leptos::prelude::*;
     let aria_label = "a good label";
     mview! { input {aria-label}; }
     # ;
@@ -522,7 +463,7 @@ If an attribute shorthand has hyphens:
 
 Note the behaviour from Leptos: setting an HTML attribute to true adds the attribute with no value associated.
 ```
-use leptos::view;
+# use leptos::prelude::*;
 view! { <input type="checkbox" checked=true data-smth=true not-here=false /> }
 # ;
 ```
