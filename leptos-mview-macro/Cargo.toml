@@ -16,3 +16,6 @@ proc-macro = true
 proc-macro2 = "1"
 proc-macro-error2 = "2"
 leptos-mview-core = { path = "../leptos-mview-core", version = "0.3.2" }
+
+[features]
+nightly = ["proc-macro-error2/nightly"]
