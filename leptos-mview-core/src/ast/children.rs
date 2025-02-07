@@ -18,6 +18,7 @@ use crate::{
 /// A child that is an actual HTML value (i.e. not a slot).
 ///
 /// Use [`Child`] to try and parse these.
+#[derive(Clone)]
 pub enum NodeChild {
     Value(Value),
     Element(Element),
@@ -30,7 +31,7 @@ impl ToTokens for NodeChild {
             Self::Element(e) => e.into_token_stream(),
         };
         tokens.extend(quote! {
-            ::leptos::prelude::IntoRender::into_render(#child_tokens)
+            #child_tokens
         });
     }
 }
@@ -51,6 +52,7 @@ impl NodeChild {
 ///
 /// Children can either be a [`NodeChild`] (i.e. an actual element), or a slot.
 /// Slots are distinguished by prefixing the child with `slot:`.
+#[derive(Clone)]
 pub enum Child {
     Node(NodeChild),
     Slot(kw::slot, Element),
@@ -89,6 +91,7 @@ impl Parse for Child {
 ///
 /// Parsing does not include the surrounding braces.
 /// If no children are present, an empty vector will be stored.
+#[derive(Clone)]
 pub struct Children(Vec<Child>);
 
 impl std::ops::Deref for Children {

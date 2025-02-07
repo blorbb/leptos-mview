@@ -42,8 +42,7 @@ use utils::*;
 /// ))
 /// ```
 
-// used in the root or for component children
-pub fn children_fragment_tokens<'a>(
+pub fn root_children_tokens<'a>(
     children: impl Iterator<Item = &'a NodeChild>,
     span: Span,
 ) -> TokenStream {
@@ -51,6 +50,27 @@ pub fn children_fragment_tokens<'a>(
         ::leptos::prelude::View::new((
             #( #children, )*
         ))
+    }
+}
+
+// used in the root or for component children
+pub fn children_fragment_tokens<'a>(
+    children: impl Iterator<Item = &'a NodeChild>,
+    span: Span,
+) -> TokenStream {
+    let children = children.collect::<Vec<_>>();
+    let has_multiple_children = children.len() > 1;
+
+    if !has_multiple_children {
+        quote_spanned! { span=>
+            #( #children, )*
+        }
+    } else {
+        quote_spanned! { span=>
+            (
+                #( #children, )*
+            )
+        }
     }
 }
 
@@ -291,23 +311,22 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
             path.span()=> ::leptos::component::component_props_builder(&#path)
         };
 
+        let directive_paths = (!(directive_paths.is_empty())).then(|| {
+            quote! {
+                .add_any_attr((#(#directive_paths,)*))
+            }
+        });
+
         Some(quote! {
-            // the .build() returns `!` if not all props are present.
-            // this causes unreachable code warning in ::leptos::component_view
-            #[allow(unreachable_code)]
-            ::leptos::prelude::View::new(
                 ::leptos::component::component_view(
-                    &#path,
-                    #component_props_builder
-                        #attrs
-                        #children
-                        #slot_children
-                        #build
-                )
-                .add_any_attr((
-                    #(#directive_paths,)*
-                ))
+                &#path,
+                #component_props_builder
+                #attrs
+                #children
+                #slot_children
+                #build
             )
+            #directive_paths
         })
     }
 }

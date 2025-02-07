@@ -26,6 +26,7 @@ use crate::ast::KebabIdent;
 /// placed directly after (`Component<T>`).
 ///
 /// See [`TagKind`] for a discriminant-only version of this enum.
+#[derive(Clone)]
 pub enum Tag {
     Html(syn::Ident),
     /// The generic will contain a leading `::`.
