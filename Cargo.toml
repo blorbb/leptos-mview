@@ -17,6 +17,7 @@ leptos-mview-macro = { path = "leptos-mview-macro", version = "0.4.0" }
 trybuild = "1"
 # needs to use ssr for some view-to-HTML features to work.
 leptos = { version = "0.7.0", features = ["ssr", "nightly"] }
+leptos_router = { version = "0.7.0", features = ["ssr", "nightly"] }
 leptos-mview = { path = ".", features = ["nightly"] }
 
 [features]
