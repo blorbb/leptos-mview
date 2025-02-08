@@ -30,7 +30,7 @@ impl ToTokens for NodeChild {
             Self::Element(e) => e.into_token_stream(),
         };
         tokens.extend(quote! {
-            ::leptos::prelude::IntoRender::into_render(#child_tokens)
+            #child_tokens
         });
     }
 }
