@@ -42,7 +42,6 @@ use crate::{
 ///
 /// Whether the element is a slot or not is distinguished by
 /// [`Child`](crate::ast::Child).
-#[derive(Clone)]
 pub struct Element {
     tag: Tag,
     selectors: SelectorShorthands,

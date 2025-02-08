@@ -12,14 +12,12 @@ mod kw;
 mod parse;
 mod span;
 
-use ast::Child;
+use ast::{Child, Children};
 use expand::root_children_tokens;
 use proc_macro2::{Span, TokenStream};
 use proc_macro_error2::abort;
 use quote::quote;
 use syn::spanned::Spanned;
-
-use crate::{ast::Children, expand::children_fragment_tokens};
 
 #[must_use]
 pub fn mview_impl(input: TokenStream) -> TokenStream {

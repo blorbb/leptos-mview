@@ -24,7 +24,7 @@ mod utils;
 #[allow(clippy::wildcard_imports)]
 use utils::*;
 
-/// Converts the children into a `leptos::Fragment::lazy()` token stream.
+/// Converts the children into a `View::new()` token stream.
 ///
 /// Example:
 /// ```ignore
@@ -41,7 +41,6 @@ use utils::*;
 ///     {"b"},
 /// ))
 /// ```
-
 pub fn root_children_tokens<'a>(
     children: impl Iterator<Item = &'a NodeChild>,
     span: Span,
@@ -53,7 +52,7 @@ pub fn root_children_tokens<'a>(
     }
 }
 
-// used in the root or for component children
+// used for component children
 pub fn children_fragment_tokens<'a>(
     children: impl Iterator<Item = &'a NodeChild>,
     span: Span,
@@ -61,15 +60,13 @@ pub fn children_fragment_tokens<'a>(
     let children = children.collect::<Vec<_>>();
     let has_multiple_children = children.len() > 1;
 
-    if !has_multiple_children {
+    if has_multiple_children {
         quote_spanned! { span=>
-            #( #children, )*
+            ( #( #children, )* )
         }
     } else {
         quote_spanned! { span=>
-            (
-                #( #children, )*
-            )
+            #( #children )*
         }
     }
 }
@@ -311,20 +308,20 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
             path.span()=> ::leptos::component::component_props_builder(&#path)
         };
 
-        let directive_paths = (!(directive_paths.is_empty())).then(|| {
+        let directive_paths = (!directive_paths.is_empty()).then(|| {
             quote! {
                 .add_any_attr((#(#directive_paths,)*))
             }
         });
 
         Some(quote! {
-                ::leptos::component::component_view(
+            ::leptos::component::component_view(
                 &#path,
                 #component_props_builder
-                #attrs
-                #children
-                #slot_children
-                #build
+                    #attrs
+                    #children
+                    #slot_children
+                    #build
             )
             #directive_paths
         })
