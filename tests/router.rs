@@ -23,7 +23,7 @@ fn router() {
         Router {
             main {
                 Routes
-                    fallback=["Not found".into_view()]
+                    fallback=[mview! { p { "not found" }}]
                 {
                     Route
                         path={StaticSegment("")}
@@ -53,6 +53,15 @@ fn router() {
         }}
     };
 
+    let router_context3 = mview! {
+        RouterContext
+            path="/does-not-exist"
+        {{
+            router()
+        }}
+    };
+
     check_str(router_context1, "<p>root route");
     check_str(router_context2, "<p>you are on /route2");
+    check_str(router_context3, "<p>not found");
 }
