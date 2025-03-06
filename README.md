@@ -321,6 +321,7 @@ Some special attributes (distinguished by the `:`) called **directives** have sp
 - `attr:name={value}`
 - `clone:ident_to_clone`
 - `use:directive_name` or `use:directive_name={params}`
+- `bind:checked={rwsignal}` or `bind:value={(getter, setter)}`
 
 All of these directives except `clone` also support the attribute shorthand:
 ```rust
