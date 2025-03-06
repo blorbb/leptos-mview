@@ -13,7 +13,7 @@ use crate::{
         },
         KebabIdentOrStr, NodeChild, TagKind, Value,
     },
-    expand::{children_fragment_tokens, emit_error_if_modifier},
+    expand::{children_fragment_tokens, emit_error_if_modifier, utils},
 };
 
 ////////////////////////////////////////////////////////////////
@@ -205,6 +205,12 @@ pub(super) fn xml_directive_tokens(directive: &Directive) -> TokenStream {
         "attr" | "clone" => {
             emit_error!(dir.span(), "`{}:` is not supported on elements", dir);
             quote! {}
+        }
+        "bind" => {
+            emit_error_if_modifier(modifier.as_ref());
+            let bind = syn::Ident::new("bind", dir.span());
+            let bound_attribute_name = utils::snake_case_to_upper_camel(key.to_ident_or_emit());
+            quote! { .#bind(::leptos::attr::#bound_attribute_name, #value) }
         }
         _ => {
             emit_error!(dir.span(), "unknown directive");

@@ -1,5 +1,5 @@
 use proc_macro_error2::{abort, emit_error};
-use syn::{parse_quote, spanned::Spanned};
+use syn::{ext::IdentExt, parse_quote, spanned::Spanned};
 
 #[allow(clippy::doc_markdown)]
 // just doing a manual implementation as theres only one need for this (slots).
@@ -17,6 +17,29 @@ pub fn upper_camel_to_snake_case(ident: &str) -> String {
     }
 
     new
+}
+
+pub fn snake_case_to_upper_camel(ident: syn::Ident) -> syn::Ident {
+    let str = ident.unraw().to_string();
+    let mut new = String::with_capacity(str.len());
+    let mut next_char_is_word_start = true;
+
+    for char in str.chars() {
+        match (char, next_char_is_word_start) {
+            ('_', _) => {
+                next_char_is_word_start = true;
+            }
+            (c, true) => {
+                next_char_is_word_start = false;
+                new.extend(c.to_uppercase());
+            }
+            (c, false) => {
+                new.push(c);
+            }
+        }
+    }
+
+    syn::Ident::new_raw(&new, ident.span())
 }
 
 pub fn emit_error_if_modifier(m: Option<&syn::Ident>) {
