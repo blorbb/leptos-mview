@@ -1,14 +1,21 @@
-[package]
-name = "leptos-mview"
+[workspace]
+members = ["leptos-mview-core", "leptos-mview-macro"]
+
+[workspace.package]
 version = "0.4.1"
 edition = "2021"
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/blorbb/leptos-mview"
+
+[package]
+name = "leptos-mview"
 keywords = ["macro", "leptos", "view"]
 description = "A concise view macro for Leptos"
-repository = "https://github.com/blorbb/leptos-mview"
 readme = "README.md"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [dependencies]
 leptos-mview-macro = { path = "leptos-mview-macro", version = "0.4.1" }
@@ -22,6 +29,3 @@ leptos-mview = { path = ".", features = ["nightly"] }
 
 [features]
 nightly = ["leptos-mview-macro/nightly"]
-
-[workspace]
-members = ["leptos-mview-core", "leptos-mview-macro"]

@@ -1,13 +1,11 @@
 [package]
 name = "leptos-mview-core"
-version = "0.4.1"
-edition = "2021"
-license = "MIT OR Apache-2.0"
 description = "Main implementation of leptos-mview"
-repository = "https://github.com/blorbb/leptos-mview"
 readme = "README.md"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [dependencies]
 syn = { version = "2", features = [] }
