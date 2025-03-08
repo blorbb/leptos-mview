@@ -153,26 +153,14 @@ fn bindings() {
     let (name, set_name) = signal("Controlled".to_string());
     let email = RwSignal::new("".to_string());
     let spam_me = RwSignal::new(true);
-    // let group = RwSignal::new("one".to_string());
+    let group = RwSignal::new("one".to_string());
 
     mview! {
         input type="text" bind:value={(name, set_name)};
         input type="email" bind:value={email};
         input type="checkbox" bind:checked={spam_me};
 
-        // FIXME: after https://github.com/leptos-rs/leptos/issues/3678 fixed
-        // input type="radio" value="one" bind:group={group};
-    };
-
-    view! {
-        <input type="text"
-            bind:value=(name, set_name)
-        />
-        <input type="email"
-            bind:value=email
-        />
-        <input type="checkbox"
-            bind:checked=spam_me
-        />
+        input type="radio" value="one" bind:group={group};
+        input type="radio" value="two" bind:group={group};
     };
 }
