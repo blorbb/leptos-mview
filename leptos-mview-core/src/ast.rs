@@ -29,3 +29,5 @@ mod tag;
 pub use tag::*;
 mod value;
 pub use value::*;
+mod doctype;
+pub use doctype::*;

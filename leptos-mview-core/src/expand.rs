@@ -132,7 +132,7 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
 
     let children = element
         .children()
-        .map(|children| xml_child_methods_tokens(children.element_children()));
+        .map(|children| xml_child_methods_tokens(children.node_children()));
 
     Some(quote! {
         #tag_path
@@ -275,7 +275,7 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
     // convert the collected info into tokens //
 
     let children = element.children().map(|children| {
-        let mut it = children.element_children().peekable();
+        let mut it = children.node_children().peekable();
         // need to check that there are any element children at all,
         // as components that accept slots may not accept children.
         it.peek()

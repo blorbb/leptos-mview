@@ -7,7 +7,7 @@ use syn::{
     parse_quote, Token,
 };
 
-use super::Element;
+use super::{Doctype, Element};
 use crate::{
     ast::Value,
     error_ext::SynErrorExt,
@@ -21,6 +21,7 @@ use crate::{
 pub enum NodeChild {
     Value(Value),
     Element(Element),
+    Doctype(Doctype),
 }
 
 impl ToTokens for NodeChild {
@@ -28,6 +29,7 @@ impl ToTokens for NodeChild {
         let child_tokens = match self {
             Self::Value(v) => v.into_token_stream(),
             Self::Element(e) => e.into_token_stream(),
+            Self::Doctype(d) => d.into_token_stream(),
         };
         tokens.extend(quote! {
             #child_tokens
@@ -40,6 +42,7 @@ impl NodeChild {
         match self {
             Self::Value(v) => v.span(),
             Self::Element(e) => e.tag().span(),
+            Self::Doctype(d) => d.span(),
         }
     }
 }
@@ -70,7 +73,7 @@ impl Parse for Child {
             } else {
                 Ok(Self::Node(NodeChild::Value(value)))
             }
-        // make sure its not a fully qualified path
+        // parse slot: make sure its not a qualified path (slot::)
         } else if input.peek(kw::slot) && input.peek2(Token![:]) && !input.peek2(Token![::]) {
             let slot = kw::slot::parse(input).unwrap();
             <Token![:]>::parse(input).unwrap();
@@ -79,6 +82,8 @@ impl Parse for Child {
         } else if input.peek(syn::Ident::peek_any) {
             let elem = Element::parse(input)?;
             Ok(Self::Node(NodeChild::Element(elem)))
+        } else if let Some(doctype) = rollback_err(input, Doctype::parse) {
+            Ok(Self::Node(NodeChild::Doctype(doctype)))
         } else {
             Err(input.error("invalid child: expected literal, block, bracket or element"))
         }
@@ -132,7 +137,7 @@ impl Children {
     pub fn into_vec(self) -> Vec<Child> { self.0 }
 
     /// Returns an iterator of all children that are not slots.
-    pub fn element_children(&self) -> impl Iterator<Item = &NodeChild> {
+    pub fn node_children(&self) -> impl Iterator<Item = &NodeChild> {
         self.0.iter().filter_map(|child| match child {
             Child::Node(node) => Some(node),
             Child::Slot(..) => None,

@@ -53,7 +53,7 @@ pub fn mview_impl(input: TokenStream) -> TokenStream {
             );
         };
 
-        let fragment = root_children_tokens(children.element_children(), Span::call_site());
+        let fragment = root_children_tokens(children.node_children(), Span::call_site());
         quote! {
             {
                 #[allow(unused_braces)]

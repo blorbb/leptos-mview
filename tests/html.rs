@@ -164,3 +164,13 @@ fn bindings() {
         input type="radio" value="two" bind:group={group};
     };
 }
+
+#[test]
+fn doctype() {
+    let doctype = mview! {
+        !DOCTYPE html;
+        div;
+    };
+
+    check_str(doctype, "<!DOCTYPE html><div></div>");
+}
