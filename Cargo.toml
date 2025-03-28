@@ -17,14 +17,25 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 
-[dependencies]
-leptos-mview-macro = { path = "leptos-mview-macro", version = "0.4.3" }
+[workspace.dependencies]
+syn = "2"
+quote = "1"
+proc-macro2 = "1"
+proc-macro-error2 = "2"
 
-[dev-dependencies]
+# dev dependencies #
 trybuild = "1"
 # needs to use ssr for some view-to-HTML features to work.
 leptos = { version = "0.7.5", features = ["ssr", "nightly"] }
 leptos_router = { version = "0.7.5", features = ["ssr", "nightly"] }
+
+[dependencies]
+leptos-mview-macro = { path = "leptos-mview-macro", version = "0.4.3" }
+
+[dev-dependencies]
+trybuild.workspace = true
+leptos.workspace = true
+leptos_router.workspace = true
 leptos-mview = { path = ".", features = ["nightly"] }
 
 [features]

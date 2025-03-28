@@ -20,7 +20,7 @@ fn MyComponent() -> impl IntoView {
     let red_input = move || value().len() % 2 == 0;
 
     mview! {
-        h1.title { "A great website" }
+        h1.title("A great website")
         br;
 
         input
@@ -35,15 +35,15 @@ fn MyComponent() -> impl IntoView {
         Show
             when=[!value().is_empty()]
             fallback=[mview! { "..." }]
-        {
+        (
             Await
                 future={fetch_from_db(value())}
                 blocking
-            |db_info| {
-                p { "Things found: " strong { {*db_info} } "!" }
-                p { "Is bad: " f["{}", red_input()] }
-            }
-        }
+            |db_info| (
+                p("Things found: " strong({*db_info}) "!")
+                p("Is bad: " f["{}", red_input()])
+            )
+        )
     }
 }
 
@@ -63,10 +63,10 @@ fn MyComponent() -> impl IntoView {
     let red_input = move || value().len() % 2 == 0;
 
     mview! {
-        // specify tags and attributes, children go in braces
+        // specify tags and attributes, children go in parentheses.
         // classes (and ids) can be added like CSS selectors.
         // same as `h1 class="title"`
-        h1.title { "A great website" }
+        h1.title("A great website")
         // elements with no children end with a semi-colon
         br;
 
@@ -83,20 +83,20 @@ fn MyComponent() -> impl IntoView {
             // values wrapped in brackets `[body]` are expanded to `{move || body}`
             when=[!value().is_empty()] // `{move || !value().is_empty()}`
             fallback=[mview! { "..." }] // `{move || mview! { "..." }}`
-        { // I recommend placing children like this when attributes are multi-line
+        ( // I recommend placing children like this when attributes are multi-line
             Await
                 future={fetch_from_db(value())}
                 blocking // expanded to `blocking=true`
             // children take arguments with a 'closure'
             // this is very different to `let:db_info` in Leptos!
-            |db_info| {
-                p { "Things found: " strong { {*db_info} } "!" }
+            |db_info| (
+                p("Things found: " strong({*db_info}) "!")
                 // bracketed expansion works in children too!
                 // this one also has a special prefix to add `format!` into the expansion!
                 //    {move || format!("{}", red_input()}
-                p { "Is bad: " f["{}", red_input()] }
-            }
-        }
+                p("Is bad: " f["{}", red_input()])
+            )
+        )
     }
 }
 
@@ -134,18 +134,19 @@ Elements have the following structure:
 1. Element / component tag name / path (`div`, `App`, `component::Codeblock`).
 2. Any classes or ids prefixed with a dot `.` or hash `#` respectively.
 3. A space-separated list of attributes and directives (`class="primary"`, `on:click={...}`).
-4. Either children in braces/parens (`{ "hi!" }` or `("hi")`) or a semi-colon for no children (`;`).
+4. Children in parens or braces (`("hi")` or `{ "hi!" }`), or a semi-colon for no children (`;`).
 
 Example:
 ```rust
 mview! {
-    div.primary { strong { "hello world" } }
+    div.primary(strong("hello world"))
     input type="text" on:input={handle_input};
     MyComponent data=3 other="hi";
 }
 ```
 
 Adding generics is the same as in Leptos: add it directly after the component name, with or without the turbofish.
+
 ```rust
 #[component]
 pub fn GenericComponent<S>(ty: PhantomData<S>) -> impl IntoView {
@@ -164,10 +165,11 @@ pub fn App() -> impl IntoView {
 ```
 
 Note that due to [Reserving syntax](https://doc.rust-lang.org/edition-guide/rust-2021/reserving-syntax.html), the `#` for ids must have a space before it.
+
 ```rust
 mview! {
-    nav #primary { "..." }
-    // not allowed: nav#primary { "..." }
+    nav #primary ("...")
+    // not allowed: nav#primary ("...")
 }
 ```
 
@@ -186,18 +188,18 @@ use leptos_mview::mview;
 
 #[component]
 pub fn App() -> impl IntoView {
-    let (count, set_count) = RwSignal::new(0).split();
-    let is_even = MaybeSignal::derive(move || count() % 2 == 0);
-    let is_div5 = MaybeSignal::derive(move || count() % 5 == 0);
-    let is_div7 = MaybeSignal::derive(move || count() % 7 == 0);
+    let (count, set_count) = signal(0);
+    let is_even = Signal::derive(move || count() % 2 == 0);
+    let is_div5 = Signal::derive(move || count() % 5 == 0);
+    let is_div7 = Signal::derive(move || count() % 7 == 0);
 
     mview! {
-        SlotIf cond={is_even} {
-            slot:Then { "even" }
-            slot:ElseIf cond={is_div5} { "divisible by 5" }
-            slot:ElseIf cond={is_div7} { "divisible by 7" }
-            slot:Fallback { "odd" }
-        }
+        SlotIf cond={is_even} (
+            slot:Then ("even")
+            slot:ElseIf cond={is_div5} ("divisible by 5")
+            slot:ElseIf cond={is_div7} ("divisible by 7")
+            slot:Fallback ("odd")
+        )
     }
 }
 ```
@@ -209,7 +211,8 @@ There are (currently) 3 main types of values you can pass in:
 - **Literals** can be passed in directly to attribute values (like `data=3`, `class="main"`, `checked=true`).
     - However, children do not accept literal numbers or bools - only strings.
         ```rust
-        mview! { p { "this works " 0 " times: " true } }
+        // does NOT compile.
+        mview! { p("this works " 0 " times: " true) }
         ```
 
 - Everything else must be passed in as a **block**, including variables, closures, or expressions.
@@ -237,9 +240,9 @@ There are (currently) 3 main types of values you can pass in:
         Show
             fallback=[()] // common for not wanting a fallback as `|| ()`
             when=[number() % 2 == 0] // `{move || number() % 2 == 0}`
-        {
+        (
             "number + 1 = " [number() + 1] // works in children too!
-        }
+        )
     }
     ```
 
@@ -288,7 +291,7 @@ Most attributes are `key=value` pairs. The `value` follows the rules from above.
     let class = "these are classes";
     let id = "primary";
     mview! {
-        div {class} {id} { "this has 3 classes and id='primary'" }
+        div {class} {id} ("this has 3 classes and id='primary'")
     }
     ```
 
@@ -324,8 +327,9 @@ Some special attributes (distinguished by the `:`) called **directives** have sp
 - `bind:checked={rwsignal}` or `bind:value={(getter, setter)}`
 
 All of these directives except `clone` also support the attribute shorthand:
+
 ```rust
-let color = create_rw_signal("red".to_string());
+let color = RwSignal::new("red".to_string());
 let disabled = false;
 mview! {
     div style:{color} class:{disabled};
@@ -333,6 +337,7 @@ mview! {
 ```
 
 The `class` and `style` directives also support using string literals, for more complicated names. Make sure the string for `class:` doesn't have spaces, or it will panic!
+
 ```rust
 let yes = move || true;
 mview! {
@@ -348,19 +353,21 @@ Note that the `use:` directive automatically calls `.into()` on its argument, co
 You may have noticed that the `let:data` prop was missing from the previous section on directive attributes!
 
 This is replaced with a closure right before the children block. This way, you can pass in multiple arguments to the children more easily.
+
 ```rust
 mview! {
     Await
         future={async { 3 }}
-    |monkeys| {
-        p { {*monkeys} " little monkeys, jumping on the bed." }
-    }
+    |monkeys| (
+        p({*monkeys} " little monkeys, jumping on the bed.")
+    )
 }
 ```
 
-Note that you will usually need to add a `*` before the data you are using. If you forget that, rust-analyser will tell you to dereference here: `*{monkeys}`. This is obviously invalid - put it inside the braces. (If anyone knows how to fix this, feel free to contribute!)
+Note that you will usually need to add a `*` before the data you are using. If you forget that, rust-analyser will tell you to dereference here: `*{monkeys}`. This is obviously invalid - put it inside the braces.
 
 Children can be wrapped in either braces or parentheses, whichever you prefer.
+
 ```rust
 mview! {
     p {
