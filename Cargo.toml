@@ -2,7 +2,7 @@
 members = ["leptos-mview-core", "leptos-mview-macro"]
 
 [workspace.package]
-version = "0.4.3"
+version = "0.4.4"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/blorbb/leptos-mview"
@@ -30,7 +30,7 @@ leptos = { version = "0.7.5", features = ["ssr", "nightly"] }
 leptos_router = { version = "0.7.5", features = ["ssr", "nightly"] }
 
 [dependencies]
-leptos-mview-macro = { path = "leptos-mview-macro", version = "0.4.3" }
+leptos-mview-macro = { path = "leptos-mview-macro", version = "0.4.4" }
 
 [dev-dependencies]
 trybuild.workspace = true
