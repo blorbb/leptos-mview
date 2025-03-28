@@ -82,10 +82,29 @@ impl ToTokens for Doctype {
         }
 
         let doctype_fn = quote_spanned!(doctype_span=> doctype);
+        let eq = quote_spanned!(self.bang.span=> =);
+        // there will never be an error on these so call site is fine
+        let partial_doctype = self
+            .doctype
+            .clone()
+            .unwrap_or(syn::Ident::new("DOCTYPE", Span::call_site()));
+        let partial_html = self
+            .html
+            .clone()
+            .unwrap_or(syn::Ident::new("html", Span::call_site()));
+
         // don't span "html" so they aren't string colored.
         // "html" can't have an error anyways.
         tokens.extend(quote! {
-            ::leptos::tachys::html::#doctype_fn("html")
+            {
+                // suggest autocomplete DOCTYPE and html
+                #[allow(non_snake_case)]
+                let DOCTYPE = ();
+                let html = ();
+                let _: () #eq #partial_doctype;
+                let _: () = #partial_html;
+                ::leptos::tachys::html::#doctype_fn("html")
+            }
         });
     }
 }
