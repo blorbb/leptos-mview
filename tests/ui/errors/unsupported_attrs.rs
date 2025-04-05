@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 use leptos_mview::mview;
 
 fn style_on_component() {

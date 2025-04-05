@@ -7,7 +7,7 @@ fn ui() {
     //
     // not running any UI tests for now.
 
-    // let t = trybuild::TestCases::new();
-    // t.pass("tests/ui/pass/*.rs");
-    // t.compile_fail("tests/ui/errors/*.rs");
+    let t = trybuild::TestCases::new();
+    t.pass("tests/ui/pass/*.rs");
+    t.compile_fail("tests/ui/errors/*.rs");
 }

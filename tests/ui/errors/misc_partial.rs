@@ -1,3 +1,4 @@
+use leptos::prelude::*;
 use leptos_mview::mview;
 
 fn invalid_value() {

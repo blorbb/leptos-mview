@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 use leptos_mview::mview;
 
 fn not_directive() {
@@ -32,9 +32,7 @@ fn invalid_modifier() {
 }
 
 #[component]
-fn Com(#[prop(optional, into)] class: TextProp) -> impl IntoView {
-    let _ = class;
-}
+fn Com(#[prop(optional, into)] class: TextProp) -> impl IntoView { let _ = class; }
 
 fn invalid_parts() {
     _ = mview! {

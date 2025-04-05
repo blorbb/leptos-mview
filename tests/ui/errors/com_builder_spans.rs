@@ -1,7 +1,7 @@
 //! Testing that there are no errors that cause the entire macro to error (i.e.
 //! call-site error)
 
-use leptos::*;
+use leptos::prelude::*;
 use leptos_mview::mview;
 
 fn missing_args() {

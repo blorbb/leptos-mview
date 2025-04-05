@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 use leptos_mview::mview;
 
 #[slot]
@@ -8,7 +8,7 @@ struct Nothing {}
 fn TakesNothing(nothing: Nothing) -> impl IntoView { let _ = nothing; }
 
 fn try_bad_dirs() {
-    let attrs: Vec<(&'static str, Attribute)> = Vec::new();
+    let attrs = view! { <{..} class="thing" /> };
     let _spread = mview! {
         TakesNothing {
             slot:Nothing {..attrs};

@@ -1,3 +1,4 @@
+use leptos::prelude::*;
 use leptos_mview::mview;
 
 fn main() {
@@ -39,7 +40,10 @@ fn extra_semicolons() {
     };
 }
 
-#[expect(dependency_on_unit_never_type_fallback, reason="probably fixed in leptos 0.7")]
+#[expect(
+    dependency_on_unit_never_type_fallback,
+    reason = "probably fixed in leptos 0.7"
+)]
 fn unreachable_code() {
     _ = mview! {
         div {
