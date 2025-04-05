@@ -1,9 +1,9 @@
-use leptos::{*, html::AnyElement};
+use leptos::{prelude::*, web_sys::Element};
 use leptos_mview::mview;
 
-fn no_arg_dir(_el: HtmlElement<AnyElement>) {}
+fn no_arg_dir(_el: Element) {}
 
-fn arg_dir(_el: HtmlElement<AnyElement>, _argument: i32) {}
+fn arg_dir(_el: Element, _argument: i32) {}
 
 fn main() {
     _ = mview! {
@@ -21,11 +21,4 @@ fn main() {
 #[component]
 fn Component() -> impl IntoView {
     mview! { button { "hi" } }
-}
-
-#[component]
-fn Spreadable(#[prop(attrs)] attrs: Vec<(&'static str, Attribute)>) -> impl IntoView {
-    mview! {
-        div {..attrs};
-    }
 }
