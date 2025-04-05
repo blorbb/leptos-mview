@@ -122,7 +122,7 @@ impl From<&str> for AttributeKind {
 
 /// Converts element class/id selector shorthands into a series of `.classes`
 /// and `.id` calls.
-pub(super) fn xml_selectors_tokens(selectors: &SelectorShorthands) -> TokenStream {
+pub(super) fn xml_selectors_methods(selectors: &SelectorShorthands) -> TokenStream {
     let (classes, ids): (Vec<_>, Vec<_>) = selectors
         .iter()
         .partition(|sel| matches!(sel, SelectorShorthand::Class { .. }));
@@ -142,7 +142,7 @@ pub(super) fn xml_selectors_tokens(selectors: &SelectorShorthands) -> TokenStrea
     quote! { #(#class_methods)* #(#id_methods)* }
 }
 
-pub(super) fn xml_kv_attribute_tokens(attr: &KvAttr, element_tag: TagKind) -> TokenStream {
+pub(super) fn xml_kv_attribute_method(attr: &KvAttr, element_tag: TagKind) -> TokenStream {
     let key = attr.key();
     let value = attr.value();
     // special cases
@@ -150,7 +150,7 @@ pub(super) fn xml_kv_attribute_tokens(attr: &KvAttr, element_tag: TagKind) -> To
         let node_ref = syn::Ident::new("node_ref", key.span());
         quote! { .#node_ref(#value) }
     } else {
-        // https://github.com/leptos-rs/leptos/blob/main/leptos_macro/src/view/mod.rs#L960
+        // https://github.com/leptos-rs/leptos/blob/bdc73594eab87ad63fd3903ae7db8864cdb2f0ae/leptos_macro/src/view/mod.rs#L1002
         // Use unchecked attributes if:
         // - it's not `class` nor `style`, and
         // - It's a custom web component or SVG element
@@ -172,7 +172,7 @@ pub(super) fn xml_kv_attribute_tokens(attr: &KvAttr, element_tag: TagKind) -> To
     }
 }
 
-pub(super) fn xml_directive_tokens(directive: &Directive) -> TokenStream {
+pub(super) fn xml_directive_method(directive: &Directive) -> TokenStream {
     let Directive {
         dir,
         key,
@@ -226,7 +226,7 @@ pub(super) fn xml_directive_tokens(directive: &Directive) -> TokenStream {
     }
 }
 
-pub(super) fn xml_spread_tokens(attr: &SpreadAttr) -> TokenStream {
+pub(super) fn xml_spread_method(attr: &SpreadAttr) -> TokenStream {
     let (dotdot, expr) = (attr.dotdot(), attr.expr());
     let add_any_attr = syn::Ident::new("add_any_attr", dotdot.span());
     quote! {
@@ -244,9 +244,7 @@ pub(super) fn xml_spread_tokens(attr: &SpreadAttr) -> TokenStream {
 /// ```ignore
 /// div().child("a").child({var}).child("b")
 /// ```
-pub(super) fn xml_child_methods_tokens<'a>(
-    children: impl Iterator<Item = &'a NodeChild>,
-) -> TokenStream {
+pub(super) fn xml_child_methods<'a>(children: impl Iterator<Item = &'a NodeChild>) -> TokenStream {
     let mut ts = TokenStream::new();
     for child in children {
         let child_method = syn::Ident::new("child", child.span());
@@ -261,13 +259,13 @@ pub(super) fn xml_child_methods_tokens<'a>(
 // ------------------- component only ------------------- //
 ////////////////////////////////////////////////////////////
 
-pub(super) fn component_kv_attribute_tokens(attr: &KvAttr) -> TokenStream {
+pub(super) fn component_kv_attribute_method(attr: &KvAttr) -> TokenStream {
     let (key, value) = (attr.key().to_snake_ident(), attr.value());
     quote_spanned! { attr.span()=> .#key(#value) }
 }
 
 /// Expands to a `let` statement `let to_clone = to_clone.clone();`.
-pub(super) fn component_clone_tokens(dir: &Directive) -> TokenStream {
+pub(super) fn component_clone_stmt(dir: &Directive) -> TokenStream {
     let to_clone = dir.key.to_ident_or_emit();
     emit_error_if_modifier(dir.modifier.as_ref());
     if let Some(value) = &dir.value {
@@ -312,7 +310,7 @@ pub(super) fn component_clone_tokens(dir: &Directive) -> TokenStream {
 ///     })
 /// })
 /// ```
-pub(super) fn component_children_tokens<'a>(
+pub(super) fn component_children_method<'a>(
     children: impl Iterator<Item = &'a NodeChild>,
     args: Option<&TokenStream>,
     clones: &TokenStream,
@@ -381,7 +379,7 @@ pub(super) fn component_children_tokens<'a>(
 ///     ))
 /// )
 /// ```
-pub(super) fn directive_to_any_attr_path(directive: &Directive) -> Option<TokenStream> {
+pub(super) fn directive_to_any_attr_expr(directive: &Directive) -> Option<TokenStream> {
     let dir = &directive.dir;
     let path = match &*dir.to_string() {
         "class" | "style" => {
@@ -456,7 +454,7 @@ pub(super) fn directive_to_any_attr_path(directive: &Directive) -> Option<TokenS
 /// This should be added with all the other directives.
 ///
 /// Spread attrs are added as `IntoAttribute::into_attr(expr)`.
-pub(super) fn component_spread_tokens(attr: &SpreadAttr) -> TokenStream {
+pub(super) fn component_spread_expr(attr: &SpreadAttr) -> TokenStream {
     let attrs = attr.expr().clone();
     quote! {
         ::leptos::tachys::html::attribute::IntoAttribute::into_attr(#attrs)
