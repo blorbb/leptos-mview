@@ -149,7 +149,7 @@ Adding generics is the same as in Leptos: add it directly after the component na
 
 ```rust
 #[component]
-pub fn GenericComponent<S>(ty: PhantomData<S>) -> impl IntoView {
+pub fn GenericComponent<S: 'static>(ty: PhantomData<S>) -> impl IntoView {
     std::any::type_name::<S>()
 }
 

@@ -150,7 +150,7 @@ Adding generics is the same as in Leptos: add it directly after the component na
 # use leptos::prelude::*; use leptos_mview::mview;
 # use core::marker::PhantomData;
 #[component]
-pub fn GenericComponent<S>(ty: PhantomData<S>) -> impl IntoView {
+pub fn GenericComponent<S: 'static>(ty: PhantomData<S>) -> impl IntoView {
     std::any::type_name::<S>()
 }
 
