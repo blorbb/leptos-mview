@@ -309,8 +309,16 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
         };
 
         let directive_paths = (!directive_paths.is_empty()).then(|| {
-            quote! {
-                .add_any_attr((#(#directive_paths,)*))
+            if cfg!(feature = "__internal_erase_components") {
+                quote! {
+                    .add_any_attr(<[_]>::into_vec(::std::boxed::Box::new([
+                        #( ::leptos::attr::any_attribute::IntoAnyAttribute::into_any_attr(#directive_paths) ),*
+                    ])))
+                }
+            } else {
+                quote! {
+                    .add_any_attr((#(#directive_paths,)*))
+                }
             }
         });
 

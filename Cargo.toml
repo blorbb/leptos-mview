@@ -26,8 +26,8 @@ proc-macro-error2 = "2"
 # dev dependencies #
 trybuild = "1"
 # needs to use ssr for some view-to-HTML features to work.
-leptos = { version = "0.7.5", features = ["ssr", "nightly"] }
-leptos_router = { version = "0.7.5", features = ["ssr", "nightly"] }
+leptos = { version = "0.7.8", features = ["ssr", "nightly"] }
+leptos_router = { version = "0.7.8", features = ["ssr", "nightly"] }
 
 [dependencies]
 leptos-mview-macro = { path = "leptos-mview-macro", version = "0.4.4" }
@@ -40,3 +40,9 @@ leptos-mview = { path = ".", features = ["nightly"] }
 
 [features]
 nightly = ["leptos-mview-macro/nightly"]
+
+# https://github.com/blorbb/leptos-mview/issues/20
+[target.'cfg(erase_components)'.dependencies]
+leptos-mview-macro = { path = "leptos-mview-macro", version = "0.4.4", features = [
+    "__internal_erase_components",
+] }

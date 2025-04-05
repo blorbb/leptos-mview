@@ -21,3 +21,5 @@ leptos.workspace = true
 
 [features]
 nightly = ["proc-macro-error2/nightly"]
+# https://github.com/blorbb/leptos-mview/issues/20
+__internal_erase_components = ["leptos-mview-core/__internal_erase_components"]

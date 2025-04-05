@@ -228,9 +228,9 @@ pub(super) fn xml_directive_tokens(directive: &Directive) -> TokenStream {
 
 pub(super) fn xml_spread_tokens(attr: &SpreadAttr) -> TokenStream {
     let (dotdot, expr) = (attr.dotdot(), attr.expr());
-    let attrs = syn::Ident::new("add_any_attr", dotdot.span());
+    let add_any_attr = syn::Ident::new("add_any_attr", dotdot.span());
     quote! {
-        .#attrs(#expr)
+        .#add_any_attr(::leptos::tachys::html::attribute::IntoAttribute::into_attr(#expr))
     }
 }
 
@@ -455,5 +455,10 @@ pub(super) fn directive_to_any_attr_path(directive: &Directive) -> Option<TokenS
 
 /// This should be added with all the other directives.
 ///
-/// Spread attrs are added as `.add_any_attr(expr)`.
-pub(super) fn component_spread_tokens(attr: &SpreadAttr) -> TokenStream { attr.expr().clone() }
+/// Spread attrs are added as `IntoAttribute::into_attr(expr)`.
+pub(super) fn component_spread_tokens(attr: &SpreadAttr) -> TokenStream {
+    let attrs = attr.expr().clone();
+    quote! {
+        ::leptos::tachys::html::attribute::IntoAttribute::into_attr(#attrs)
+    }
+}
