@@ -1,7 +1,7 @@
 use proc_macro2::{Span, TokenStream};
 use proc_macro_error2::emit_error;
 use quote::{quote, quote_spanned};
-use syn::{ext::IdentExt, spanned::Spanned};
+use syn::spanned::Spanned;
 
 use crate::{
     ast::{
@@ -182,13 +182,13 @@ pub(super) fn xml_directive_method(directive: &Directive) -> TokenStream {
 
     match dir.to_string().as_str() {
         "class" | "style" => {
-            let key = key.to_lit_str();
             emit_error_if_modifier(modifier.as_ref());
+            let key = key.to_lit_str();
             quote! { .#dir((#key, #value)) }
         }
         "prop" => {
-            let key = key.to_lit_str();
             emit_error_if_modifier(modifier.as_ref());
+            let key = key.to_lit_str();
             quote! { .#dir(#key, #value) }
         }
         "on" => {
@@ -196,6 +196,7 @@ pub(super) fn xml_directive_method(directive: &Directive) -> TokenStream {
             quote! { .#dir(#event_path, #value) }
         }
         "use" => {
+            emit_error_if_modifier(directive.modifier.as_ref());
             let (fn_name, value) = use_directive_fn_value(directive);
             let directive = syn::Ident::new("directive", dir.span());
             quote! {
@@ -234,7 +235,8 @@ pub(super) fn xml_directive_method(directive: &Directive) -> TokenStream {
 pub(super) fn xml_spread_method(attr: &SpreadAttr) -> TokenStream {
     let (dotdot, expr) = (attr.dotdot(), attr.expr());
     let add_any_attr = syn::Ident::new("add_any_attr", dotdot.span());
-    quote! {
+    quote_spanned! {
+        dotdot.span()=>
         .#add_any_attr(::leptos::tachys::html::attribute::IntoAttribute::into_attr(#expr))
     }
 }
@@ -385,66 +387,74 @@ pub(super) fn component_children_method<'a>(
 /// )
 /// ```
 pub(super) fn directive_to_any_attr_expr(directive: &Directive) -> Option<TokenStream> {
+    // NOTE: all of the paths need to be fully spanned to get proper error spans!
+
     let dir = &directive.dir;
     let path = match &*dir.to_string() {
         "class" | "style" => {
+            emit_error_if_modifier(directive.modifier.as_ref());
             // avoid making it string coloured
             let key = directive.key.to_unspanned_string();
             let value = directive.value.clone().unwrap_or_else(Value::new_true);
-            // to avoid spanning the directive to the module
-            let dir_unspanned = syn::Ident::new(&dir.to_string(), Span::call_site());
-            quote! {
-                ::leptos::tachys::html::#dir_unspanned::#dir((#key, #value))
+            quote_spanned! {
+                dir.span()=>
+                ::leptos::tachys::html::#dir::#dir((#key, #value))
             }
         }
         "attr" => {
+            emit_error_if_modifier(directive.modifier.as_ref());
             let attr_kind = AttributeKind::from(&*directive.key.to_lit_str().value());
             match attr_kind {
                 AttributeKind::Class | AttributeKind::Style => {
                     let class_or_style = directive.key.to_ident_or_emit();
                     let value = directive.value.clone().unwrap_or_else(Value::new_true);
-                    // to avoid spanning to the module name
-                    let class_or_style_unspanned =
-                        syn::Ident::new(&class_or_style.unraw().to_string(), Span::call_site());
-                    quote! {
-                        ::leptos::tachys::html::#class_or_style_unspanned::#class_or_style(#value)
+                    quote_spanned! {
+                        dir.span()=>
+                        ::leptos::tachys::html::#class_or_style::#class_or_style(#value)
                     }
                 }
                 AttributeKind::Custom => {
                     let attr_name = directive.key.to_unspanned_string();
                     let value = directive.value.clone().unwrap_or_else(Value::new_true);
-                    quote! {
+                    quote_spanned! {
+                        dir.span()=>
                         ::leptos::tachys::html::attribute::custom::custom_attribute(#attr_name, #value)
                     }
                 }
                 AttributeKind::OtherChecked => {
                     let attr_name = directive.key.to_ident_or_emit();
                     let value = directive.value.clone().unwrap_or_else(Value::new_true);
-                    quote! {
+                    quote_spanned! {
+                        dir.span()=>
                         ::leptos::tachys::html::attribute::#attr_name(#value)
                     }
                 }
             }
         }
         "prop" => {
+            emit_error_if_modifier(directive.modifier.as_ref());
             let prop = &directive.dir;
             let prop_name = directive.key.to_lit_str();
             let value = directive.value.clone().unwrap_or_else(Value::new_true);
-            quote! {
+            quote_spanned! {
+                dir.span()=>
                 ::leptos::tachys::html::property::#prop(#prop_name, #value)
             }
         }
         "on" => {
             let event_path = event_listener_event_path(directive);
             let value = &directive.value;
-            quote! {
+            quote_spanned! {
+                dir.span()=>
                 ::leptos::tachys::html::event::on(#event_path, #value)
             }
         }
         "use" => {
+            emit_error_if_modifier(directive.modifier.as_ref());
             let (fn_name, value) = use_directive_fn_value(directive);
             let directive_method = syn::Ident::new("directive", directive.dir.span());
-            quote! {
+            quote_spanned! {
+                dir.span()=>
                 ::leptos::tachys::html::directive::#directive_method(
                     #fn_name,
                     #value
@@ -462,7 +472,8 @@ pub(super) fn directive_to_any_attr_expr(directive: &Directive) -> Option<TokenS
 /// Spread attrs are added as `IntoAttribute::into_attr(expr)`.
 pub(super) fn component_spread_expr(attr: &SpreadAttr) -> TokenStream {
     let attrs = attr.expr().clone();
-    quote! {
+    quote_spanned! {
+        attr.dotdot().span()=>
         ::leptos::tachys::html::attribute::IntoAttribute::into_attr(#attrs)
     }
 }

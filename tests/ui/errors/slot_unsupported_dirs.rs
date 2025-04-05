@@ -1,4 +1,4 @@
-use leptos::prelude::*;
+use leptos::{prelude::*, web_sys::Element};
 use leptos_mview::mview;
 
 #[slot]
@@ -27,7 +27,7 @@ fn try_bad_dirs() {
         }
     };
 
-    fn a_directive(_el: HtmlElement<html::AnyElement>) {}
+    fn a_directive(_el: Element) {}
     let _use = mview! {
         TakesNothing {
             slot:Nothing use:a_directive;

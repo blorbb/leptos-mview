@@ -1,50 +1,18 @@
-error[E0618]: expected function, found `bool`
-  --> tests/ui/errors/com_dyn_classes.rs:16:30
+error[E0277]: the trait bound `(&str, {closure@$DIR/tests/ui/errors/com_dyn_classes.rs:16:30: 16:42}): IntoClass` is not satisfied
+  --> tests/ui/errors/com_dyn_classes.rs:16:20
    |
-16 |         AComponent class:red=true;
-   |                              ^^^^ call expression requires function
-
-error[E0308]: mismatched types
-  --> tests/ui/errors/com_dyn_classes.rs:22:30
+16 |         AComponent class:red=["not this"];
+   |                    ^^^^^ unsatisfied trait bound
    |
-22 |         AComponent class:red=["not this"];
-   |                              ^^^^^^^^^^^^
-   |                              |
-   |                              expected `bool`, found `&str`
-   |                              arguments to this function are incorrect
+   = help: the trait `IntoClass` is not implemented for `(&str, {closure@$DIR/tests/ui/errors/com_dyn_classes.rs:16:30: 16:42})`
+   = help: the following other types implement trait `IntoClass`:
+             (&str, F)
+             (&str, bool)
+note: required by a bound in `leptos::tachys::html::class::class`
+  --> $CARGO/tachys-0.1.7/src/html/class.rs
    |
-note: method defined here
-  --> $RUST/core/src/bool.rs
-   |
-   |     pub fn then_some<T>(self, t: T) -> Option<T> {
-   |            ^^^^^^^^^
-
-error[E0599]: no method named `class` found for struct `EmptyPropsBuilder` in the current scope
-  --> tests/ui/errors/com_dyn_classes.rs:34:17
-   |
-33 |       _ = mview! {
-   |  _________-
-34 | |         Nothing class:red=[true];
-   | |                -^^^^^ method not found in `EmptyPropsBuilder`
-   | |________________|
-   |
-
-error[E0599]: no method named `class` found for struct `EmptyPropsBuilder` in the current scope
-  --> tests/ui/errors/com_dyn_classes.rs:40:16
-   |
-39 |       _ = mview! {
-   |  _________-
-40 | |         Nothing.red;
-   | |               -^ method not found in `EmptyPropsBuilder`
-   | |_______________|
-   |
-
-error[E0599]: no method named `id` found for struct `EmptyPropsBuilder` in the current scope
-  --> tests/ui/errors/com_dyn_classes.rs:46:17
-   |
-45 |       _ = mview! {
-   |  _________-
-46 | |         Nothing #unique;
-   | |                -^ method not found in `EmptyPropsBuilder`
-   | |________________|
-   |
+   | pub fn class<C>(class: C) -> Class<C>
+   |        ----- required by a bound in this function
+   | where
+   |     C: IntoClass,
+   |        ^^^^^^^^^ required by this bound in `class`

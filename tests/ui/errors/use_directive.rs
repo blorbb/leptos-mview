@@ -11,6 +11,8 @@ fn missing_argument() {
     };
 }
 
+// the span looks bad on this but it's just a light info about the into call.
+// it looks fine in rust-analyzer.
 fn extra_argument() {
     _ = mview! {
         span use:no_arg_dir=2;

@@ -1,4 +1,4 @@
-use leptos::prelude::*;
+use leptos::{prelude::*, text_prop::TextProp, web_sys::Element};
 use leptos_mview::mview;
 
 fn not_directive() {
@@ -63,6 +63,6 @@ fn invalid_parts() {
     };
 }
 
-fn directive(_el: leptos::HtmlElement<leptos::html::AnyElement>) {}
+fn directive(_el: Element) {}
 
 fn main() {}

@@ -293,8 +293,10 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
 
     if IS_SLOT {
         // Into is for turning a single slot into a vec![slot] if needed
+        // need to span the into for the unreachable warning
+        let into = quote_spanned!(path.span()=> ::std::convert::Into::into);
         Some(quote! {
-            ::std::convert::Into::into(
+            #into(
                 #path::builder()
                     #attrs
                     #children
@@ -306,6 +308,9 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
         // call site.
         let component_props_builder = quote_spanned! {
             path.span()=> ::leptos::component::component_props_builder(&#path)
+        };
+        let component_view = quote_spanned! {
+            path.span()=> ::leptos::component::component_view
         };
 
         let directive_paths = (!directive_paths.is_empty()).then(|| {
@@ -323,7 +328,7 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
         });
 
         Some(quote! {
-            ::leptos::component::component_view(
+            #component_view(
                 &#path,
                 #component_props_builder
                     #attrs

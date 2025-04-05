@@ -1,23 +1,11 @@
-error: `style:` is not supported on components/slots
- --> tests/ui/errors/unsupported_attrs.rs:6:19
-  |
-6 |         Component style:color="white";
-  |                   ^^^^^
-
-error: `prop:` is not supported on components/slots
-  --> tests/ui/errors/unsupported_attrs.rs:12:19
-   |
-12 |         Component prop:value="1";
-   |                   ^^^^
-
 error: `attr:` is not supported on elements
-  --> tests/ui/errors/unsupported_attrs.rs:18:15
-   |
-18 |         input attr:class="no" type="text";
-   |               ^^^^
+ --> tests/ui/errors/unsupported_attrs.rs:6:15
+  |
+6 |         input attr:class="no" type="text";
+  |               ^^^^
 
 error: `clone:` is not supported on elements
-  --> tests/ui/errors/unsupported_attrs.rs:26:18
+  --> tests/ui/errors/unsupported_attrs.rs:14:18
    |
-26 |             span clone:notcopy {
+14 |             span clone:notcopy {
    |                  ^^^^^

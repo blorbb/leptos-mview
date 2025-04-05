@@ -2,7 +2,7 @@ error[E0277]: the trait bound `i32: From<()>` is not satisfied
   --> tests/ui/errors/use_directive.rs:10:17
    |
 10 |         div use:arg_dir;
-   |                 ^^^^^^^ the trait `From<()>` is not implemented for `i32`, which is required by `(): Into<_>`
+   |                 ^^^^^^^ the trait `From<()>` is not implemented for `i32`
    |
    = help: the following other types implement trait `From<T>`:
              `i32` implements `From<bool>`
@@ -13,13 +13,13 @@ error[E0277]: the trait bound `i32: From<()>` is not satisfied
    = note: required for `()` to implement `Into<i32>`
 
 error[E0277]: the trait bound `(): From<{integer}>` is not satisfied
-  --> tests/ui/errors/use_directive.rs:16:29
+  --> tests/ui/errors/use_directive.rs:18:29
    |
-15 |       _ = mview! {
+17 |       _ = mview! {
    |  _________-
-16 | |         span use:no_arg_dir=2;
-   | |                             ^ the trait `From<{integer}>` is not implemented for `()`, which is required by `{integer}: Into<_>`
-17 | |     };
+18 | |         span use:no_arg_dir=2;
+   | |                             ^ the trait `From<{integer}>` is not implemented for `()`
+19 | |     };
    | |_____- required by a bound introduced by this call
    |
    = help: the following other types implement trait `From<T>`:

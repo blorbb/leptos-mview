@@ -10,7 +10,7 @@ error[E0061]: this method takes 1 argument but 0 arguments were supplied
   --> tests/ui/errors/slot_builder_spans.rs:22:18
    |
 22 |             slot:SChildren { "hi" }
-   |                  ^^^^^^^^^ an argument of type `SChildrenBuilder_Error_Missing_required_field_an_attr` is missing
+   |                  ^^^^^^^^^ argument #1 of type `SChildrenBuilder_Error_Missing_required_field_an_attr` is missing
    |
 note: method defined here
   --> tests/ui/errors/slot_builder_spans.rs:10:1
@@ -22,6 +22,20 @@ help: provide the argument
    |
 22 |             slot:SChildren(/* SChildrenBuilder_Error_Missing_required_field_an_attr */) { "hi" }
    |                           +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+warning: unreachable call
+  --> tests/ui/errors/slot_builder_spans.rs:22:18
+   |
+20 |       _ = mview! {
+   |  _________-
+21 | |         TakesSChildren {
+22 | |             slot:SChildren { "hi" }
+   | |                  ^^^^^^^^^ unreachable call
+23 | |         }
+24 | |     };
+   | |_____- any code following this expression is unreachable
+   |
+   = note: `#[warn(unreachable_code)]` on by default
 
 error[E0308]: mismatched types
   --> tests/ui/errors/slot_builder_spans.rs:29:49
@@ -41,9 +55,9 @@ error[E0308]: mismatched types
   --> tests/ui/errors/slot_builder_spans.rs:37:38
    |
 37 |             slot:SChildren an_attr=1 |s| { "this is " {s} }
-   |                                      ^^^ expected `Rc<dyn Fn() -> Fragment>`, found closure
+   |                                      ^^^ expected `Arc<dyn Fn() -> AnyView + Send + Sync>`, found closure
    |
-   = note: expected struct `Rc<(dyn std::ops::Fn() -> Fragment + 'static)>`
+   = note: expected struct `Arc<(dyn Fn() -> leptos::prelude::AnyView + Send + std::marker::Sync + 'static)>`
              found closure `{closure@$DIR/tests/ui/errors/slot_builder_spans.rs:37:38: 37:41}`
 
 error[E0599]: no method named `children` found for struct `SNoChildrenBuilder` in the current scope
@@ -60,20 +74,26 @@ error[E0599]: no method named `children` found for struct `SNoChildrenBuilder` i
    | |_________________________________________|
    |
 
-error[E0277]: the trait bound `leptos::Callback<i32, leptos::View>: ToChildren<{closure@$DIR/tests/ui/errors/slot_builder_spans.rs:73:37: 73:43}>` is not satisfied
-  --> tests/ui/errors/slot_builder_spans.rs:71:9
+error[E0277]: the trait bound `leptos::prelude::Callback<i32, leptos::prelude::AnyView>: ToChildren<{closure@$DIR/tests/ui/errors/slot_builder_spans.rs:73:37: 73:43}>` is not satisfied
+  --> tests/ui/errors/slot_builder_spans.rs:73:37
    |
 71 |       _ = mview! {
-   |  _________^
+   |  _________-
 72 | |         TakesSClosureChildren {
 73 | |             slot:SClosureChildren { "hey!" }
+   | |                                     ^^^^^^ unsatisfied trait bound
 74 | |         }
 75 | |     };
-   | |_____^ the trait `ToChildren<{closure@$DIR/tests/ui/errors/slot_builder_spans.rs:73:37: 73:43}>` is not implemented for `leptos::Callback<i32, leptos::View>`
+   | |_____- required by a bound introduced by this call
    |
+   = help: the trait `ToChildren<{closure@$DIR/tests/ui/errors/slot_builder_spans.rs:73:37: 73:43}>` is not implemented for `leptos::prelude::Callback<i32, leptos::prelude::AnyView>`
    = help: the following other types implement trait `ToChildren<F>`:
-             Box<(dyn FnMut() -> Fragment + 'static)>
-             Box<(dyn FnOnce() -> Fragment + 'static)>
-             Box<(dyn std::ops::Fn() -> Fragment + 'static)>
-             Rc<(dyn std::ops::Fn() -> Fragment + 'static)>
-   = note: this error originates in the macro `mview` (in Nightly builds, run with -Z macro-backtrace for more info)
+             Arc<(dyn Fn() -> Fragment + Send + 'static)>
+             Arc<(dyn Fn() -> leptos::prelude::AnyView + Send + std::marker::Sync + 'static)>
+             Box<(dyn Fn() -> leptos::prelude::AnyView + Send + 'static)>
+             Box<(dyn FnMut() -> Fragment + Send + 'static)>
+             Box<(dyn FnMut() -> leptos::prelude::AnyView + Send + 'static)>
+             Box<(dyn FnOnce() -> Fragment + Send + 'static)>
+             Box<(dyn FnOnce() -> leptos::prelude::AnyView + Send + 'static)>
+             TypedChildren<C>
+           and $N others
