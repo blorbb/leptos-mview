@@ -210,13 +210,18 @@ pub(super) fn xml_directive_method(directive: &Directive) -> TokenStream {
             emit_error_if_modifier(modifier.as_ref());
             let bind = syn::Ident::new("bind", dir.span());
             let bound_attribute_name = utils::snake_case_to_upper_camel(key.to_ident_or_emit());
+            let bind_key = if key.to_lit_str().value() == "group" {
+                quote_spanned!(key.span()=> ::leptos::tachys::reactive_graph::bind::#bound_attribute_name)
+            } else {
+                quote_spanned!(key.span()=> ::leptos::attr::#bound_attribute_name)
+            };
 
             // https://github.com/leptos-rs/leptos/pull/3680/files
             // special case for `bind:group`
             if key.to_lit_str().value() == "group" {
-                quote! { .#bind(::leptos::tachys::reactive_graph::bind::#bound_attribute_name, #value) }
+                quote_spanned! {key.span()=> .#bind(#bind_key, #value) }
             } else {
-                quote! { .#bind(::leptos::attr::#bound_attribute_name, #value) }
+                quote_spanned! {key.span() => .#bind(#bind_key, #value) }
             }
         }
         _ => {
@@ -422,10 +427,11 @@ pub(super) fn directive_to_any_attr_expr(directive: &Directive) -> Option<TokenS
             }
         }
         "prop" => {
-            let prop = directive.key.to_ident_or_emit();
+            let prop = &directive.dir;
+            let prop_name = directive.key.to_lit_str();
             let value = directive.value.clone().unwrap_or_else(Value::new_true);
             quote! {
-                ::leptos::tachys::html::property::#prop(#value)
+                ::leptos::tachys::html::property::#prop(#prop_name, #value)
             }
         }
         "on" => {
