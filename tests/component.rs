@@ -18,11 +18,11 @@ fn basic() {
         }
     }
 
-    _ = view! {
-        <MyComponent my_attribute="something" another_attribute=vec![0, 1]>
+    _ = mview! {
+        MyComponent my-attribute="something" another-attribute={vec![0, 1]} (
             "my child"
-        </MyComponent>
-    }
+        )
+    };
 }
 
 #[test]
