@@ -110,6 +110,23 @@ async fn fetch_from_db(data: String) -> usize { data.len() }
 
 The `view!` macros in Leptos is often the largest part of a component, and can get extremely long when writing complex components. This macro aims to be as **concise** as possible, trying to **minimise unnecessary punctuation/words** and **shorten common patterns**.
 
+This macro aims to provide well-spanned error messages (so that the whole macro isn't red when you make a mistake). If you find an error message that is extremely confusing or making the entire macro invocation show the error, I consider this a bug! Please report them (but see below first)!
+
+`mview!` is also much faster than `view!` when providing autocomplete due to being lazier with parsing. (This hasn't been benchmarked properly, just from my personal experience using this with rust-analyzer. Maybe I'll benchmark this someday.)
+
+### Better error messages
+
+Leptos 0.7 uses a statically typed view tree, which means that an error in one section will often propagate everywhere due to unsatisfied trait bounds / types. Enabling [the `erase_components` cfg flag](https://book.leptos.dev/getting_started/leptos_dx.html#4-use---cfgerase_components-during-development) improves some error messages.
+
+This cfg flag needs to be enabled in either the rust-analyzer config or in `.cargo/config.toml`. For example, rust-analyzer can be configured in VSCode by adding this to your settings.json:
+```json
+"rust-analyzer.server.extraEnv": {
+    "RUSTFLAGS": "--cfg=erase_components"
+}
+```
+
+This crate also has a feature `"nightly"` that enables better diagnostic messages, using the nightly Diagnostic API. (This simply enables the nightly feature in proc-macro-error2. Necessary while [this pr](https://github.com/GnomedDev/proc-macro-error-2/pull/5) is not yet merged.)
+
 ## Compatibility
 
 This macro will be compatible with the latest stable release of Leptos. The macro references Leptos items using `::leptos::...`, no items are re-exported from this crate. Therefore, this crate will likely work with any Leptos version if no view-related items are changed.
@@ -122,8 +139,6 @@ The below are the versions with which I have tested it to be working. It is like
 | `0.2`                  | `0.5`, `0.6`                |
 | `0.3`                  | `0.6`                       |
 | `0.4`                  | `0.7`                       |
-
-This crate also has a feature `"nightly"` that enables better proc-macro diagnostics (simply enables the nightly feature in proc-macro-error2. Necessary while [this pr](https://github.com/GnomedDev/proc-macro-error-2/pull/5) is not yet merged).
 
 ## Syntax details
 
@@ -174,6 +189,8 @@ mview! {
 ```
 
 Classes/ids created with the selector syntax can be mixed with the attribute `class="..."` and directive `class:a-class={signal}` as well.
+
+There is also a special element `!DOCTYPE html;`, equivalent to `<!DOCTYPE html>`.
 
 ### Slots
 
