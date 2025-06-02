@@ -13,7 +13,7 @@ fn spread_html_element() {
     };
     check_str(
         res,
-        r#"<div data-yet-another-thing="z" data-index="0" data-another="b" class="c">children</div>"#,
+        r#"<div data-yet-another-thing="z" data-index="0" data-another="b" class="c">children<!></div>"#,
     );
 }
 

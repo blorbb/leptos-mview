@@ -26,16 +26,18 @@ proc-macro-error2 = "2"
 # dev dependencies #
 trybuild = "1"
 # needs to use ssr for some view-to-HTML features to work.
-leptos = { version = "0.7.8", features = ["ssr", "nightly"] }
-leptos_router = { version = "0.7.8", features = ["ssr", "nightly"] }
+leptos = { version = "0.8.2", features = ["ssr", "nightly"] }
+leptos_router = { version = "0.8.2", features = ["ssr", "nightly"] }
+any_spawner = "0.3.0"
 
-[dependencies]
+[dependencies] # tests with async components
 leptos-mview-macro = { path = "leptos-mview-macro", version = "0.4.4" }
 
 [dev-dependencies]
 trybuild.workspace = true
 leptos.workspace = true
 leptos_router.workspace = true
+any_spawner.workspace = true
 leptos-mview = { path = ".", features = ["nightly"] }
 
 [features]

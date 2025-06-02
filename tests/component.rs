@@ -1,4 +1,5 @@
-use leptos::{prelude::*, task::Executor};
+use any_spawner::Executor;
+use leptos::prelude::*;
 use leptos_mview::mview;
 mod utils;
 use utils::check_str;

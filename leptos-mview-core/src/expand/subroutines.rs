@@ -237,7 +237,7 @@ pub(super) fn xml_spread_method(attr: &SpreadAttr) -> TokenStream {
     let add_any_attr = syn::Ident::new("add_any_attr", dotdot.span());
     quote_spanned! {
         dotdot.span()=>
-        .#add_any_attr(::leptos::tachys::html::attribute::IntoAttribute::into_attr(#expr))
+        .#add_any_attr(#expr)
     }
 }
 
@@ -469,11 +469,11 @@ pub(super) fn directive_to_any_attr_expr(directive: &Directive) -> Option<TokenS
 
 /// This should be added with all the other directives.
 ///
-/// Spread attrs are added as `IntoAttribute::into_attr(expr)`.
+/// Spread attrs are added as `expr`. This may change in the future.
 pub(super) fn component_spread_expr(attr: &SpreadAttr) -> TokenStream {
     let attrs = attr.expr().clone();
     quote_spanned! {
         attr.dotdot().span()=>
-        ::leptos::tachys::html::attribute::IntoAttribute::into_attr(#attrs)
+        #attrs
     }
 }
