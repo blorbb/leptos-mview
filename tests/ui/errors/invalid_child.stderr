@@ -12,7 +12,7 @@ error: extra semi-colon found
    |
    = help: remove this semi-colon
 
-error[E0277]: the trait bound `&&str: Render` is not satisfied
+error[E0277]: the trait bound `&&str: RenderHtml` is not satisfied
   --> tests/ui/errors/invalid_child.rs:18:13
    |
 18 |             {value}
@@ -21,10 +21,10 @@ error[E0277]: the trait bound `&&str: Render` is not satisfied
    = help: the trait `leptos::prelude::ElementChild<NewChild>` is implemented for `leptos::html::HtmlElement<E, At, Ch>`
    = note: required for `&str` to implement `FnOnce()`
    = note: required for `&&str` to implement `ReactiveFunction`
-   = note: required for `&&str` to implement `Render`
+   = note: required for `&&str` to implement `RenderHtml`
    = note: required for `leptos::html::HtmlElement<leptos::html::Span, (), ()>` to implement `leptos::prelude::ElementChild<&&str>`
 
-error[E0277]: the trait bound `std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:28:22: 28:33}>: Render` is not satisfied
+error[E0277]: the trait bound `std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:28:22: 28:33}>: RenderHtml` is not satisfied
   --> tests/ui/errors/invalid_child.rs:26:13
    |
 26 | /             {values
@@ -38,7 +38,7 @@ error[E0277]: the trait bound `std::iter::Map<std::vec::IntoIter<&str>, {closure
    = help: the trait `FnMut()` is not implemented for `std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:28:22: 28:33}>`
    = help: the trait `leptos::prelude::ElementChild<NewChild>` is implemented for `leptos::html::HtmlElement<E, At, Ch>`
    = note: required for `std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:28:22: 28:33}>` to implement `ReactiveFunction`
-   = note: required for `std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:28:22: 28:33}>` to implement `Render`
+   = note: required for `std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:28:22: 28:33}>` to implement `RenderHtml`
    = note: required for `leptos::html::HtmlElement<Ul, (), ()>` to implement `leptos::prelude::ElementChild<std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:28:22: 28:33}>>`
 
 warning: unreachable call

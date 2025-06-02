@@ -13,7 +13,7 @@ error[E0061]: this method takes 1 argument but 0 arguments were supplied
    |         ^^^ argument #1 of type `ForPropsBuilder_Error_Missing_required_field_key` is missing
    |
 note: method defined here
-  --> $CARGO/leptos-0.7.8/src/for_loop.rs
+  --> $CARGO/leptos-0.8.2/src/for_loop.rs
    |
    | #[component]
    | ^^^^^^^^^^^^
@@ -44,7 +44,7 @@ error[E0277]: expected a `Fn()` closure, found `str`
    = note: wrap the `str` in a closure with no arguments: `|| { /* code */ }`
    = note: required for `&str` to implement `FnOnce()`
 note: required by a bound in `ShowPropsBuilder::<W, C, (__children, (), __fallback)>::when`
-  --> $CARGO/leptos-0.7.8/src/show.rs
+  --> $CARGO/leptos-0.8.2/src/show.rs
    |
    |     when: W,
    |     ---- required by a bound in this associated function
@@ -62,7 +62,7 @@ error[E0277]: expected a `Fn()` closure, found `str`
    = note: wrap the `str` in a closure with no arguments: `|| { /* code */ }`
    = note: required for `&str` to implement `Fn()`
 note: required by a bound in `leptos::prelude::Show`
-  --> $CARGO/leptos-0.7.8/src/show.rs
+  --> $CARGO/leptos-0.8.2/src/show.rs
    |
    | pub fn Show<W, C>(
    |        ---- required by a bound in this function
@@ -96,7 +96,7 @@ error[E0277]: expected a `Fn()` closure, found `bool`
    = help: the trait `Fn()` is not implemented for `bool`
    = note: wrap the `bool` in a closure with no arguments: `|| { /* code */ }`
 note: required by a bound in `ShowPropsBuilder::<W, C, (__children, (), __fallback)>::when`
-  --> $CARGO/leptos-0.7.8/src/show.rs
+  --> $CARGO/leptos-0.8.2/src/show.rs
    |
    |     when: W,
    |     ---- required by a bound in this associated function
@@ -115,7 +115,7 @@ error[E0277]: expected a `Fn()` closure, found `bool`
    = note: required for `ShowProps<bool, _>` to implement `leptos::prelude::Props`
    = note: required for `fn(ShowProps<bool, _>) -> impl leptos::IntoView {leptos::prelude::Show::<bool, _>}` to implement `leptos::prelude::Component<ShowProps<bool, _>>`
 note: required by a bound in `component_props_builder`
-  --> $CARGO/leptos-0.7.8/src/component.rs
+  --> $CARGO/leptos-0.8.2/src/component.rs
    |
    | pub fn component_props_builder<P: PropsOrNoPropsBuilder>(
    |        ----------------------- required by a bound in this function
@@ -173,7 +173,7 @@ error[E0277]: `{closure@$DIR/tests/ui/errors/com_builder_spans.rs:57:22: 57:35}`
    |
    = help: the trait `Future` is not implemented for closure `{closure@$DIR/tests/ui/errors/com_builder_spans.rs:57:22: 57:35}`
 note: required by a bound in `AwaitPropsBuilder::<T, Fut, Chil, V, ((), __blocking, __children)>::future`
-  --> $CARGO/leptos-0.7.8/src/await_.rs
+  --> $CARGO/leptos-0.8.2/src/await_.rs
    |
    |     future: Fut,
    |     ------ required by a bound in this associated function
@@ -191,7 +191,7 @@ error[E0277]: `{closure@$DIR/tests/ui/errors/com_builder_spans.rs:57:22: 57:35}`
    = note: required for `AwaitProps<_, {closure@$DIR/tests/ui/errors/com_builder_spans.rs:57:22: 57:35}, _, _>` to implement `leptos::prelude::Props`
    = note: required for `fn(AwaitProps<_, {closure@$DIR/tests/ui/errors/com_builder_spans.rs:57:22: 57:35}, _, _>) -> impl leptos::IntoView {leptos::prelude::Await::<_, {closure@$DIR/tests/ui/errors/com_builder_spans.rs:57:22: 57:35}, _, _>}` to implement `leptos::prelude::Component<AwaitProps<_, {closure@$DIR/tests/ui/errors/com_builder_spans.rs:57:22: 57:35}, _, _>>`
 note: required by a bound in `component_props_builder`
-  --> $CARGO/leptos-0.7.8/src/component.rs
+  --> $CARGO/leptos-0.8.2/src/component.rs
    |
    | pub fn component_props_builder<P: PropsOrNoPropsBuilder>(
    |        ----------------------- required by a bound in this function
@@ -202,7 +202,7 @@ help: use parentheses to call this closure
 57 |         Await() future=[async { 3 }] { "no args" }
    |              ++
 
-error[E0599]: the method `children` exists for struct `AwaitPropsBuilder<_, {closure@com_builder_spans.rs:57:22}, _, _, (({closure@com_builder_spans.rs:57:22},), (), ())>`, but its trait bounds were not satisfied
+error[E0599]: the method `children` exists for struct `AwaitPropsBuilder<_, {closure@$DIR/tests/ui/errors/com_builder_spans.rs:57:22: 57:35}, _, _, (({closure@$DIR/tests/ui/errors/com_builder_spans.rs:57:22: 57:35},), (), ())>`, but its trait bounds were not satisfied
   --> tests/ui/errors/com_builder_spans.rs:57:38
    |
 56 |       _ = mview! {

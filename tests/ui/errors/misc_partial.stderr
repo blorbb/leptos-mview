@@ -38,6 +38,6 @@ error[E0599]: no method named `test` found for struct `leptos::html::HtmlElement
    |  _________-
 11 | |         div class:x={true} {
 12 | |             span class=test
-   | |                       -^^^^ method not found in `HtmlElement<Span, Vec<AnyAttribute>, ()>`
+   | |                       -^^^^ method not found in `leptos::html::HtmlElement<leptos::html::Span, Vec<AnyAttribute>, ()>`
    | |_______________________|
    |

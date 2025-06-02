@@ -88,12 +88,12 @@ error[E0277]: the trait bound `leptos::prelude::Callback<i32, leptos::prelude::A
    |
    = help: the trait `ToChildren<{closure@$DIR/tests/ui/errors/slot_builder_spans.rs:73:37: 73:43}>` is not implemented for `leptos::prelude::Callback<i32, leptos::prelude::AnyView>`
    = help: the following other types implement trait `ToChildren<F>`:
-             Arc<(dyn Fn() -> Fragment + Send + 'static)>
-             Arc<(dyn Fn() -> leptos::prelude::AnyView + Send + std::marker::Sync + 'static)>
-             Box<(dyn Fn() -> leptos::prelude::AnyView + Send + 'static)>
-             Box<(dyn FnMut() -> Fragment + Send + 'static)>
-             Box<(dyn FnMut() -> leptos::prelude::AnyView + Send + 'static)>
-             Box<(dyn FnOnce() -> Fragment + Send + 'static)>
-             Box<(dyn FnOnce() -> leptos::prelude::AnyView + Send + 'static)>
-             TypedChildren<C>
+             `Arc<(dyn Fn() -> Fragment + Send + 'static)>` implements `ToChildren<ChildrenOptContainer<T>>`
+             `Arc<(dyn Fn() -> Fragment + Send + 'static)>` implements `ToChildren<F>`
+             `Arc<(dyn Fn() -> leptos::prelude::AnyView + Send + std::marker::Sync + 'static)>` implements `ToChildren<ChildrenOptContainer<T>>`
+             `Arc<(dyn Fn() -> leptos::prelude::AnyView + Send + std::marker::Sync + 'static)>` implements `ToChildren<F>`
+             `Box<(dyn Fn() -> leptos::prelude::AnyView + Send + 'static)>` implements `ToChildren<ChildrenOptContainer<T>>`
+             `Box<(dyn Fn() -> leptos::prelude::AnyView + Send + 'static)>` implements `ToChildren<F>`
+             `Box<(dyn FnMut() -> Fragment + Send + 'static)>` implements `ToChildren<ChildrenOptContainer<T>>`
+             `Box<(dyn FnMut() -> Fragment + Send + 'static)>` implements `ToChildren<F>`
            and $N others

@@ -40,25 +40,25 @@ error[E0599]: no method named `a` found for struct `leptos::html::HtmlElement` i
 5 |       _ = mview! {
   |  _________-
 6 | |         div a=a {}
-  | |            -^ method not found in `HtmlElement<Div, (), ()>`
+  | |            -^ method not found in `leptos::html::HtmlElement<leptos::html::Div, (), ()>`
   | |____________|
   |
 
-error[E0061]: this function takes 1 argument but 0 arguments were supplied
+error[E0061]: this method takes 1 argument but 0 arguments were supplied
   --> tests/ui/errors/invalid_value.rs:12:14
    |
 12 |         div {..};
    |              ^^ argument #1 is missing
    |
 note: method defined here
-  --> $CARGO/tachys-0.1.7/src/html/attribute/mod.rs
+  --> $CARGO/tachys-0.2.3/src/view/add_attr.rs
    |
-   |     fn into_attr(self) -> Self::Output;
-   |        ^^^^^^^^^
+   |     fn add_any_attr<NewAttr: Attribute>(
+   |        ^^^^^^^^^^^^
 help: provide the argument
    |
-12 |         div {..(/* value */)};
-   |                +++++++++++++
+12 |         div {..(/* attr */)};
+   |                ++++++++++++
 
 error[E0277]: the trait bound `MissingValueAfterEq: AttributeValue` is not satisfied
   --> tests/ui/errors/invalid_value.rs:20:16
@@ -73,15 +73,15 @@ error[E0277]: the trait bound `MissingValueAfterEq: AttributeValue` is not satis
              &'a str
              ()
              Arc<str>
+             Cow<'a, str>
              IpAddr
              Ipv4Addr
              Ipv6Addr
-             NonZero<i128>
            and $N others
    = note: required for `MissingValueAfterEq` to implement `ReactiveFunction`
    = note: required for `MissingValueAfterEq` to implement `AttributeValue`
 note: required by a bound in `element::elements::<impl leptos::html::HtmlElement<leptos::html::A, At, Ch>>::href`
-  --> $CARGO/tachys-0.1.7/src/html/element/elements.rs
+  --> $CARGO/tachys-0.2.3/src/html/element/elements.rs
    |
    | / html_elements! {
    | |     /// The `<a>` HTML element (or anchor element), with its href attribute, creates a hyperlink to web pages, files, email addresses, lo...
@@ -107,15 +107,15 @@ error[E0277]: the trait bound `MissingValueAfterEq: AttributeValue` is not satis
              &'a str
              ()
              Arc<str>
+             Cow<'a, str>
              IpAddr
              Ipv4Addr
              Ipv6Addr
-             NonZero<i128>
            and $N others
    = note: required for `MissingValueAfterEq` to implement `ReactiveFunction`
    = note: required for `MissingValueAfterEq` to implement `AttributeValue`
 note: required by a bound in `element::elements::<impl leptos::html::HtmlElement<leptos::html::A, At, Ch>>::href`
-  --> $CARGO/tachys-0.1.7/src/html/element/elements.rs
+  --> $CARGO/tachys-0.2.3/src/html/element/elements.rs
    |
    | / html_elements! {
    | |     /// The `<a>` HTML element (or anchor element), with its href attribute, creates a hyperlink to web pages, files, email addresses, lo...
