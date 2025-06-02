@@ -1,5 +1,11 @@
 # Enable these when testing rust-analyzer etc with erase components.
 
+# Make sure to test with this both enabled and disabled.
+# Some tests are dependent on erase_components being enabled though,
+# just make sure there's no compile errors or completely incorrect
+# tests.
+# Use `cargo test --workspace --no-fail-fast`
+
 [target.x86_64-unknown-linux-gnu]
 rustflags = ["--cfg", "erase_components"]
 
