@@ -525,3 +525,20 @@ pub use leptos_mview_macro::mview;
 /// Not for public use. Do not implement anything on this.
 #[doc(hidden)]
 pub struct MissingValueAfterEq;
+
+#[cfg(test)]
+mod tests {
+    use leptos::prelude::*;
+
+    use super::mview;
+
+    #[component]
+    fn Component() -> impl IntoView {}
+
+    #[test]
+    fn ids() {
+        _ = mview! {
+            Component #thing-a;
+        };
+    }
+}
