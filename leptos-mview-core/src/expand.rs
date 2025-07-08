@@ -200,7 +200,7 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
         }
     } else {
         // all the ids need to be collected together
-        // as multiple attr:id=... creates multiple `id=...` attributes on teh element
+        // as multiple attr:id=... creates multiple `id=...` attributes on the element
         let mut ids = Vec::<KebabIdent>::new();
         let mut first_pound_symbol = None;
         for sel in element.selectors().iter() {
