@@ -111,7 +111,7 @@ This macro aims to provide well-spanned error messages (so that the whole macro 
 
 ## Better error messages
 
-Leptos 0.7 uses a statically typed view tree, which means that an error in one section will often propagate everywhere due to unsatisfied trait bounds / types. Enabling [the `erase_components` cfg flag](https://book.leptos.dev/getting_started/leptos_dx.html#4-use---cfgerase_components-during-development) improves some error messages.
+Leptos 0.7+ uses a statically typed view tree, which means that an error in one section will often propagate everywhere due to unsatisfied trait bounds / types. Enabling [the `erase_components` cfg flag](https://book.leptos.dev/getting_started/leptos_dx.html#5-use---cfgerase_components-during-development) improves some error messages.
 
 This cfg flag needs to be enabled in either the rust-analyzer config or in `.cargo/config.toml`. For example, rust-analyzer can be configured in VSCode by adding this to your settings.json:
 ```json
