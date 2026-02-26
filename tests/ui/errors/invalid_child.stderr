@@ -61,15 +61,36 @@ help: the trait `leptos::prelude::ElementChild<NewChild>` is implemented for `le
     = note: required for `leptos::html::HtmlElement<Ul, (), ()>` to implement `leptos::prelude::ElementChild<std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:28:22: 28:33}>>`
 
 warning: unreachable call
-  --> tests/ui/errors/invalid_child.rs:50:13
+  --> tests/ui/errors/invalid_child.rs:46:13
    |
-50 |             {todo!()}
+46 |             {todo!()}
    |             ^-------^
    |             ||
    |             |any code following this expression is unreachable
    |             unreachable call
    |
    = note: `#[warn(unreachable_code)]` (part of `#[warn(unused)]`) on by default
+
+error[E0277]: the trait bound `!: RenderHtml` is not satisfied
+ --> tests/ui/errors/invalid_child.rs:46:13
+  |
+ 46 |             {todo!()}
+    |             ^^^^^^^^^ the trait `FnMut()` is not implemented for `!`
+    |
+help: the trait `leptos::prelude::ElementChild<NewChild>` is implemented for `leptos::html::HtmlElement<E, At, Ch>`
+   --> $CARGO/tachys-0.2.13/src/html/element/mod.rs
+    |
+    | / impl<E, At, Ch, NewChild> ElementChild<NewChild> for HtmlElement<E, At, Ch>
+    | | where
+    | |     E: ElementWithChildren,
+    | |     Ch: RenderHtml + NextChildren,
+    | |
+    | |     NewChild: IntoRender,
+    | |     NewChild::Output: RenderHtml,
+    | |_________________________________^
+    = note: required for `!` to implement `ReactiveFunction`
+    = note: required for `!` to implement `RenderHtml`
+    = note: required for `leptos::html::HtmlElement<leptos::html::Div, (), ()>` to implement `leptos::prelude::ElementChild<!>`
 
 warning: unused variable: `a`
  --> tests/ui/errors/invalid_child.rs:5:9
