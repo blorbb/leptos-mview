@@ -35,7 +35,7 @@ warning: unreachable call
 24 | |     };
    | |_____- any code following this expression is unreachable
    |
-   = note: `#[warn(unreachable_code)]` on by default
+   = note: `#[warn(unreachable_code)]` (part of `#[warn(unused)]`) on by default
 
 error[E0308]: mismatched types
   --> tests/ui/errors/slot_builder_spans.rs:29:49
@@ -60,7 +60,7 @@ error[E0308]: mismatched types
    = note: expected struct `Arc<(dyn Fn() -> leptos::prelude::AnyView + Send + std::marker::Sync + 'static)>`
              found closure `{closure@$DIR/tests/ui/errors/slot_builder_spans.rs:37:38: 37:41}`
 
-error[E0599]: no method named `children` found for struct `SNoChildrenBuilder` in the current scope
+error[E0599]: no method named `children` found for struct `SNoChildrenBuilder<TypedBuilderFields>` in the current scope
   --> tests/ui/errors/slot_builder_spans.rs:53:42
    |
 42 |   #[slot]
@@ -81,19 +81,15 @@ error[E0277]: the trait bound `leptos::prelude::Callback<i32, leptos::prelude::A
    |  _________-
 72 | |         TakesSClosureChildren {
 73 | |             slot:SClosureChildren { "hey!" }
-   | |                                     ^^^^^^ unsatisfied trait bound
+   | |                                     ^^^^^^ the trait `ToChildren<{closure@$DIR/tests/ui/errors/slot_builder_spans.rs:73:37: 73:43}>` is not implemented for `leptos::prelude::Callback<i32, leptos::prelude::AnyView>`
 74 | |         }
 75 | |     };
    | |_____- required by a bound introduced by this call
    |
-   = help: the trait `ToChildren<{closure@$DIR/tests/ui/errors/slot_builder_spans.rs:73:37: 73:43}>` is not implemented for `leptos::prelude::Callback<i32, leptos::prelude::AnyView>`
    = help: the following other types implement trait `ToChildren<F>`:
-             `Arc<(dyn Fn() -> Fragment + Send + 'static)>` implements `ToChildren<ChildrenOptContainer<T>>`
-             `Arc<(dyn Fn() -> Fragment + Send + 'static)>` implements `ToChildren<F>`
-             `Arc<(dyn Fn() -> leptos::prelude::AnyView + Send + std::marker::Sync + 'static)>` implements `ToChildren<ChildrenOptContainer<T>>`
-             `Arc<(dyn Fn() -> leptos::prelude::AnyView + Send + std::marker::Sync + 'static)>` implements `ToChildren<F>`
-             `Box<(dyn Fn() -> leptos::prelude::AnyView + Send + 'static)>` implements `ToChildren<ChildrenOptContainer<T>>`
-             `Box<(dyn Fn() -> leptos::prelude::AnyView + Send + 'static)>` implements `ToChildren<F>`
-             `Box<(dyn FnMut() -> Fragment + Send + 'static)>` implements `ToChildren<ChildrenOptContainer<T>>`
-             `Box<(dyn FnMut() -> Fragment + Send + 'static)>` implements `ToChildren<F>`
-           and $N others
+             `TypedChildren<C>` implements `ToChildren<F>`
+             `TypedChildren<T>` implements `ToChildren<ChildrenOptContainer<T>>`
+             `TypedChildrenFn<C>` implements `ToChildren<F>`
+             `TypedChildrenFn<T>` implements `ToChildren<ChildrenOptContainer<T>>`
+             `TypedChildrenMut<C>` implements `ToChildren<F>`
+             `TypedChildrenMut<T>` implements `ToChildren<ChildrenOptContainer<T>>`

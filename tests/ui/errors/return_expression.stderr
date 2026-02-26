@@ -4,13 +4,22 @@ error: expected value after =
 7 |         div class=;
   |                   ^
 
-error[E0277]: the trait bound `MissingValueAfterEq: IntoClass` is not satisfied
+error[E0277]: the trait bound `leptos_mview::MissingValueAfterEq: IntoClass` is not satisfied
  --> tests/ui/errors/return_expression.rs:7:13
   |
-7 |         div class=;
-  |             ^^^^^ the trait `FnMut()` is not implemented for `MissingValueAfterEq`
-  |
-  = help: the trait `leptos::prelude::ClassAttribute<C>` is implemented for `leptos::html::HtmlElement<E, At, Ch>`
-  = note: required for `MissingValueAfterEq` to implement `ReactiveFunction`
-  = note: required for `MissingValueAfterEq` to implement `IntoClass`
-  = note: required for `leptos::html::HtmlElement<leptos::html::Div, (), ()>` to implement `leptos::prelude::ClassAttribute<MissingValueAfterEq>`
+ 7 |         div class=;
+   |             ^^^^^ the trait `FnMut()` is not implemented for `leptos_mview::MissingValueAfterEq`
+   |
+help: the trait `leptos::prelude::ClassAttribute<C>` is implemented for `leptos::html::HtmlElement<E, At, Ch>`
+  --> $CARGO/tachys-0.2.13/src/html/attribute/global.rs
+   |
+   | / impl<E, At, Ch, C> ClassAttribute<C> for HtmlElement<E, At, Ch>
+   | | where
+   | |     E: ElementType + Send,
+   | |     At: Attribute + Send,
+   | |     Ch: RenderHtml + Send,
+   | |     C: IntoClass,
+   | |_________________^
+   = note: required for `leptos_mview::MissingValueAfterEq` to implement `ReactiveFunction`
+   = note: required for `leptos_mview::MissingValueAfterEq` to implement `IntoClass`
+   = note: required for `leptos::html::HtmlElement<leptos::html::Div, (), ()>` to implement `leptos::prelude::ClassAttribute<leptos_mview::MissingValueAfterEq>`

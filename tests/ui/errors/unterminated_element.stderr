@@ -19,4 +19,4 @@ warning: unused import: `leptos::prelude::*`
 1 | use leptos::prelude::*;
   |     ^^^^^^^^^^^^^^^^^^
   |
-  = note: `#[warn(unused_imports)]` on by default
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default

@@ -84,4 +84,4 @@ warning: unused variable: `to_clone`
 54 |     let to_clone = String::new();
    |         ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_to_clone`
    |
-   = note: `#[warn(unused_variables)]` on by default
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default

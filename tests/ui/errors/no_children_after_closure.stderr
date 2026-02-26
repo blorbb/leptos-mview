@@ -16,18 +16,18 @@ error[E0061]: this method takes 1 argument but 0 arguments were supplied
  --> tests/ui/errors/no_children_after_closure.rs:6:9
   |
 6 |         Await
-  |         ^^^^^ argument #1 of type `AwaitPropsBuilder_Error_Missing_required_field_children` is missing
+  |         ^^^^^ argument #1 of type `leptos::prelude::AwaitPropsBuilder_Error_Missing_required_field_children` is missing
   |
 note: method defined here
- --> $CARGO/leptos-0.8.2/src/await_.rs
+ --> $CARGO/leptos-0.8.16/src/await_.rs
   |
   | #[component]
   | ^^^^^^^^^^^^
   = note: this error originates in the derive macro `::leptos::typed_builder_macro::TypedBuilder` (in Nightly builds, run with -Z macro-backtrace for more info)
 help: provide the argument
   |
-6 |         Await(/* AwaitPropsBuilder_Error_Missing_required_field_children */)
-  |              +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+6 |         Await(/* leptos::prelude::AwaitPropsBuilder_Error_Missing_required_field_children */)
+  |              ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 warning: unreachable call
  --> tests/ui/errors/no_children_after_closure.rs:6:9
@@ -38,4 +38,4 @@ warning: unreachable call
   |         unreachable call
   |         any code following this expression is unreachable
   |
-  = note: `#[warn(unreachable_code)]` on by default
+  = note: `#[warn(unreachable_code)]` (part of `#[warn(unused)]`) on by default
