@@ -2,7 +2,7 @@
 members = ["leptos-mview-core", "leptos-mview-macro"]
 
 [workspace.package]
-version = "0.4.4"
+version = "0.5.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/blorbb/leptos-mview"
@@ -31,7 +31,7 @@ leptos_router = { version = "0.8.12", features = ["ssr", "nightly"] }
 any_spawner = "0.3.0"
 
 [dependencies] # tests with async components
-leptos-mview-macro = { path = "leptos-mview-macro", version = "0.4.4" }
+leptos-mview-macro = { path = "leptos-mview-macro", version = "0.5.0" }
 
 [dev-dependencies]
 trybuild.workspace = true
@@ -45,6 +45,6 @@ nightly = ["leptos-mview-macro/nightly"]
 
 # https://github.com/blorbb/leptos-mview/issues/20
 [target.'cfg(erase_components)'.dependencies]
-leptos-mview-macro = { path = "leptos-mview-macro", version = "0.4.4", features = [
+leptos-mview-macro = { path = "leptos-mview-macro", version = "0.5.0", features = [
     "__internal_erase_components",
 ] }

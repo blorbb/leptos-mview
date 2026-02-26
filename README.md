@@ -139,6 +139,7 @@ The below are the versions with which I have tested it to be working. It is like
 | `0.2`                  | `0.5`, `0.6`                |
 | `0.3`                  | `0.6`                       |
 | `0.4`                  | `0.7`                       |
+| `0.5`                  | `0.8`                       |
 
 ## Syntax details
 
