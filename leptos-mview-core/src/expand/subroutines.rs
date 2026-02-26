@@ -1,7 +1,7 @@
 use proc_macro2::{Span, TokenStream};
 use proc_macro_error2::emit_error;
 use quote::{quote, quote_spanned};
-use syn::{ext::IdentExt, spanned::Spanned};
+use syn::spanned::Spanned;
 
 use crate::{
     ast::{
@@ -122,7 +122,7 @@ impl From<&str> for AttributeKind {
 
 /// Converts element class/id selector shorthands into a series of `.classes`
 /// and `.id` calls.
-pub(super) fn xml_selectors_tokens(selectors: &SelectorShorthands) -> TokenStream {
+pub(super) fn xml_selectors_methods(selectors: &SelectorShorthands) -> TokenStream {
     let (classes, ids): (Vec<_>, Vec<_>) = selectors
         .iter()
         .partition(|sel| matches!(sel, SelectorShorthand::Class { .. }));
@@ -142,7 +142,7 @@ pub(super) fn xml_selectors_tokens(selectors: &SelectorShorthands) -> TokenStrea
     quote! { #(#class_methods)* #(#id_methods)* }
 }
 
-pub(super) fn xml_kv_attribute_tokens(attr: &KvAttr, element_tag: TagKind) -> TokenStream {
+pub(super) fn xml_kv_attribute_method(attr: &KvAttr, element_tag: TagKind) -> TokenStream {
     let key = attr.key();
     let value = attr.value();
     // special cases
@@ -150,7 +150,7 @@ pub(super) fn xml_kv_attribute_tokens(attr: &KvAttr, element_tag: TagKind) -> To
         let node_ref = syn::Ident::new("node_ref", key.span());
         quote! { .#node_ref(#value) }
     } else {
-        // https://github.com/leptos-rs/leptos/blob/main/leptos_macro/src/view/mod.rs#L960
+        // https://github.com/leptos-rs/leptos/blob/bdc73594eab87ad63fd3903ae7db8864cdb2f0ae/leptos_macro/src/view/mod.rs#L1002
         // Use unchecked attributes if:
         // - it's not `class` nor `style`, and
         // - It's a custom web component or SVG element
@@ -172,7 +172,7 @@ pub(super) fn xml_kv_attribute_tokens(attr: &KvAttr, element_tag: TagKind) -> To
     }
 }
 
-pub(super) fn xml_directive_tokens(directive: &Directive) -> TokenStream {
+pub(super) fn xml_directive_method(directive: &Directive) -> TokenStream {
     let Directive {
         dir,
         key,
@@ -182,13 +182,13 @@ pub(super) fn xml_directive_tokens(directive: &Directive) -> TokenStream {
 
     match dir.to_string().as_str() {
         "class" | "style" => {
-            let key = key.to_lit_str();
             emit_error_if_modifier(modifier.as_ref());
+            let key = key.to_lit_str();
             quote! { .#dir((#key, #value)) }
         }
         "prop" => {
-            let key = key.to_lit_str();
             emit_error_if_modifier(modifier.as_ref());
+            let key = key.to_lit_str();
             quote! { .#dir(#key, #value) }
         }
         "on" => {
@@ -196,6 +196,7 @@ pub(super) fn xml_directive_tokens(directive: &Directive) -> TokenStream {
             quote! { .#dir(#event_path, #value) }
         }
         "use" => {
+            emit_error_if_modifier(directive.modifier.as_ref());
             let (fn_name, value) = use_directive_fn_value(directive);
             let directive = syn::Ident::new("directive", dir.span());
             quote! {
@@ -210,13 +211,18 @@ pub(super) fn xml_directive_tokens(directive: &Directive) -> TokenStream {
             emit_error_if_modifier(modifier.as_ref());
             let bind = syn::Ident::new("bind", dir.span());
             let bound_attribute_name = utils::snake_case_to_upper_camel(key.to_ident_or_emit());
+            let bind_key = if key.to_lit_str().value() == "group" {
+                quote_spanned!(key.span()=> ::leptos::tachys::reactive_graph::bind::#bound_attribute_name)
+            } else {
+                quote_spanned!(key.span()=> ::leptos::attr::#bound_attribute_name)
+            };
 
             // https://github.com/leptos-rs/leptos/pull/3680/files
             // special case for `bind:group`
             if key.to_lit_str().value() == "group" {
-                quote! { .#bind(::leptos::tachys::reactive_graph::bind::#bound_attribute_name, #value) }
+                quote_spanned! {key.span()=> .#bind(#bind_key, #value) }
             } else {
-                quote! { .#bind(::leptos::attr::#bound_attribute_name, #value) }
+                quote_spanned! {key.span() => .#bind(#bind_key, #value) }
             }
         }
         _ => {
@@ -226,11 +232,12 @@ pub(super) fn xml_directive_tokens(directive: &Directive) -> TokenStream {
     }
 }
 
-pub(super) fn xml_spread_tokens(attr: &SpreadAttr) -> TokenStream {
+pub(super) fn xml_spread_method(attr: &SpreadAttr) -> TokenStream {
     let (dotdot, expr) = (attr.dotdot(), attr.expr());
-    let attrs = syn::Ident::new("add_any_attr", dotdot.span());
-    quote! {
-        .#attrs(#expr)
+    let add_any_attr = syn::Ident::new("add_any_attr", dotdot.span());
+    quote_spanned! {
+        dotdot.span()=>
+        .#add_any_attr(#expr)
     }
 }
 
@@ -244,9 +251,7 @@ pub(super) fn xml_spread_tokens(attr: &SpreadAttr) -> TokenStream {
 /// ```ignore
 /// div().child("a").child({var}).child("b")
 /// ```
-pub(super) fn xml_child_methods_tokens<'a>(
-    children: impl Iterator<Item = &'a NodeChild>,
-) -> TokenStream {
+pub(super) fn xml_child_methods<'a>(children: impl Iterator<Item = &'a NodeChild>) -> TokenStream {
     let mut ts = TokenStream::new();
     for child in children {
         let child_method = syn::Ident::new("child", child.span());
@@ -261,13 +266,13 @@ pub(super) fn xml_child_methods_tokens<'a>(
 // ------------------- component only ------------------- //
 ////////////////////////////////////////////////////////////
 
-pub(super) fn component_kv_attribute_tokens(attr: &KvAttr) -> TokenStream {
+pub(super) fn component_kv_attribute_method(attr: &KvAttr) -> TokenStream {
     let (key, value) = (attr.key().to_snake_ident(), attr.value());
     quote_spanned! { attr.span()=> .#key(#value) }
 }
 
 /// Expands to a `let` statement `let to_clone = to_clone.clone();`.
-pub(super) fn component_clone_tokens(dir: &Directive) -> TokenStream {
+pub(super) fn component_clone_stmt(dir: &Directive) -> TokenStream {
     let to_clone = dir.key.to_ident_or_emit();
     emit_error_if_modifier(dir.modifier.as_ref());
     if let Some(value) = &dir.value {
@@ -312,7 +317,7 @@ pub(super) fn component_clone_tokens(dir: &Directive) -> TokenStream {
 ///     })
 /// })
 /// ```
-pub(super) fn component_children_tokens<'a>(
+pub(super) fn component_children_method<'a>(
     children: impl Iterator<Item = &'a NodeChild>,
     args: Option<&TokenStream>,
     clones: &TokenStream,
@@ -381,66 +386,75 @@ pub(super) fn component_children_tokens<'a>(
 ///     ))
 /// )
 /// ```
-pub(super) fn directive_to_any_attr_path(directive: &Directive) -> Option<TokenStream> {
+pub(super) fn directive_to_any_attr_expr(directive: &Directive) -> Option<TokenStream> {
+    // NOTE: all of the paths need to be fully spanned to get proper error spans!
+
     let dir = &directive.dir;
     let path = match &*dir.to_string() {
         "class" | "style" => {
+            emit_error_if_modifier(directive.modifier.as_ref());
             // avoid making it string coloured
             let key = directive.key.to_unspanned_string();
             let value = directive.value.clone().unwrap_or_else(Value::new_true);
-            // to avoid spanning the directive to the module
-            let dir_unspanned = syn::Ident::new(&dir.to_string(), Span::call_site());
-            quote! {
-                ::leptos::tachys::html::#dir_unspanned::#dir((#key, #value))
+            quote_spanned! {
+                dir.span()=>
+                ::leptos::tachys::html::#dir::#dir((#key, #value))
             }
         }
         "attr" => {
+            emit_error_if_modifier(directive.modifier.as_ref());
             let attr_kind = AttributeKind::from(&*directive.key.to_lit_str().value());
             match attr_kind {
                 AttributeKind::Class | AttributeKind::Style => {
                     let class_or_style = directive.key.to_ident_or_emit();
                     let value = directive.value.clone().unwrap_or_else(Value::new_true);
-                    // to avoid spanning to the module name
-                    let class_or_style_unspanned =
-                        syn::Ident::new(&class_or_style.unraw().to_string(), Span::call_site());
-                    quote! {
-                        ::leptos::tachys::html::#class_or_style_unspanned::#class_or_style(#value)
+                    quote_spanned! {
+                        dir.span()=>
+                        ::leptos::tachys::html::#class_or_style::#class_or_style(#value)
                     }
                 }
                 AttributeKind::Custom => {
                     let attr_name = directive.key.to_unspanned_string();
                     let value = directive.value.clone().unwrap_or_else(Value::new_true);
-                    quote! {
+                    quote_spanned! {
+                        dir.span()=>
                         ::leptos::tachys::html::attribute::custom::custom_attribute(#attr_name, #value)
                     }
                 }
                 AttributeKind::OtherChecked => {
                     let attr_name = directive.key.to_ident_or_emit();
                     let value = directive.value.clone().unwrap_or_else(Value::new_true);
-                    quote! {
+                    quote_spanned! {
+                        dir.span()=>
                         ::leptos::tachys::html::attribute::#attr_name(#value)
                     }
                 }
             }
         }
         "prop" => {
-            let prop = directive.key.to_ident_or_emit();
+            emit_error_if_modifier(directive.modifier.as_ref());
+            let prop = &directive.dir;
+            let prop_name = directive.key.to_lit_str();
             let value = directive.value.clone().unwrap_or_else(Value::new_true);
-            quote! {
-                ::leptos::tachys::html::property::#prop(#value)
+            quote_spanned! {
+                dir.span()=>
+                ::leptos::tachys::html::property::#prop(#prop_name, #value)
             }
         }
         "on" => {
             let event_path = event_listener_event_path(directive);
             let value = &directive.value;
-            quote! {
+            quote_spanned! {
+                dir.span()=>
                 ::leptos::tachys::html::event::on(#event_path, #value)
             }
         }
         "use" => {
+            emit_error_if_modifier(directive.modifier.as_ref());
             let (fn_name, value) = use_directive_fn_value(directive);
             let directive_method = syn::Ident::new("directive", directive.dir.span());
-            quote! {
+            quote_spanned! {
+                dir.span()=>
                 ::leptos::tachys::html::directive::#directive_method(
                     #fn_name,
                     #value
@@ -455,5 +469,11 @@ pub(super) fn directive_to_any_attr_path(directive: &Directive) -> Option<TokenS
 
 /// This should be added with all the other directives.
 ///
-/// Spread attrs are added as `.add_any_attr(expr)`.
-pub(super) fn component_spread_tokens(attr: &SpreadAttr) -> TokenStream { attr.expr().clone() }
+/// Spread attrs are added as `expr`. This may change in the future.
+pub(super) fn component_spread_expr(attr: &SpreadAttr) -> TokenStream {
+    let attrs = attr.expr().clone();
+    quote_spanned! {
+        attr.dotdot().span()=>
+        #attrs
+    }
+}

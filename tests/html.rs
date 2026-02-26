@@ -26,7 +26,7 @@ fn single_element() {
             "hi"
         }
     };
-    check_str(result, r#"<div>hi</div>"#);
+    check_str(result, r#"<div>hi<!></div>"#);
 }
 
 #[test]
@@ -57,8 +57,8 @@ fn a_bunch() {
         result,
         "hi\
         <span data-index=\"0\" class=\"abc\">\
-            <strong>d</strong>\
-            3\
+            <strong>d<!></strong>\
+            3<!>\
         </span>\
         <br>\
         <input type=\"checkbox\" checked>",
@@ -136,7 +136,7 @@ fn custom_web_component() {
 
     check_str(
         component,
-        r#"<iconify-icon icon="a" class="something">b</iconify-icon>"#,
+        r#"<iconify-icon icon="a" class="something">b<!></iconify-icon>"#,
     );
 }
 

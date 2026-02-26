@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::{prelude::*, text_prop::TextProp, web_sys::Element};
 use leptos_mview::mview;
 
 fn not_directive() {
@@ -32,9 +32,7 @@ fn invalid_modifier() {
 }
 
 #[component]
-fn Com(#[prop(optional, into)] class: TextProp) -> impl IntoView {
-    let _ = class;
-}
+fn Com(#[prop(optional, into)] class: TextProp) -> impl IntoView { let _ = class; }
 
 fn invalid_parts() {
     _ = mview! {
@@ -65,6 +63,6 @@ fn invalid_parts() {
     };
 }
 
-fn directive(_el: leptos::HtmlElement<leptos::html::AnyElement>) {}
+fn directive(_el: Element) {}
 
 fn main() {}

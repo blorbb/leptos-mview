@@ -4,7 +4,7 @@
 //! This file is for testing on the slot itself, see `com_builder_spans` for
 //! testing on components.
 
-use leptos::*;
+use leptos::prelude::*;
 use leptos_mview::mview;
 
 #[slot]
@@ -57,7 +57,7 @@ fn incorrect_children() {
 
 #[slot]
 struct SClosureChildren {
-    children: Callback<i32, View>,
+    children: Callback<i32, AnyView>,
 }
 
 #[component]

@@ -22,7 +22,7 @@ error: `use:` is not supported on slots
 33 |             slot:Nothing use:a_directive;
    |                          ^^^
 
-error: `prop:` is not supported on components/slots
+error: `prop:` is not supported on slots
   --> tests/ui/errors/slot_unsupported_dirs.rs:39:26
    |
 39 |             slot:Nothing prop:value="1";
@@ -31,7 +31,7 @@ error: `prop:` is not supported on components/slots
 warning: unused variable: `attrs`
   --> tests/ui/errors/slot_unsupported_dirs.rs:11:9
    |
-11 |     let attrs: Vec<(&'static str, Attribute)> = Vec::new();
+11 |     let attrs = view! { <{..} class="thing" /> };
    |         ^^^^^ help: if this is intentional, prefix it with an underscore: `_attrs`
    |
-   = note: `#[warn(unused_variables)]` on by default
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default

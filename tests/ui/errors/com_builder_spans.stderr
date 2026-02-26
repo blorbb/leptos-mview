@@ -1,4 +1,4 @@
-warning: use of deprecated method `leptos::ForPropsBuilder::<IF, I, T, EF, N, KF, K, ((IF,), (), __children)>::build`: Missing required field key
+warning: use of deprecated method `leptos::prelude::ForPropsBuilder::<IF, I, T, EF, N, KF, K, ((IF,), (), __children)>::build`: Missing required field key
   --> tests/ui/errors/com_builder_spans.rs:10:9
    |
 10 |         For each=[[1, 2, 3]] |i| { {i} }
@@ -7,21 +7,32 @@ warning: use of deprecated method `leptos::ForPropsBuilder::<IF, I, T, EF, N, KF
    = note: `#[warn(deprecated)]` on by default
 
 error[E0061]: this method takes 1 argument but 0 arguments were supplied
+ --> tests/ui/errors/com_builder_spans.rs:10:9
+  |
+ 10 |         For each=[[1, 2, 3]] |i| { {i} }
+    |         ^^^ argument #1 of type `leptos::prelude::ForPropsBuilder_Error_Missing_required_field_key` is missing
+    |
+note: method defined here
+   --> $CARGO/leptos-0.8.16/src/for_loop.rs
+    |
+    | #[component]
+    | ^^^^^^^^^^^^
+    = note: this error originates in the derive macro `::leptos::typed_builder_macro::TypedBuilder` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: provide the argument
+    |
+ 10 |         For(/* leptos::prelude::ForPropsBuilder_Error_Missing_required_field_key */) each=[[1, 2, 3]] |i| { {i} }
+    |            +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+warning: unreachable call
   --> tests/ui/errors/com_builder_spans.rs:10:9
    |
 10 |         For each=[[1, 2, 3]] |i| { {i} }
-   |         ^^^ an argument of type `ForPropsBuilder_Error_Missing_required_field_key` is missing
+   |         ^^^
+   |         |
+   |         unreachable call
+   |         any code following this expression is unreachable
    |
-note: method defined here
-  --> $CARGO/leptos-0.6.12/src/for_loop.rs
-   |
-   | #[component(transparent)]
-   | ^^^^^^^^^^^^^^^^^^^^^^^^^
-   = note: this error originates in the derive macro `::leptos::typed_builder_macro::TypedBuilder` (in Nightly builds, run with -Z macro-backtrace for more info)
-help: provide the argument
-   |
-10 |         For(/* ForPropsBuilder_Error_Missing_required_field_key */) each=[[1, 2, 3]] |i| { {i} }
-   |            ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+   = note: `#[warn(unreachable_code)]` (part of `#[warn(unused)]`) on by default
 
 error[E0277]: expected a `Fn()` closure, found `str`
   --> tests/ui/errors/com_builder_spans.rs:17:14
@@ -29,17 +40,17 @@ error[E0277]: expected a `Fn()` closure, found `str`
 17 |         Show when={"no"} {
    |              ^^^^ expected an `Fn()` closure, found `str`
    |
-   = help: the trait `Fn()` is not implemented for `str`, which is required by `&str: FnOnce()`
+   = help: the trait `Fn()` is not implemented for `str`
    = note: wrap the `str` in a closure with no arguments: `|| { /* code */ }`
    = note: required for `&str` to implement `FnOnce()`
-note: required by a bound in `ShowPropsBuilder::<W, (__children, (), __fallback)>::when`
-  --> $CARGO/leptos-0.6.12/src/show.rs
+note: required by a bound in `leptos::prelude::ShowPropsBuilder::<W, C, (__children, (), __fallback)>::when`
+  --> $CARGO/leptos-0.8.16/src/show.rs
    |
    |     when: W,
    |     ---- required by a bound in this associated function
 ...
-   |     W: Fn() -> bool + 'static,
-   |                ^^^^ required by this bound in `ShowPropsBuilder::<W, (__children, (), __fallback)>::when`
+   |     W: Fn() -> bool + Send + Sync + 'static,
+   |                ^^^^ required by this bound in `ShowPropsBuilder::<W, C, (__children, (), __fallback)>::when`
 
 error[E0277]: expected a `Fn()` closure, found `str`
   --> tests/ui/errors/com_builder_spans.rs:17:9
@@ -47,31 +58,31 @@ error[E0277]: expected a `Fn()` closure, found `str`
 17 |         Show when={"no"} {
    |         ^^^^ expected an `Fn()` closure, found `str`
    |
-   = help: the trait `Fn()` is not implemented for `str`, which is required by `&str: Fn()`
+   = help: the trait `Fn()` is not implemented for `str`
    = note: wrap the `str` in a closure with no arguments: `|| { /* code */ }`
    = note: required for `&str` to implement `Fn()`
-note: required by a bound in `leptos::Show`
-  --> $CARGO/leptos-0.6.12/src/show.rs
+note: required by a bound in `leptos::prelude::Show`
+  --> $CARGO/leptos-0.8.16/src/show.rs
    |
-   | pub fn Show<W>(
+   | pub fn Show<W, C>(
    |        ---- required by a bound in this function
 ...
-   |     W: Fn() -> bool + 'static,
+   |     W: Fn() -> bool + Send + Sync + 'static,
    |        ^^^^^^^^^^^^ required by this bound in `Show`
 
-error[E0599]: the method `children` exists for struct `ShowPropsBuilder<&str, ((), (&str,), ())>`, but its trait bounds were not satisfied
+error[E0599]: the method `children` exists for struct `leptos::prelude::ShowPropsBuilder<&str, _, ((), (&str,), ())>`, but its trait bounds were not satisfied
   --> tests/ui/errors/com_builder_spans.rs:18:13
    |
 16 |       _ = mview! {
    |  _________-
 17 | |         Show when={"no"} {
 18 | |             "hi"
-   | |            -^^^^ method cannot be called on `ShowPropsBuilder<&str, ((), (&str,), ())>` due to unsatisfied trait bounds
+   | |            -^^^^ method cannot be called due to unsatisfied trait bounds
    | |____________|
    |
    |
    = note: the following trait bounds were not satisfied:
-           `str: std::ops::Fn<()>`
+           `str: Fn<()>`
            which is required by `<&str as FnOnce<()>>::Output = bool`
            `str: FnOnce<()>`
            which is required by `<&str as FnOnce<()>>::Output = bool`
@@ -84,14 +95,14 @@ error[E0277]: expected a `Fn()` closure, found `bool`
    |
    = help: the trait `Fn()` is not implemented for `bool`
    = note: wrap the `bool` in a closure with no arguments: `|| { /* code */ }`
-note: required by a bound in `ShowPropsBuilder::<W, (__children, (), __fallback)>::when`
-  --> $CARGO/leptos-0.6.12/src/show.rs
+note: required by a bound in `leptos::prelude::ShowPropsBuilder::<W, C, (__children, (), __fallback)>::when`
+  --> $CARGO/leptos-0.8.16/src/show.rs
    |
    |     when: W,
    |     ---- required by a bound in this associated function
 ...
-   |     W: Fn() -> bool + 'static,
-   |        ^^^^^^^^^^^^ required by this bound in `ShowPropsBuilder::<W, (__children, (), __fallback)>::when`
+   |     W: Fn() -> bool + Send + Sync + 'static,
+   |        ^^^^^^^^^^^^ required by this bound in `ShowPropsBuilder::<W, C, (__children, (), __fallback)>::when`
 
 error[E0277]: expected a `Fn()` closure, found `bool`
   --> tests/ui/errors/com_builder_spans.rs:25:9
@@ -99,31 +110,30 @@ error[E0277]: expected a `Fn()` closure, found `bool`
 25 |         Show when={true} {
    |         ^^^^ expected an `Fn()` closure, found `bool`
    |
-   = help: the trait `Fn()` is not implemented for `bool`, which is required by `fn(ShowProps<_>) -> impl leptos::IntoView {leptos::Show::<_>}: leptos::Component<_>`
+   = help: the trait `Fn()` is not implemented for `bool`
    = note: wrap the `bool` in a closure with no arguments: `|| { /* code */ }`
-   = note: required for `ShowProps<bool>` to implement `leptos::Props`
-   = note: required for `fn(ShowProps<bool>) -> impl leptos::IntoView {leptos::Show::<bool>}` to implement `leptos::Component<ShowProps<bool>>`
-note: required by a bound in `component_props_builder`
-  --> $CARGO/leptos-0.6.12/src/lib.rs
+note: required by a bound in `leptos::prelude::Show`
+  --> $CARGO/leptos-0.8.16/src/show.rs
    |
-   | pub fn component_props_builder<P: PropsOrNoPropsBuilder>(
-   |        ----------------------- required by a bound in this function
-   |     _f: &impl Component<P>,
-   |               ^^^^^^^^^^^^ required by this bound in `component_props_builder`
+   | pub fn Show<W, C>(
+   |        ---- required by a bound in this function
+...
+   |     W: Fn() -> bool + Send + Sync + 'static,
+   |        ^^^^^^^^^^^^ required by this bound in `Show`
 
-error[E0599]: the method `children` exists for struct `ShowPropsBuilder<bool, ((), (bool,), ())>`, but its trait bounds were not satisfied
+error[E0599]: the method `children` exists for struct `leptos::prelude::ShowPropsBuilder<bool, _, ((), (bool,), ())>`, but its trait bounds were not satisfied
   --> tests/ui/errors/com_builder_spans.rs:26:13
    |
 24 |       _ = mview! {
    |  _________-
 25 | |         Show when={true} {
 26 | |             "hi"
-   | |            -^^^^ method cannot be called on `ShowPropsBuilder<bool, ((), (bool,), ())>` due to unsatisfied trait bounds
+   | |            -^^^^ method cannot be called due to unsatisfied trait bounds
    | |____________|
    |
    |
    = note: the following trait bounds were not satisfied:
-           `bool: std::ops::Fn<()>`
+           `bool: Fn<()>`
            `bool: FnOnce<()>`
            which is required by `<bool as FnOnce<()>>::Output = bool`
 
@@ -147,57 +157,57 @@ error[E0308]: mismatched types
   --> tests/ui/errors/com_builder_spans.rs:48:15
    |
 48 |         Thing |s| { "hello" }
-   |               ^^^ expected `Box<dyn FnOnce() -> Fragment>`, found closure
+   |               ^^^^^^^^^^^^^ expected `Box<dyn FnOnce() -> AnyView + Send>`, found closure
    |
-   = note: expected struct `Box<(dyn FnOnce() -> Fragment + 'static)>`
+   = note: expected struct `Box<(dyn FnOnce() -> AnyView + Send + 'static)>`
              found closure `{closure@$DIR/tests/ui/errors/com_builder_spans.rs:48:15: 48:18}`
 
-error[E0283]: type annotations needed
+error[E0277]: `{closure@$DIR/tests/ui/errors/com_builder_spans.rs:57:22: 57:35}` is not a future
+  --> tests/ui/errors/com_builder_spans.rs:57:15
+   |
+57 |         Await future=[async { 3 }] { "no args" }
+   |               ^^^^^^ ------------- consider calling this closure
+   |               |
+   |               `{closure@$DIR/tests/ui/errors/com_builder_spans.rs:57:22: 57:35}` is not a future
+   |
+   = help: the trait `Future` is not implemented for closure `{closure@$DIR/tests/ui/errors/com_builder_spans.rs:57:22: 57:35}`
+note: required by a bound in `leptos::prelude::AwaitPropsBuilder::<T, Fut, Chil, V, ((), __blocking, __children)>::future`
+  --> $CARGO/leptos-0.8.16/src/await_.rs
+   |
+   |     future: Fut,
+   |     ------ required by a bound in this associated function
+...
+   |     Fut: std::future::Future<Output = T> + Send + 'static,
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `AwaitPropsBuilder::<T, Fut, Chil, V, ((), __blocking, __children)>::future`
+
+error[E0277]: `{closure@$DIR/tests/ui/errors/com_builder_spans.rs:57:22: 57:35}` is not a future
   --> tests/ui/errors/com_builder_spans.rs:57:9
    |
 57 |         Await future=[async { 3 }] { "no args" }
-   |         ^^^^^ cannot infer type of the type parameter `V` declared on the function `Await`
+   |         ^^^^^        ------------- consider calling this closure
+   |         |
+   |         `{closure@$DIR/tests/ui/errors/com_builder_spans.rs:57:22: 57:35}` is not a future
    |
-   = note: cannot satisfy `_: leptos::IntoView`
-   = help: the following types implement trait `leptos::IntoView`:
-             &'static str
-             &Fragment
-             &leptos::View
-             &std::string::String
-             ()
-             (A, B)
-             (A, B, C)
-             (A, B, C, D)
-           and $N others
-note: required by a bound in `leptos::Await`
-  --> $CARGO/leptos-0.6.12/src/await_.rs
+   = help: the trait `Future` is not implemented for closure `{closure@$DIR/tests/ui/errors/com_builder_spans.rs:57:22: 57:35}`
+note: required by a bound in `leptos::prelude::Await`
+  --> $CARGO/leptos-0.8.16/src/await_.rs
    |
-   | pub fn Await<T, Fut, FF, VF, V>(
+   | pub fn Await<T, Fut, Chil, V>(
    |        ----- required by a bound in this function
 ...
-   |     V: IntoView,
-   |        ^^^^^^^^ required by this bound in `Await`
-help: consider specifying the generic arguments
-   |
-57 |         Await::<i32, _, _, VF, V> future=[async { 3 }] { "no args" }
-   |              ++++++++++++++++++++
+   |     Fut: std::future::Future<Output = T> + Send + 'static,
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Await`
 
-error[E0283]: type annotations needed
-  --> tests/ui/errors/com_builder_spans.rs:57:9
+error[E0599]: the method `children` exists for struct `leptos::prelude::AwaitPropsBuilder<_, {closure@$DIR/tests/ui/errors/com_builder_spans.rs:57:22: 57:35}, _, _, (({closure@$DIR/tests/ui/errors/com_builder_spans.rs:57:22: 57:35},), (), ())>`, but its trait bounds were not satisfied
+  --> tests/ui/errors/com_builder_spans.rs:57:38
    |
-57 |         Await future=[async { 3 }] { "no args" }
-   |         ^^^^^ cannot infer type of the type parameter `VF` declared on the function `Await`
+56 |       _ = mview! {
+   |  _________-
+57 | |         Await future=[async { 3 }] { "no args" }
+   | |                      -------------  -^^^^^^^^^ method cannot be called due to unsatisfied trait bounds
+   | |______________________|______________|
+   |                        |
+   |                        doesn't satisfy `_: Future`
    |
-   = note: multiple `impl`s satisfying `_: ToChildren<{closure@$DIR/tests/ui/errors/com_builder_spans.rs:57:38: 57:47}>` found in the `leptos` crate:
-           - impl<F> ToChildren<F> for Box<(dyn FnMut() -> Fragment + 'static)>
-             where <F as FnOnce<()>>::Output == Fragment, F: FnMut(), F: 'static;
-           - impl<F> ToChildren<F> for Box<(dyn FnOnce() -> Fragment + 'static)>
-             where <F as FnOnce<()>>::Output == Fragment, F: FnOnce(), F: 'static;
-           - impl<F> ToChildren<F> for Box<(dyn std::ops::Fn() -> Fragment + 'static)>
-             where <F as FnOnce<()>>::Output == Fragment, F: Fn(), F: 'static;
-           - impl<F> ToChildren<F> for Rc<(dyn std::ops::Fn() -> Fragment + 'static)>
-             where <F as FnOnce<()>>::Output == Fragment, F: Fn(), F: 'static;
-help: consider specifying the generic arguments
-   |
-57 |         Await::<i32, _, _, VF, V> future=[async { 3 }] { "no args" }
-   |              ++++++++++++++++++++
+   = note: the following trait bounds were not satisfied:
+           `{closure@$DIR/tests/ui/errors/com_builder_spans.rs:57:22: 57:35}: Future`

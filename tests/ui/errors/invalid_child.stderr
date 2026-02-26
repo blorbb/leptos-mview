@@ -1,65 +1,64 @@
 error: invalid child: expected literal, block, bracket or element
- --> tests/ui/errors/invalid_child.rs:6:9
+ --> tests/ui/errors/invalid_child.rs:7:9
   |
-6 |         (a)
+7 |         (a)
   |         ^
 
 error: extra semi-colon found
-  --> tests/ui/errors/invalid_child.rs:37:27
+  --> tests/ui/errors/invalid_child.rs:38:27
    |
-37 |         div { "hi there" };
+38 |         div { "hi there" };
    |                           ^
    |
    = help: remove this semi-colon
 
-error[E0277]: the trait bound `&&str: IntoView` is not satisfied
-  --> tests/ui/errors/invalid_child.rs:17:14
-   |
-17 |             {value}
-   |             -^^^^^-
-   |             ||
-   |             |the trait `Fn()` is not implemented for `str`, which is required by `&&str: IntoView`
-   |             required by a bound introduced by this call
-   |
-   = help: the trait `IntoView` is implemented for `&'static str`
-   = note: required for `&str` to implement `FnOnce()`
-   = note: required for `&&str` to implement `IntoView`
-note: required by a bound in `leptos::HtmlElement::<El>::child`
-  --> $CARGO/leptos_dom-0.6.12/src/html.rs
-   |
-   |     pub fn child(self, child: impl IntoView) -> Self {
-   |                                    ^^^^^^^^ required by this bound in `HtmlElement::<El>::child`
+error[E0277]: the trait bound `&&str: RenderHtml` is not satisfied
+ --> tests/ui/errors/invalid_child.rs:18:13
+  |
+ 18 |             {value}
+    |             ^^^^^^^ the trait `Fn()` is not implemented for `str`
+    |
+help: the trait `leptos::prelude::ElementChild<NewChild>` is implemented for `leptos::html::HtmlElement<E, At, Ch>`
+   --> $CARGO/tachys-0.2.13/src/html/element/mod.rs
+    |
+    | / impl<E, At, Ch, NewChild> ElementChild<NewChild> for HtmlElement<E, At, Ch>
+    | | where
+    | |     E: ElementWithChildren,
+    | |     Ch: RenderHtml + NextChildren,
+    | |
+    | |     NewChild: IntoRender,
+    | |     NewChild::Output: RenderHtml,
+    | |_________________________________^
+    = note: required for `&str` to implement `FnOnce()`
+    = note: required for `&&str` to implement `ReactiveFunction`
+    = note: required for `&&str` to implement `RenderHtml`
+    = note: required for `leptos::html::HtmlElement<leptos::html::Span, (), ()>` to implement `leptos::prelude::ElementChild<&&str>`
 
-error[E0277]: the trait bound `std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:27:22: 27:33}>: IntoView` is not satisfied
-  --> tests/ui/errors/invalid_child.rs:25:14
-   |
-25 |                {values
-   |  ______________-^
-   | | ______________|
-26 | ||                 .into_iter()
-27 | ||                 .map(|val: &str| {
-28 | ||                     mview! { li({val}) }
-29 | ||                 })
-   | ||__________________^ the trait `Fn()` is not implemented for `std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:27:22: 27:33}>`, which is required by `std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:27:22: 27:33}>: IntoView`
-30 | |              }
-   | |______________- required by a bound introduced by this call
-   |
-   = help: the following other types implement trait `IntoView`:
-             &'static str
-             &Fragment
-             &leptos::View
-             &std::string::String
-             ()
-             (A, B)
-             (A, B, C)
-             (A, B, C, D)
-           and $N others
-   = note: required for `std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:27:22: 27:33}>` to implement `IntoView`
-note: required by a bound in `leptos::HtmlElement::<El>::child`
-  --> $CARGO/leptos_dom-0.6.12/src/html.rs
-   |
-   |     pub fn child(self, child: impl IntoView) -> Self {
-   |                                    ^^^^^^^^ required by this bound in `HtmlElement::<El>::child`
+error[E0277]: the trait bound `std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:28:22: 28:33}>: RenderHtml` is not satisfied
+ --> tests/ui/errors/invalid_child.rs:26:13
+  |
+ 26 | /             {values
+ 27 | |                 .into_iter()
+ 28 | |                 .map(|val: &str| {
+ 29 | |                     mview! { li({val}) }
+ 30 | |                 })
+ 31 | |             }
+    | |_____________^ the trait `FnMut()` is not implemented for `std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:28:22: 28:33}>`
+    |
+help: the trait `leptos::prelude::ElementChild<NewChild>` is implemented for `leptos::html::HtmlElement<E, At, Ch>`
+   --> $CARGO/tachys-0.2.13/src/html/element/mod.rs
+    |
+    | / impl<E, At, Ch, NewChild> ElementChild<NewChild> for HtmlElement<E, At, Ch>
+    | | where
+    | |     E: ElementWithChildren,
+    | |     Ch: RenderHtml + NextChildren,
+    | |
+    | |     NewChild: IntoRender,
+    | |     NewChild::Output: RenderHtml,
+    | |_________________________________^
+    = note: required for `std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:28:22: 28:33}>` to implement `ReactiveFunction`
+    = note: required for `std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:28:22: 28:33}>` to implement `RenderHtml`
+    = note: required for `leptos::html::HtmlElement<Ul, (), ()>` to implement `leptos::prelude::ElementChild<std::iter::Map<std::vec::IntoIter<&str>, {closure@$DIR/tests/ui/errors/invalid_child.rs:28:22: 28:33}>>`
 
 warning: unreachable call
   --> tests/ui/errors/invalid_child.rs:46:13
@@ -70,12 +69,33 @@ warning: unreachable call
    |             |any code following this expression is unreachable
    |             unreachable call
    |
-   = note: `#[warn(unreachable_code)]` on by default
+   = note: `#[warn(unreachable_code)]` (part of `#[warn(unused)]`) on by default
+
+error[E0277]: the trait bound `!: RenderHtml` is not satisfied
+ --> tests/ui/errors/invalid_child.rs:46:13
+  |
+ 46 |             {todo!()}
+    |             ^^^^^^^^^ the trait `FnMut()` is not implemented for `!`
+    |
+help: the trait `leptos::prelude::ElementChild<NewChild>` is implemented for `leptos::html::HtmlElement<E, At, Ch>`
+   --> $CARGO/tachys-0.2.13/src/html/element/mod.rs
+    |
+    | / impl<E, At, Ch, NewChild> ElementChild<NewChild> for HtmlElement<E, At, Ch>
+    | | where
+    | |     E: ElementWithChildren,
+    | |     Ch: RenderHtml + NextChildren,
+    | |
+    | |     NewChild: IntoRender,
+    | |     NewChild::Output: RenderHtml,
+    | |_________________________________^
+    = note: required for `!` to implement `ReactiveFunction`
+    = note: required for `!` to implement `RenderHtml`
+    = note: required for `leptos::html::HtmlElement<leptos::html::Div, (), ()>` to implement `leptos::prelude::ElementChild<!>`
 
 warning: unused variable: `a`
- --> tests/ui/errors/invalid_child.rs:4:9
+ --> tests/ui/errors/invalid_child.rs:5:9
   |
-4 |     let a = "a";
+5 |     let a = "a";
   |         ^ help: if this is intentional, prefix it with an underscore: `_a`
   |
-  = note: `#[warn(unused_variables)]` on by default
+  = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default

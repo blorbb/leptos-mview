@@ -1,14 +1,22 @@
 error: unknown attribute
- --> tests/ui/errors/unterminated_element.rs:6:9
+ --> tests/ui/errors/unterminated_element.rs:7:9
   |
-6 |         "hi"
+7 |         "hi"
   |         ^^^^
 
 error: child elements not found
- --> tests/ui/errors/unterminated_element.rs:5:9
+ --> tests/ui/errors/unterminated_element.rs:6:9
   |
-5 | /         input type="text"
-6 | |         "hi"
+6 | /         input type="text"
+7 | |         "hi"
   | |____________^
   |
   = help: add a `;` at the end to terminate the element
+
+warning: unused import: `leptos::prelude::*`
+ --> tests/ui/errors/unterminated_element.rs:1:5
+  |
+1 | use leptos::prelude::*;
+  |     ^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default

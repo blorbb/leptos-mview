@@ -1,10 +1,10 @@
-use leptos::*;
+use leptos::prelude::*;
 use leptos_mview::mview;
 
 fn main() {
     mview! {
         Await
-            future=[async { 1 }]
+            future={async { 1 }}
         |data| "no"
     };
 }

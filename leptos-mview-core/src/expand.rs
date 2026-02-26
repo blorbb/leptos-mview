@@ -113,7 +113,7 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
     };
 
     // add selector-style ids/classes (div.some-class #some-id)
-    let selector_methods = xml_selectors_tokens(element.selectors());
+    let selector_methods = xml_selectors_methods(element.selectors());
 
     // parse normal attributes first
     let mut attrs = TokenStream::new();
@@ -124,15 +124,15 @@ pub fn xml_to_tokens(element: &Element) -> Option<TokenStream> {
 
     for a in element.attrs().iter() {
         match a {
-            Attr::Kv(attr) => attrs.extend(xml_kv_attribute_tokens(attr, element.tag().kind())),
-            Attr::Directive(dir) => directives.extend(xml_directive_tokens(dir)),
-            Attr::Spread(spread) => spread_attrs.extend(xml_spread_tokens(spread)),
+            Attr::Kv(attr) => attrs.extend(xml_kv_attribute_method(attr, element.tag().kind())),
+            Attr::Directive(dir) => directives.extend(xml_directive_method(dir)),
+            Attr::Spread(spread) => spread_attrs.extend(xml_spread_method(spread)),
         }
     }
 
     let children = element
         .children()
-        .map(|children| xml_child_methods_tokens(children.node_children()));
+        .map(|children| xml_child_methods(children.node_children()));
 
     Some(quote! {
         #tag_path
@@ -212,7 +212,7 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
                 SelectorShorthand::Class { class, dot_symbol } => {
                     // desugar to class:the-class
                     directive_paths.push(
-                        directive_to_any_attr_path(&Directive {
+                        directive_to_any_attr_expr(&Directive {
                             dir: syn::Ident::new("class", dot_symbol.span),
                             key: KebabIdentOrStr::KebabIdent(class.clone()),
                             modifier: None,
@@ -232,7 +232,7 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
                 .join(" ");
             // desugar to attr:id="the-id id2 id3"
             directive_paths.push(
-                directive_to_any_attr_path(&Directive {
+                directive_to_any_attr_expr(&Directive {
                     dir: syn::Ident::new("attr", Span::call_site()),
                     key: parse_quote_spanned! { first_pound_symbol.span=> id },
                     modifier: None,
@@ -244,26 +244,26 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
     }
 
     element.attrs().iter().for_each(|a| match a {
-        Attr::Kv(attr) => attrs.extend(component_kv_attribute_tokens(attr)),
+        Attr::Kv(attr) => attrs.extend(component_kv_attribute_method(attr)),
         Attr::Spread(spread) => {
             if IS_SLOT {
                 emit_error!(spread.span(), "spread syntax is not supported on slots");
             } else {
-                directive_paths.push(component_spread_tokens(spread));
+                directive_paths.push(component_spread_expr(spread));
             }
         }
         Attr::Directive(dir) => match dir.dir.to_string().as_str() {
             // clone works on both components and slots
             "clone" => {
                 emit_error_if_modifier(dir.modifier.as_ref());
-                clones.extend(component_clone_tokens(dir));
+                clones.extend(component_clone_stmt(dir));
             }
             // slots support no other directives
             other if IS_SLOT => {
                 emit_error!(dir.dir.span(), "`{}:` is not supported on slots", other);
             }
             _ => {
-                if let Some(path) = directive_to_any_attr_path(dir) {
+                if let Some(path) = directive_to_any_attr_expr(dir) {
                     directive_paths.push(path);
                 } else {
                     emit_error!(dir.dir.span(), "unknown directive");
@@ -280,7 +280,7 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
         // as components that accept slots may not accept children.
         it.peek()
             .is_some()
-            .then(|| component_children_tokens(it, element.children_args(), &clones))
+            .then(|| component_children_method(it, element.children_args(), &clones))
     });
 
     let slot_children = element
@@ -293,8 +293,10 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
 
     if IS_SLOT {
         // Into is for turning a single slot into a vec![slot] if needed
+        // need to span the into for the unreachable warning
+        let into = quote_spanned!(path.span()=> ::std::convert::Into::into);
         Some(quote! {
-            ::std::convert::Into::into(
+            #into(
                 #path::builder()
                     #attrs
                     #children
@@ -307,15 +309,26 @@ pub fn component_to_tokens<const IS_SLOT: bool>(element: &Element) -> Option<Tok
         let component_props_builder = quote_spanned! {
             path.span()=> ::leptos::component::component_props_builder(&#path)
         };
+        let component_view = quote_spanned! {
+            path.span()=> ::leptos::component::component_view
+        };
 
         let directive_paths = (!directive_paths.is_empty()).then(|| {
-            quote! {
-                .add_any_attr((#(#directive_paths,)*))
+            if cfg!(feature = "__internal_erase_components") {
+                quote! {
+                    .add_any_attr(<[_]>::into_vec(::std::boxed::Box::new([
+                        #( ::leptos::attr::any_attribute::IntoAnyAttribute::into_any_attr(#directive_paths) ),*
+                    ])))
+                }
+            } else {
+                quote! {
+                    .add_any_attr((#(#directive_paths,)*))
+                }
             }
         });
 
         Some(quote! {
-            ::leptos::component::component_view(
+            #component_view(
                 &#path,
                 #component_props_builder
                     #attrs

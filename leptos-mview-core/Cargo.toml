@@ -12,3 +12,7 @@ syn.workspace = true
 quote.workspace = true
 proc-macro2.workspace = true
 proc-macro-error2.workspace = true
+
+[features]
+# https://github.com/blorbb/leptos-mview/issues/20
+__internal_erase_components = []

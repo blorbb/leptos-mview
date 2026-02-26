@@ -1,7 +1,7 @@
 error: unterminated element
- --> tests/ui/errors/unterminated_element_error.rs:7:13
+ --> tests/ui/errors/unterminated_element_error.rs:8:13
   |
-7 |             input.input type="text"
+8 |             input.input type="text"
   |             ^^^^^
   |
   = help: add a `;` to terminate the element with no children

@@ -14,7 +14,7 @@ fn html_child() {
 
     check_str(
         res,
-        ["child</strong>go<em", "to<a href=\"#\"", "nowhere</a></em>"].as_slice(),
+        r##"<strong>child<!></strong>go<em>to<a href="#">nowhere<!></a><!></em>"##,
     )
 }
 

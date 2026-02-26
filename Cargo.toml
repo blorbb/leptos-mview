@@ -2,8 +2,8 @@
 members = ["leptos-mview-core", "leptos-mview-macro"]
 
 [workspace.package]
-version = "0.4.4"
-edition = "2021"
+version = "0.5.0"
+edition = "2024"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/blorbb/leptos-mview"
 
@@ -26,17 +26,25 @@ proc-macro-error2 = "2"
 # dev dependencies #
 trybuild = "1"
 # needs to use ssr for some view-to-HTML features to work.
-leptos = { version = "0.7.5", features = ["ssr", "nightly"] }
-leptos_router = { version = "0.7.5", features = ["ssr", "nightly"] }
+leptos = { version = "0.8.12", features = ["ssr", "nightly"] }
+leptos_router = { version = "0.8.12", features = ["ssr", "nightly"] }
+any_spawner = "0.3.0"
 
-[dependencies]
-leptos-mview-macro = { path = "leptos-mview-macro", version = "0.4.4" }
+[dependencies] # tests with async components
+leptos-mview-macro = { path = "leptos-mview-macro", version = "0.5.0" }
 
 [dev-dependencies]
 trybuild.workspace = true
 leptos.workspace = true
 leptos_router.workspace = true
+any_spawner.workspace = true
 leptos-mview = { path = ".", features = ["nightly"] }
 
 [features]
 nightly = ["leptos-mview-macro/nightly"]
+
+# https://github.com/blorbb/leptos-mview/issues/20
+[target.'cfg(erase_components)'.dependencies]
+leptos-mview-macro = { path = "leptos-mview-macro", version = "0.5.0", features = [
+    "__internal_erase_components",
+] }

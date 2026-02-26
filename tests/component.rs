@@ -1,4 +1,5 @@
-use leptos::{prelude::*, task::Executor};
+use any_spawner::Executor;
+use leptos::prelude::*;
 use leptos_mview::mview;
 mod utils;
 use utils::check_str;
@@ -18,11 +19,11 @@ fn basic() {
         }
     }
 
-    _ = view! {
-        <MyComponent my_attribute="something" another_attribute=vec![0, 1]>
+    _ = mview! {
+        MyComponent my-attribute="something" another-attribute={vec![0, 1]} (
             "my child"
-        </MyComponent>
-    }
+        )
+    };
 }
 
 #[test]
@@ -69,7 +70,7 @@ fn generics() {
     use core::marker::PhantomData;
     // copied from https://github.com/leptos-rs/leptos/pull/1636
     #[component]
-    pub fn GenericComponent<S>(ty: PhantomData<S>) -> impl IntoView {
+    pub fn GenericComponent<S: 'static>(ty: PhantomData<S>) -> impl IntoView {
         let _ty = ty;
         std::any::type_name::<S>()
     }

@@ -1,213 +1,135 @@
 error: expected value after =
- --> tests/ui/errors/invalid_value.rs:5:15
+ --> tests/ui/errors/invalid_value.rs:6:15
   |
-5 |         div a=a {}
+6 |         div a=a {}
   |               ^
   |
   = help: you may have meant to wrap this in braces
 
 error: expected value after =
-  --> tests/ui/errors/invalid_value.rs:19:16
+  --> tests/ui/errors/invalid_value.rs:20:16
    |
-19 |         a href=();
+20 |         a href=();
    |                ^
 
 error: extra semi-colon found
-  --> tests/ui/errors/invalid_value.rs:19:18
+  --> tests/ui/errors/invalid_value.rs:20:18
    |
-19 |         a href=();
+20 |         a href=();
    |                  ^
    |
    = help: remove this semi-colon
 
 error: expected value after =
-  --> tests/ui/errors/invalid_value.rs:27:15
+  --> tests/ui/errors/invalid_value.rs:28:15
    |
-27 |         a href=
+28 |         a href=
    |               ^
 
 error: unterminated element
-  --> tests/ui/errors/invalid_value.rs:27:9
+  --> tests/ui/errors/invalid_value.rs:28:9
    |
-27 |         a href=
+28 |         a href=
    |         ^
    |
    = help: add a `;` to terminate the element with no children
 
-error[E0277]: the trait bound `MissingValueAfterEq: IntoAttribute` is not satisfied
- --> tests/ui/errors/invalid_value.rs:5:15
+error[E0599]: no method named `a` found for struct `leptos::html::HtmlElement<E, At, Ch>` in the current scope
+ --> tests/ui/errors/invalid_value.rs:6:13
   |
-4 |       _ = mview! {
+5 |       _ = mview! {
   |  _________-
-5 | |         div a=a {}
-  | |               ^ the trait `Fn()` is not implemented for `MissingValueAfterEq`, which is required by `MissingValueAfterEq: IntoAttribute`
-6 | |     };
-  | |_____- required by a bound introduced by this call
+6 | |         div a=a {}
+  | |            -^ method not found in `leptos::html::HtmlElement<leptos::html::Div, (), ()>`
+  | |____________|
   |
-  = help: the following other types implement trait `IntoAttribute`:
-            &'static str
-            &std::string::String
-            Arguments<'_>
-            Cow<'static, str>
-            Nonce
-            Oco<'static, str>
-            Rc<str>
-            TextProp
-          and $N others
-  = note: required for `MissingValueAfterEq` to implement `IntoAttribute`
-note: required by a bound in `leptos::HtmlElement::<El>::attr`
- --> $CARGO/leptos_dom-0.6.12/src/html.rs
-  |
-  |     pub fn attr(
-  |            ---- required by a bound in this associated function
-...
-  |         attr: impl IntoAttribute,
-  |                    ^^^^^^^^^^^^^ required by this bound in `HtmlElement::<El>::attr`
 
 error[E0061]: this method takes 1 argument but 0 arguments were supplied
-  --> tests/ui/errors/invalid_value.rs:11:14
+  --> tests/ui/errors/invalid_value.rs:12:14
    |
-11 |           div {..};
-   |  ______________^^-
-12 | |     };
-   | |_____- an argument is missing
+12 |         div {..};
+   |              ^^ argument #1 is missing
    |
 note: method defined here
-  --> $CARGO/leptos_dom-0.6.12/src/html.rs
+  --> $CARGO/tachys-0.2.13/src/view/add_attr.rs
    |
-   |     pub fn attrs(
-   |            ^^^^^
+   |     fn add_any_attr<NewAttr: Attribute>(
+   |        ^^^^^^^^^^^^
 help: provide the argument
    |
-10 |     _ = ..(/* attrs */);
-   |         ~~~~~~~~~~~~~~~
+12 |         div {..(/* attr */)};
+   |                ++++++++++++
 
-error[E0277]: the trait bound `(): IntoAttribute` is not satisfied
-  --> tests/ui/errors/invalid_value.rs:18:16
-   |
-17 |       _ = mview! {
-   |  _________-
-18 | |         a href={};
-   | |                ^^ the trait `Fn()` is not implemented for `()`, which is required by `(): IntoAttribute`
-19 | |         a href=();
-20 | |         a href=[];
-21 | |     };
-   | |_____- required by a bound introduced by this call
-   |
-   = help: the following other types implement trait `IntoAttribute`:
-             &'static str
-             &std::string::String
-             Arguments<'_>
-             Cow<'static, str>
-             Nonce
-             Oco<'static, str>
-             Rc<str>
-             TextProp
-           and $N others
-   = note: required for `()` to implement `IntoAttribute`
-note: required by a bound in `leptos::HtmlElement::<El>::attr`
-  --> $CARGO/leptos_dom-0.6.12/src/html.rs
-   |
-   |     pub fn attr(
-   |            ---- required by a bound in this associated function
+error[E0277]: the trait bound `leptos_mview::MissingValueAfterEq: AttributeValue` is not satisfied
+ --> tests/ui/errors/invalid_value.rs:20:16
+  |
+ 20 |         a href=();
+    |           ---- ^ the trait `FnMut()` is not implemented for `leptos_mview::MissingValueAfterEq`
+    |           |
+    |           required by a bound introduced by this call
+    |
+    = help: the following other types implement trait `AttributeValue`:
+              &'a str
+              ()
+              Oco<'static, str>
+              Suspend<V>
+              bool
+              char
+              f32
+              f64
+            and $N others
+    = note: required for `leptos_mview::MissingValueAfterEq` to implement `ReactiveFunction`
+    = note: required for `leptos_mview::MissingValueAfterEq` to implement `AttributeValue`
+note: required by a bound in `element::elements::<impl leptos::html::HtmlElement<leptos::html::A, At, Ch>>::href`
+   --> $CARGO/tachys-0.2.13/src/html/element/elements.rs
+    |
+ 54 |                           V: AttributeValue,
+    |                              ^^^^^^^^^^^^^^ required by this bound in `element::elements::<impl HtmlElement<A, At, Ch>>::href`
 ...
-   |         attr: impl IntoAttribute,
-   |                    ^^^^^^^^^^^^^ required by this bound in `HtmlElement::<El>::attr`
+    | / html_elements! {
+    | |     /// The `<a>` HTML element (or anchor element), with its href attribute, creates a hyperlink to web pages, files, email addresses, locations in the same page, or anything else a URL can address.
+    | |     a HtmlAnchorElement [download, href, hreflang, ping, referrerpolicy, rel, target, r#type ] true,
+    | |                                    ---- required by a bound in this associated function
+    | |     /// The `<abbr>` HTML element represents an abbreviation or acronym; the optional title attribute can provide an expansion or description for the abbreviation. If present, title must contain this full descr...
+...   |
+    | |     video HtmlVideoElement [autoplay, controls, controlslist, crossorigin, disablepictureinpicture, disableremoteplayback, height, r#loop, muted, playsinline, poster, preload, src, width] true,
+    | | }
+    | |_- in this macro invocation
+    = note: this error originates in the macro `html_element_inner` which comes from the expansion of the macro `html_elements` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error[E0277]: the trait bound `MissingValueAfterEq: IntoAttribute` is not satisfied
-  --> tests/ui/errors/invalid_value.rs:19:16
-   |
-17 |       _ = mview! {
-   |  _________-
-18 | |         a href={};
-19 | |         a href=();
-   | |                ^ the trait `Fn()` is not implemented for `MissingValueAfterEq`, which is required by `MissingValueAfterEq: IntoAttribute`
-20 | |         a href=[];
-21 | |     };
-   | |_____- required by a bound introduced by this call
-   |
-   = help: the following other types implement trait `IntoAttribute`:
-             &'static str
-             &std::string::String
-             Arguments<'_>
-             Cow<'static, str>
-             Nonce
-             Oco<'static, str>
-             Rc<str>
-             TextProp
-           and $N others
-   = note: required for `MissingValueAfterEq` to implement `IntoAttribute`
-note: required by a bound in `leptos::HtmlElement::<El>::attr`
-  --> $CARGO/leptos_dom-0.6.12/src/html.rs
-   |
-   |     pub fn attr(
-   |            ---- required by a bound in this associated function
+error[E0277]: the trait bound `leptos_mview::MissingValueAfterEq: AttributeValue` is not satisfied
+ --> tests/ui/errors/invalid_value.rs:28:15
+  |
+ 28 |         a href=
+    |           ----^ the trait `FnMut()` is not implemented for `leptos_mview::MissingValueAfterEq`
+    |           |
+    |           required by a bound introduced by this call
+    |
+    = help: the following other types implement trait `AttributeValue`:
+              &'a str
+              ()
+              Oco<'static, str>
+              Suspend<V>
+              bool
+              char
+              f32
+              f64
+            and $N others
+    = note: required for `leptos_mview::MissingValueAfterEq` to implement `ReactiveFunction`
+    = note: required for `leptos_mview::MissingValueAfterEq` to implement `AttributeValue`
+note: required by a bound in `element::elements::<impl leptos::html::HtmlElement<leptos::html::A, At, Ch>>::href`
+   --> $CARGO/tachys-0.2.13/src/html/element/elements.rs
+    |
+ 54 |                           V: AttributeValue,
+    |                              ^^^^^^^^^^^^^^ required by this bound in `element::elements::<impl HtmlElement<A, At, Ch>>::href`
 ...
-   |         attr: impl IntoAttribute,
-   |                    ^^^^^^^^^^^^^ required by this bound in `HtmlElement::<El>::attr`
-
-error[E0277]: expected a `Fn()` closure, found `()`
-  --> tests/ui/errors/invalid_value.rs:20:16
-   |
-17 |       _ = mview! {
-   |  _________-
-18 | |         a href={};
-19 | |         a href=();
-20 | |         a href=[];
-   | |                ^^ expected an `Fn()` closure, found `()`
-21 | |     };
-   | |_____- required by a bound introduced by this call
-   |
-   = help: the trait `Fn()` is not implemented for `()`, which is required by `{closure@$DIR/tests/ui/errors/invalid_value.rs:20:16: 20:18}: IntoAttribute`
-   = note: wrap the `()` in a closure with no arguments: `|| { /* code */ }`
-   = help: the following other types implement trait `IntoAttribute`:
-             &'static str
-             &std::string::String
-             Arguments<'_>
-             Cow<'static, str>
-             Nonce
-             Oco<'static, str>
-             Rc<str>
-             TextProp
-           and $N others
-   = note: required for `()` to implement `IntoAttribute`
-   = note: 1 redundant requirement hidden
-   = note: required for `{closure@$DIR/tests/ui/errors/invalid_value.rs:20:16: 20:18}` to implement `IntoAttribute`
-note: required by a bound in `leptos::HtmlElement::<El>::attr`
-  --> $CARGO/leptos_dom-0.6.12/src/html.rs
-   |
-   |     pub fn attr(
-   |            ---- required by a bound in this associated function
-...
-   |         attr: impl IntoAttribute,
-   |                    ^^^^^^^^^^^^^ required by this bound in `HtmlElement::<El>::attr`
-
-error[E0277]: the trait bound `MissingValueAfterEq: IntoAttribute` is not satisfied
-  --> tests/ui/errors/invalid_value.rs:27:15
-   |
-26 |       _ = mview! {
-   |  _________-
-27 | |         a href=
-   | |               ^ the trait `Fn()` is not implemented for `MissingValueAfterEq`, which is required by `MissingValueAfterEq: IntoAttribute`
-28 | |     };
-   | |_____- required by a bound introduced by this call
-   |
-   = help: the following other types implement trait `IntoAttribute`:
-             &'static str
-             &std::string::String
-             Arguments<'_>
-             Cow<'static, str>
-             Nonce
-             Oco<'static, str>
-             Rc<str>
-             TextProp
-           and $N others
-   = note: required for `MissingValueAfterEq` to implement `IntoAttribute`
-note: required by a bound in `leptos::HtmlElement::<El>::attr`
-  --> $CARGO/leptos_dom-0.6.12/src/html.rs
-   |
-   |     pub fn attr(
-   |            ---- required by a bound in this associated function
-...
-   |         attr: impl IntoAttribute,
-   |                    ^^^^^^^^^^^^^ required by this bound in `HtmlElement::<El>::attr`
+    | / html_elements! {
+    | |     /// The `<a>` HTML element (or anchor element), with its href attribute, creates a hyperlink to web pages, files, email addresses, locations in the same page, or anything else a URL can address.
+    | |     a HtmlAnchorElement [download, href, hreflang, ping, referrerpolicy, rel, target, r#type ] true,
+    | |                                    ---- required by a bound in this associated function
+    | |     /// The `<abbr>` HTML element represents an abbreviation or acronym; the optional title attribute can provide an expansion or description for the abbreviation. If present, title must contain this full descr...
+...   |
+    | |     video HtmlVideoElement [autoplay, controls, controlslist, crossorigin, disablepictureinpicture, disableremoteplayback, height, r#loop, muted, playsinline, poster, preload, src, width] true,
+    | | }
+    | |_- in this macro invocation
+    = note: this error originates in the macro `html_element_inner` which comes from the expansion of the macro `html_elements` (in Nightly builds, run with -Z macro-backtrace for more info)

@@ -210,7 +210,7 @@ fn children_and_slots() {
             [
                 "here 1",
                 "here 2",
-                "<span>here 3</span>",
+                "<span>here 3",
                 "nested is here!",
                 "yet another shown",
             ]

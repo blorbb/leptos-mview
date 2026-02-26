@@ -13,7 +13,7 @@ proc-macro = true
 [dependencies]
 proc-macro2.workspace = true
 proc-macro-error2.workspace = true
-leptos-mview-core = { path = "../leptos-mview-core", version = "0.4.4" }
+leptos-mview-core = { path = "../leptos-mview-core", version = "0.5.0" }
 
 # needed for doctests to run
 [dev-dependencies]
@@ -21,3 +21,5 @@ leptos.workspace = true
 
 [features]
 nightly = ["proc-macro-error2/nightly"]
+# https://github.com/blorbb/leptos-mview/issues/20
+__internal_erase_components = ["leptos-mview-core/__internal_erase_components"]

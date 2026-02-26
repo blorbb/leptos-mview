@@ -25,63 +25,63 @@ error: unknown modifier
    = help: :undelegated is the only known modifier
 
 error: unknown modifier: modifiers are only supported on `on:` directives
-  --> tests/ui/errors/invalid_directive.rs:41:24
+  --> tests/ui/errors/invalid_directive.rs:39:24
    |
-41 |         div class:this:undelegated=true;
+39 |         div class:this:undelegated=true;
    |                        ^^^^^^^^^^^
 
 error: unknown modifier: modifiers are only supported on `on:` directives
-  --> tests/ui/errors/invalid_directive.rs:44:28
+  --> tests/ui/errors/invalid_directive.rs:42:28
    |
-44 |         div style:position:undelegated="absolute";
+42 |         div style:position:undelegated="absolute";
    |                            ^^^^^^^^^^^
 
 error: unknown modifier: modifiers are only supported on `on:` directives
-  --> tests/ui/errors/invalid_directive.rs:47:26
+  --> tests/ui/errors/invalid_directive.rs:45:26
    |
-47 |         input prop:value:something="input something";
+45 |         input prop:value:something="input something";
    |                          ^^^^^^^^^
 
 error: unknown modifier: modifiers are only supported on `on:` directives
-  --> tests/ui/errors/invalid_directive.rs:50:30
+  --> tests/ui/errors/invalid_directive.rs:48:30
    |
-50 |         button use:directive:another;
+48 |         button use:directive:another;
    |                              ^^^^^^^
 
 error: `attr:` is not supported on elements
-  --> tests/ui/errors/invalid_directive.rs:53:16
+  --> tests/ui/errors/invalid_directive.rs:51:16
    |
-53 |         button attr:type="submit";
+51 |         button attr:type="submit";
    |                ^^^^
 
 error: unknown modifier: modifiers are only supported on `on:` directives
-  --> tests/ui/errors/invalid_directive.rs:58:28
+  --> tests/ui/errors/invalid_directive.rs:56:28
    |
-58 |         Com clone:to_clone:undelegated;
+56 |         Com clone:to_clone:undelegated;
    |                            ^^^^^^^^^^^
 
 error: `clone:` does not take any values
-  --> tests/ui/errors/invalid_directive.rs:61:19
+  --> tests/ui/errors/invalid_directive.rs:59:19
    |
-61 |         Com clone:{to_clone};
+59 |         Com clone:{to_clone};
    |                   ^^^^^^^^^^
 
 error: unknown modifier: modifiers are only supported on `on:` directives
-  --> tests/ui/errors/invalid_directive.rs:64:23
+  --> tests/ui/errors/invalid_directive.rs:62:23
    |
-64 |         Com class:aaa:undelegated=[false];
+62 |         Com class:aaa:undelegated=[false];
    |                       ^^^^^^^^^^^
 
-error[E0425]: cannot find value `clicky_click` in module `leptos::ev`
+error[E0425]: cannot find value `clicky_click` in module `leptos::tachys::html::event`
   --> tests/ui/errors/invalid_directive.rs:24:19
    |
 24 |         button on:clicky-click={move |_| ()};
-   |                   ^^^^^^^^^^^^ not found in `leptos::ev`
+   |                   ^^^^^^^^^^^^ not found in `leptos::tachys::html::event`
 
 warning: unused variable: `to_clone`
-  --> tests/ui/errors/invalid_directive.rs:56:9
+  --> tests/ui/errors/invalid_directive.rs:54:9
    |
-56 |     let to_clone = String::new();
+54 |     let to_clone = String::new();
    |         ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_to_clone`
    |
-   = note: `#[warn(unused_variables)]` on by default
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
